@@ -35,4 +35,8 @@ public class BN254aG1 extends BNG1<BN254aFr, BN254aFq, BN254aG1, BN254aG1Paramet
     public BigInteger toBigInteger() {
         return BigInteger.ZERO;
     }
+
+    public void setBigInteger(BigInteger bigInteger) {
+        //do not use it
+    }
 }

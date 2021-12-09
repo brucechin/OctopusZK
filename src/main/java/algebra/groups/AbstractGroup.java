@@ -78,6 +78,8 @@ public abstract class AbstractGroup<GroupT extends AbstractGroup<GroupT>> implem
 
     public abstract BigInteger toBigInteger();
 
+    public abstract void setBigInteger(final BigInteger bigInteger);
+
     /**
      * If secureSeed is provided, returns cryptographically secure random group element using byte[].
      * Else if seed is provided, returns pseudorandom group element using long as seed.

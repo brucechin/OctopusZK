@@ -12,6 +12,7 @@ import algebra.groups.AbstractGroup;
 import algebra.curves.AbstractG1;
 import algebra.curves.fake.FakeG1;
 import algebra.curves.fake.FakeG2;
+import algebra.curves.fake.fake_parameters.FakeFqParameters;
 import algebra.curves.AbstractG2;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -26,6 +27,8 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Arrays;
+import java.io.*;
 
 public class FixedBaseMSM {
 
@@ -109,7 +112,7 @@ public class FixedBaseMSM {
     }
 
     public static native <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
-    T batchMSMNativeHelper(
+    byte[] batchMSMNativeHelper(
             final int outerc,
             final int windowSize,
             final ArrayList<ArrayList<byte[]>> multiplesOfBase,
@@ -178,34 +181,49 @@ public class FixedBaseMSM {
         System.out.println("multiplesOfBase len : " + multiplesOfBase.size() + " " + multiplesOfBase.get(0).size());
         System.out.println("multiplesOfBase type : " + multiplesOfBase.get(0).get(0).getClass().getName());
         
-        //TODO lianke uncomment these code
-        // ArrayList<ArrayList<byte[]>> byteArray = new ArrayList<ArrayList<byte[]>>();
-        // int out_size = multiplesOfBase.size();
-        // int in_size = multiplesOfBase.get(0).size();
-        // //System.out.println("start multiplesOfBase toByteArray");
+        ArrayList<ArrayList<byte[]>> byteArray = new ArrayList<ArrayList<byte[]>>();
+        int out_size = multiplesOfBase.size();
+        int in_size = multiplesOfBase.get(0).size();
 
-        // for(int i =0; i < out_size; i++){
-        //     ArrayList<byte[]> tmp = new ArrayList<byte[]>();
-        //     for(int j = 0; j< in_size; j++){
-        //         tmp.add(multiplesOfBase.get(i).get(j).toBigInteger().toByteArray());
-        //     }
-        //     byteArray.add(tmp);
-        // }
-        // //System.out.println("end multiplesOfBase toByteArray");
+        for(int i =0; i < out_size; i++){
+            ArrayList<byte[]> tmp = new ArrayList<byte[]>();
+            for(int j = 0; j< in_size; j++){
+                tmp.add(multiplesOfBase.get(i).get(j).toBigInteger().toByteArray());
+            }
+            byteArray.add(tmp);
+        }
 
-        // final int outerc = (scalarSize + windowSize - 1) / windowSize;
-        // ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
-        // //System.out.println("start bigScalars toByteArray");
-        // for (FieldT scalar : scalars) {
-        //     bigScalars.add(scalar.toBigInteger().toByteArray());
-        // }
-        // //System.out.println("end bigScalars toByteArray");
+        final int outerc = (scalarSize + windowSize - 1) / windowSize;
+        ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
+        for (FieldT scalar : scalars) {
+            bigScalars.add(scalar.toBigInteger().toByteArray());
+        }
 
-        // batchMSMNativeHelper(outerc, windowSize, byteArray, bigScalars);
-        
+        byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, byteArray, bigScalars);
+
+
         for (FieldT scalar : scalars) {
             res.add(serialMSM(scalarSize, windowSize, multiplesOfBase, scalar));
         }
+        final List<T> jni_res = new ArrayList<>(scalars.size());
+        //TODO move modulus to cpp side to accelerate more.
+
+        BigInteger modulus = new BigInteger("1532495540865888858358347027150309183618765510462668801");
+        for(int i = 0; i < scalars.size(); i++){
+            byte[] slice = Arrays.copyOfRange(resultByteArray, i*32, (i+1)*32);//in cpp side, BigInt is 32 bytes.
+            BigInteger bi = new BigInteger(slice);
+            BigInteger output = bi.mod(modulus);
+            T temp = multiplesOfBase.get(0).get(0).zero();
+            temp.setBigInteger(output);
+            jni_res.add(temp);
+            if(!res.get(i).toBigInteger().equals(temp.toBigInteger())){
+                System.out.println("error in FixedBaseMSM.batchMSM JNI computation");
+            }
+            // System.out.println(
+            // "\n                 res:" + res.get(i).toBigInteger()+
+            // "\n jni modulus output :" + temp.toBigInteger() + " " + res.get(i).toBigInteger().equals(temp.toBigInteger()) );
+        }
+
 
         return res;
     }

@@ -10,9 +10,9 @@ extern "C" {
 /*
  * Class:     algebra_msm_FixedBaseMSM
  * Method:    batchMSMNativeHelper
- * Signature: (IILjava/util/ArrayList;Ljava/util/ArrayList;)Lalgebra/groups/AbstractGroup;
+ * Signature: (IILjava/util/ArrayList;Ljava/util/ArrayList;)[B
  */
-JNIEXPORT jobject JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
+JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   (JNIEnv *, jclass, jint, jint, jobject, jobject);
 
 /*

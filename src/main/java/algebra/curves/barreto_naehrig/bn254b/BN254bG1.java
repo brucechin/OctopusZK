@@ -33,4 +33,8 @@ public class BN254bG1
     public BigInteger toBigInteger() {
         return BigInteger.ZERO;
     }
+
+    public void setBigInteger(BigInteger bigInteger) {
+        //do not use it
+    }
 }

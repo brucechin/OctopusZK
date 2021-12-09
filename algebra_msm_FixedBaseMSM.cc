@@ -8,13 +8,41 @@
 #include "BigInteger.h"
 
 
+// ScopedJavaLocalRef<jbyteArray> ToJavaByteArray(JNIEnv* env,
+//                                               const uint8_t* bytes,
+//                                               size_t len) {
+//   jbyteArray byte_array = env->NewByteArray(len);
+//   CheckException(env);
+//   DCHECK(byte_array);
+//   env->SetByteArrayRegion(byte_array, 0, len,
+//                           reinterpret_cast<const jbyte*>(bytes));
+//   CheckException(env);
+//   return ScopedJavaLocalRef<jbyteArray>(env, byte_array);
+// }
+
+// /**
+// * JNI method calling from JAVA 
+// */
+// JNIEXPORT jobjectArray JNICALL Java_com_test_Test_getStudentDetails( JNIEnv *env, jclass cls)
+// {
+//     jobjectArray jPosRecArray = env->NewObjectArray(searchRecordResult.size(), jniPosRec->cls, NULL);
+ 
+//     for (size_t i = 0; i < searchRecordResult.size(); i++) {
+//         jobject jPosRec = env->NewObject(jniPosRec->cls, jniPosRec->constructortorID);
+//         FillStudentRecValuesToJni(env, jPosRec, searchRecordResult[i]);
+//         env->SetObjectArrayElement(jPosRecArray, i, jPosRec);
+//     }
+ 
+//     return jPosRecArray;
+// }
+
 /*
  * Class:     algebra_msm_FixedBaseMSM
  * Method:    serialMSMNativeHelper
  * Signature: (IILjava/util/List;Ljava/math/BigInteger;)Lalgebra/groups/AbstractGroup;
  */
 using namespace std;
-JNIEXPORT jobject JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
+JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   (JNIEnv *env, jclass obj, jint outerc, jint windowSize, jobject multiplesOfBase, jobject bigScalars)
 {
 
@@ -30,23 +58,29 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   // jclass biginteger = env->GetObjectClass(bigScalar);
 
   vector<BigInt> bigScalarArray = vector<BigInt>(batch_size, BigInt());
-  for(int i =0; i < batch_size; i++){
-      jbyteArray element = (jbyteArray)env->CallObjectMethod(bigScalars, java_util_ArrayList_get, i);
-      bigScalarArray[i].bytes = (char*)env->GetByteArrayElements(element, NULL);
+  for(int j = 0; j < batch_size; j++){
+      bigScalarArray[j] = BigInt();
+  }
+  vector<vector<BigInt>> multiplesOfBasePtrArray = vector<vector<BigInt>>(out_len, vector<BigInt>(inner_len, BigInt()));
+  for(int i = 0; i < out_len;i++){
+    for(int j = 0; j < inner_len; j++){
+      multiplesOfBasePtrArray[i][j] = BigInt();
+    }
   }
 
-  // vector<bitset<8>> bigScalarBitArray;
-  // for(int i=0; i < lengthOfArray;i++){
-  //   // std::bitset<8> arr(bufferPtr[lengthOfArray -1 -i]);
-  //   // bigScalarBitArray.push_back(arr);
-  //   printf("%hhx |", bufferPtr[i]);
-  // }
-  //this arr[i] equals to BigInteger.testBit(i)
+  for(int i =0; i < batch_size; i++){
+      jbyteArray element = (jbyteArray)env->CallObjectMethod(bigScalars, java_util_ArrayList_get, i);
+      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
+      bigScalarArray[i].len = env->GetArrayLength(element);
 
-  //jobject first_element = env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase, java_util_ArrayList_get, 0), java_util_ArrayList_get, 0);
+      memcpy(bigScalarArray[i].bytes + BigInt::capacity - bigScalarArray[i].len, 
+                                bytes,
+                                bigScalarArray[i].len);
+      //bigScalarArray[i].print();
+  }
 
   cout <<"multiplesOfBase size " << out_len << " " <<inner_len <<endl;
-  vector<vector<BigInt>> multiplesOfBasePtrArray = vector<vector<BigInt>>(out_len, vector<BigInt>(inner_len, BigInt()));
+
   //TODO lianke parallelize it
   for(int i = 0; i < out_len;i++){
     for(int j = 0; j < inner_len; j++){
@@ -54,15 +88,15 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
       char* bytes = (char*)env->GetByteArrayElements(element, NULL);
       multiplesOfBasePtrArray[i][j].len = env->GetArrayLength(element);
       memcpy(multiplesOfBasePtrArray[i][j].bytes + BigInt::capacity - multiplesOfBasePtrArray[i][j].len, bytes,  multiplesOfBasePtrArray[i][j].len);
-      // cout << i << " " <<j  << " bytes len:" <<multiplesOfBasePtrArray[i][j].len <<endl;
-      // multiplesOfBasePtrArray[i][j].print();
+      //cout << i << " " <<j  << " bytes len:" <<multiplesOfBasePtrArray[i][j].len <<endl;
+      //multiplesOfBasePtrArray[i][j].print();
     }
   }
-  //cout << "aaa" <<endl;
 
+  jbyteArray resultByteArray = env->NewByteArray((jsize)BigInt::capacity * batch_size);
   for(int batch_index = 0; batch_index < batch_size; batch_index++){
     BigInt res = multiplesOfBasePtrArray[0][0];
-    //printf("1");
+
     for (int outer = 0; outer < outerc; ++outer) {
         int inner = 0;
         //printf("2");
@@ -73,13 +107,14 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
         }
         //TODO lianke this inner for loop to update inner can be done better
         res = res + multiplesOfBasePtrArray[outer][inner];
-    }
+    }    
+
+    env->SetByteArrayRegion(resultByteArray, batch_index * BigInt::capacity , BigInt::capacity,   reinterpret_cast<const jbyte*>(res.bytes));
+    //env->ReleaseByteArrayElements(resultByteArray, (jbyte*) res.bytes, batch_index * BigInt::capacity);
   }
 
-  //cout << "bbb" <<endl;
 
-  //TODO add return value
-  return bigScalars;
+  return resultByteArray;
 }
 
 
@@ -108,7 +143,8 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeHelp
   vector<BigInt> bigScalarArray = vector<BigInt>(batch_size, BigInt());
   for(int i =0; i < batch_size; i++){
       jbyteArray element = (jbyteArray)env->CallObjectMethod(bigScalars, java_util_ArrayList_get, i);
-      bigScalarArray[i].bytes = (char*)env->GetByteArrayElements(element, NULL);
+      bigScalarArray[i].len = env->GetArrayLength(element);
+      memcpy(bigScalarArray[i].bytes + BigInt::capacity - bigScalarArray[i].len, (char*)env->GetByteArrayElements(element, NULL), bigScalarArray[i].len);
   }
 
   //jobject first_element = env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase1, java_util_ArrayList_get, 0), java_util_ArrayList_get, 0);
@@ -168,6 +204,11 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeHelp
   }
 
 
+
+
+
+//lianke : below are old codebases
+
   // for(int i=0; i < lengthOfArray;i++){
   //   for(int j = 0; j < 8; j++){
   //     cout <<bigScalarBitArray[i][j] << " ";
@@ -180,3 +221,10 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeHelp
   // jclass fp_cls = env->GetObjectClass(fp);
   // jfieldID biginteger_fid = env->GetFieldID(fp_cls, "number", "Ljava/math/BigInteger;");
   
+    // vector<bitset<8>> bigScalarBitArray;
+  // for(int i=0; i < lengthOfArray;i++){
+  //   // std::bitset<8> arr(bufferPtr[lengthOfArray -1 -i]);
+  //   // bigScalarBitArray.push_back(arr);
+  //   printf("%hhx |", bufferPtr[i]);
+  // }
+  //this arr[i] equals to BigInteger.testBit(i)

@@ -20,7 +20,7 @@ import java.util.Random;
  */
 public class AdditiveIntegerGroup extends AbstractGroup<AdditiveIntegerGroup> {
     //TODO i need to implement this AdditiveIntegerGroup in cpp
-    protected final BigInteger number;
+    protected BigInteger number;
     private final AbstractAdditiveIntegerGroupParameters GroupParameters;
     private final ArrayList<Integer> fixedBaseWindowTable = new ArrayList<>(0);
 
@@ -81,6 +81,11 @@ public class AdditiveIntegerGroup extends AbstractGroup<AdditiveIntegerGroup> {
 
         return result;
     }
+
+    public void setBigInteger(BigInteger bigInteger) {
+        this.number = bigInteger;
+    }
+
 
     public AdditiveIntegerGroup zero() {
         return GroupParameters.ZERO();

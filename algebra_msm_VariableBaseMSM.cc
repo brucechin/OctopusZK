@@ -4,14 +4,20 @@
 #include<cstring>
 #include <bitset>
 #include <vector>
+#include <tuple>
+#include <cmath>
 #include "algebra_msm_VariableBaseMSM.h"
 #include "BigInteger.h"
+
+
+
 
 /*
  * Class:     algebra_msm_VariableBaseMSM
  * Method:    variableBaseSerialMSMNativeHelper
  * Signature: (Ljava/util/ArrayList;Ljava/util/ArrayList;)Lalgebra/groups/AbstractGroup;
  */
+//TODO lianke: I plan to pass the modulus through the JNI func parameter to reduce the overhead.
 JNIEXPORT jobject JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerialMSMNativeHelper
   (JNIEnv * env, jclass obj, jobject bases, jobject scalars){
     jclass java_util_ArrayList      = static_cast<jclass>(env->NewGlobalRef(env->FindClass("java/util/ArrayList")));
@@ -25,18 +31,88 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerialMSM
     vector<BigInt> bigScalarArray = vector<BigInt>(scalars_size, BigInt());
     for(int i =0; i < scalars_size; i++){
         jbyteArray element = (jbyteArray)env->CallObjectMethod(scalars, java_util_ArrayList_get, i);
-        bigScalarArray[i].bytes = (char*)env->GetByteArrayElements(element, NULL);
+        bigScalarArray[i].len = env->GetArrayLength(element);
+        memcpy(bigScalarArray[i].bytes + BigInt::capacity - bigScalarArray[i].len, (char*)env->GetByteArrayElements(element, NULL), bigScalarArray[i].len);
+        //bigScalarArray[i].print();
     }
 
     vector<BigInt> baseArray = vector<BigInt>(base_size, BigInt());
     for(int i =0; i < base_size; i++){
         jbyteArray element = (jbyteArray)env->CallObjectMethod(bases, java_util_ArrayList_get, i);
-        baseArray[i].bytes = (char*)env->GetByteArrayElements(element, NULL);
+        baseArray[i].len = env->GetArrayLength(element);
+        memcpy(baseArray[i].bytes + BigInt::capacity - baseArray[i].len, (char*)env->GetByteArrayElements(element, NULL), baseArray[i].len);
+        //baseArray[i].print();
+    }
+
+    BigInt acc;//should be init to zero.
+    vector<tuple<BigInt, BigInt>> filteredInput;
+    int numBits = 0;
+    for(int i = 0; i < base_size; i++){
+      BigInt scalar = bigScalarArray[i];
+      if(scalar.isZero()){
+        continue;
+      }
+
+      BigInt base = baseArray[i];//TODO lianke this base does not contain modulus yet.
+      if(scalar.isOne()){
+        acc = acc + base;
+      }else{
+        filteredInput.push_back(make_tuple(scalar, base));
+        numBits = max(numBits, scalar.len);
+      }
     }
 
 
-    //TODO lianke do the variable MSM computation.
+    if(!filteredInput.empty()){
+      //TODO lianke call pippengerMSM here. maybe we can make it as a helper function for further usage.
 
+      int length = filteredInput.size();
+      int log2Length =  max(1, (int)log2(length));
+      int c = log2Length - (log2Length / 3);
+      int numBuckets = 1 << c;
+      int numGroups = (numBits + c - 1)/c;
+      BigInt zero; //TODO lianke modulus should be std::get<1>(filteredInput[0]) they are fakeG1 or fakeG2.
+      vector<BigInt> bucketsModel = vector<BigInt>(numBuckets, zero);
+      BigInt result = zero;
+
+      for(int k = numGroups - 1; k >=0; k--){
+        if (k < numGroups - 1) {
+            for (int i = 0; i < c; i++) {
+                result = result + result;
+            }
+
+            vector<BigInt> buckets = vector<BigInt>(bucketsModel);
+
+            for (int i = 0; i < length; i++) {
+                  int id = 0;
+                  for (int j = 0; j < c; j++) {
+                      if (std::get<1>(filteredInput[i]).testBit(k * c + j)) {
+                          id |= 1 << j;
+                      }
+                  }
+
+                  if (id == 0) {
+                      continue;
+                  }
+
+                  // Potentially use mixed addition here.
+                  buckets[id] = buckets[id] + std::get<1>(filteredInput[i]);
+            }
+
+            BigInt runningSum = zero;
+            for(int i = numBuckets - 1; i > 0; i--){
+              runningSum = runningSum + buckets[i];
+              result = result + runningSum;
+            }
+
+        }
+      }
+
+      acc = acc + result;
+    }
+    
+
+  //TODO return acc;
 
     return scalars;
 
@@ -77,7 +153,135 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseDoubleMSM
         baseArray2[i].bytes = (char*)env->GetByteArrayElements(element, NULL);
     }
 
-    //TODO lianke do the variable MSM computation.
+    BigInt acc1;//should be init to zero.
+    BigInt acc2;//should be init to zero.
+
+    vector<tuple<BigInt, BigInt>> filteredInput1;
+    vector<tuple<BigInt, BigInt>> filteredInput2;
+
+    int numBits = 0;
+    for(int i = 0; i < base_size1; i++){
+      BigInt scalar = bigScalarArray[i];
+      if(scalar.isZero()){
+        continue;
+      }
+
+      BigInt base = baseArray1[i];//TODO lianke this base does not contain modulus yet.
+      if(scalar.isOne()){
+        acc1 = acc1 + base;
+      }else{
+        filteredInput1.push_back(make_tuple(scalar, base));
+        numBits = max(numBits, scalar.len);
+      }
+    }
+
+    for(int i = 0; i < base_size2; i++){
+      BigInt scalar = bigScalarArray[i];
+      if(scalar.isZero()){
+        continue;
+      }
+
+      BigInt base = baseArray2[i];//TODO lianke this base does not contain modulus yet.
+      if(scalar.isOne()){
+        acc2 = acc2 + base;
+      }else{
+        filteredInput2.push_back(make_tuple(scalar, base));
+        numBits = max(numBits, scalar.len);
+      }
+    }
+
+    if(!filteredInput1.empty()){
+      int length = filteredInput1.size();
+      int log2Length =  max(1, (int)log2(length));
+      int c = log2Length - (log2Length / 3);
+      int numBuckets = 1 << c;
+      int numGroups = (numBits + c - 1)/c;
+      BigInt zero; //TODO lianke modulus should be std::get<1>(filteredInput[0]) they are fakeG1 or fakeG2.
+      vector<BigInt> bucketsModel = vector<BigInt>(numBuckets, zero);
+      BigInt result = zero;
+      for(int k = numGroups - 1; k >=0; k--){
+        if (k < numGroups - 1) {
+            for (int i = 0; i < c; i++) {
+                result = result + result;
+            }
+
+            vector<BigInt> buckets = vector<BigInt>(bucketsModel);
+
+            for (int i = 0; i < length; i++) {
+                  int id = 0;
+                  for (int j = 0; j < c; j++) {
+                      if (std::get<1>(filteredInput1[i]).testBit(k * c + j)) {
+                          id |= 1 << j;
+                      }
+                  }
+
+                  if (id == 0) {
+                      continue;
+                  }
+
+                  // Potentially use mixed addition here.
+                  buckets[id] = buckets[id] + std::get<1>(filteredInput1[i]);
+            }
+
+            BigInt runningSum = zero;
+            for(int i = numBuckets - 1; i > 0; i--){
+              runningSum = runningSum + buckets[i];
+              result = result + runningSum;
+            }
+
+        }
+      }
+
+      acc1 = acc1 + result;
+    }
+    
+  
+    if(!filteredInput2.empty()){
+      int length = filteredInput2.size();
+      int log2Length =  max(1, (int)log2(length));
+      int c = log2Length - (log2Length / 3);
+      int numBuckets = 1 << c;
+      int numGroups = (numBits + c - 1)/c;
+      BigInt zero; //TODO lianke modulus should be std::get<1>(filteredInput[0]) they are fakeG1 or fakeG2.
+      vector<BigInt> bucketsModel = vector<BigInt>(numBuckets, zero);
+      BigInt result = zero;
+      for(int k = numGroups - 1; k >=0; k--){
+        if (k < numGroups - 1) {
+            for (int i = 0; i < c; i++) {
+                result = result + result;
+            }
+
+            vector<BigInt> buckets = vector<BigInt>(bucketsModel);
+
+            for (int i = 0; i < length; i++) {
+                  int id = 0;
+                  for (int j = 0; j < c; j++) {
+                      if (std::get<1>(filteredInput2[i]).testBit(k * c + j)) {
+                          id |= 1 << j;
+                      }
+                  }
+
+                  if (id == 0) {
+                      continue;
+                  }
+
+                  // Potentially use mixed addition here.
+                  buckets[id] = buckets[id] + std::get<1>(filteredInput2[i]);
+            }
+
+            BigInt runningSum = zero;
+            for(int i = numBuckets - 1; i > 0; i--){
+              runningSum = runningSum + buckets[i];
+              result = result + runningSum;
+            }
+
+        }
+      }
+
+      acc2 = acc2 + result;
+    }
+
+    //TODO return acc1 and acc2
 
     return scalars;
   }

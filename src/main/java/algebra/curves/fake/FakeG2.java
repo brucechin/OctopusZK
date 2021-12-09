@@ -17,7 +17,7 @@ import java.util.ArrayList;
 
 public class FakeG2 extends AbstractG2<FakeG2> implements Serializable {
 
-    public final Fp element;
+    public Fp element;
     public AbstractFakeG2Parameters FakeG2Parameters;
 
     public FakeG2(final Fp element, final AbstractFakeG2Parameters FakeG2Parameters) {
@@ -91,6 +91,10 @@ public class FakeG2 extends AbstractG2<FakeG2> implements Serializable {
 
     public BigInteger toBigInteger() {
         return this.element.toBigInteger();
+    }
+
+    public void setBigInteger(BigInteger bigInteger) {
+        this.element.number = bigInteger;
     }
 
     public String toString() {

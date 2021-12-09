@@ -16,7 +16,7 @@ import java.math.BigInteger;
 
 public class FakeGT extends AbstractGT<FakeGT> implements Serializable {
 
-    public final Fp element;
+    public Fp element;
     public AbstractFakeGTParameters FakeGTParameters;
 
     public FakeGT(final Fp element, final AbstractFakeGTParameters FakeGTParameters) {
@@ -46,6 +46,10 @@ public class FakeGT extends AbstractGT<FakeGT> implements Serializable {
 
     public FakeGT one() {
         return FakeGTParameters.ONE();
+    }
+
+    public void setBigInteger(BigInteger bigInteger) {
+        this.element.number = bigInteger;
     }
 
     public boolean isOne() {

@@ -21,7 +21,7 @@ import scala.Tuple2;
 public class VariableBaseMSM {
 
     public static final BigInteger BOS_COSTER_MSM_THRESHOLD = new BigInteger("1048576");
-    
+
     static {
 		System.loadLibrary("AlgebraMSMVariableBaseMSM");
         System.out.println("AlgebraMSMVariableBaseMSM loaded");
@@ -155,8 +155,9 @@ public class VariableBaseMSM {
             FieldT extends AbstractFieldElementExpanded<FieldT>>
     GroupT serialMSM(final List<FieldT> scalars, final List<GroupT> bases) {
         System.out.println("variableBaseSerialMSM info:");
-        System.out.println("variableBaseSerialMSM base size :" + bases.size());
-        System.out.println("variableBaseSerialMSM scalars size :" + scalars.size());
+        System.out.println("variableBaseSerialMSM base size :" + bases.size() + " type:" +bases.get(0).getClass().getName());
+        System.out.println("variableBaseSerialMSM scalars size :" + scalars.size() + " type:"+scalars.get(0).getClass().getName());
+
         assert (bases.size() == scalars.size());
 
         final List<Tuple2<BigInteger, GroupT>> filteredInput = new ArrayList<>();
@@ -174,26 +175,26 @@ public class VariableBaseMSM {
 
         variableBaseSerialMSMNativeHelper(basesArray, bigScalars);
         
-        // int numBits = 0;
-        // for (int i = 0; i < bases.size(); i++) {
-        //     final BigInteger scalar = scalars.get(i).toBigInteger();
-        //     if (scalar.equals(BigInteger.ZERO)) {
-        //         continue;
-        //     }
+        int numBits = 0;
+        for (int i = 0; i < bases.size(); i++) {
+            final BigInteger scalar = scalars.get(i).toBigInteger();
+            if (scalar.equals(BigInteger.ZERO)) {
+                continue;
+            }
 
-        //     final GroupT base = bases.get(i);
+            final GroupT base = bases.get(i);
 
-        //     if (scalar.equals(BigInteger.ONE)) {
-        //         acc = acc.add(base);
-        //     } else {
-        //         filteredInput.add(new Tuple2<>(scalar, base));
-        //         numBits = Math.max(numBits, scalar.bitLength());
-        //     }
-        // }
+            if (scalar.equals(BigInteger.ONE)) {
+                acc = acc.add(base);
+            } else {
+                filteredInput.add(new Tuple2<>(scalar, base));
+                numBits = Math.max(numBits, scalar.bitLength());
+            }
+        }
 
-        // if (!filteredInput.isEmpty()) {
-        //     acc = acc.add(pippengerMSM(filteredInput, numBits));
-        // }
+        if (!filteredInput.isEmpty()) {
+            acc = acc.add(pippengerMSM(filteredInput, numBits));
+        }
 
         return acc;
     }
@@ -223,23 +224,23 @@ public class VariableBaseMSM {
         T2 acc2 = bases.get(0)._2.zero();
         int numBits = 0;
 
-        // for (int i = 0; i < size; i++) {
-        //     final Tuple2<T1, T2> value = bases.get(i);
-        //     final BigInteger scalar = scalars.get(i).toBigInteger();
-        //     if (scalar.equals(BigInteger.ZERO)) {
-        //         continue;
-        //     }
+        for (int i = 0; i < size; i++) {
+            final Tuple2<T1, T2> value = bases.get(i);
+            final BigInteger scalar = scalars.get(i).toBigInteger();
+            if (scalar.equals(BigInteger.ZERO)) {
+                continue;
+            }
 
-        //     // Mixed addition
-        //     if (scalar.equals(BigInteger.ONE)) {
-        //         acc1 = acc1.add(value._1);
-        //         acc2 = acc2.add(value._2);
-        //     } else {
-        //         converted1.add(new Tuple2<>(scalar, value._1));
-        //         converted2.add(new Tuple2<>(scalar, value._2));
-        //         numBits = Math.max(numBits, scalar.bitLength());
-        //     }
-        // }
+            // Mixed addition
+            if (scalar.equals(BigInteger.ONE)) {
+                acc1 = acc1.add(value._1);
+                acc2 = acc2.add(value._2);
+            } else {
+                converted1.add(new Tuple2<>(scalar, value._1));
+                converted2.add(new Tuple2<>(scalar, value._2));
+                numBits = Math.max(numBits, scalar.bitLength());
+            }
+        }
 
 
         ///----------------------JNI code------------------------------//

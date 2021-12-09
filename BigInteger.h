@@ -18,7 +18,7 @@ public:
     BigInt();
 
     BigInt(char *, int len);
-
+    BigInt(int val);
     //Direct assignment
     BigInt &operator=(const BigInt &);
  
@@ -57,7 +57,11 @@ public:
 
     //Read and Write
     void print();
+    void printAddress();
 
+    bool isZero();
+    bool isOne();
+    int bitLength();
     bool testBit(int index); //same with the java BigInteger testBit
 };
 
@@ -66,11 +70,32 @@ BigInt::BigInt(){
     memset(bytes, 0, capacity);
 }
 
+BigInt::BigInt(int val){
+    bytes = new char[capacity];
+    memcpy(bytes, &val, capacity - sizeof(int));
+}
 
 
 BigInt::BigInt(char *s, int len){
     bytes = s;
     len = len; 
+}
+
+int BigInt::bitLength(){
+
+}
+
+bool BigInt::isZero(){
+    //TODO lianke test its correctness
+    char testblock[BigInt::capacity];
+    memset(testblock, 0, sizeof(testblock));
+    return memcmp(testblock, bytes, BigInt::capacity) == 0;
+}
+
+bool BigInt::isOne(){
+    //TODO lianke test its correctness
+    BigInt one(1);
+    return *this == one;
 }
 
 
@@ -82,9 +107,15 @@ void BigInt::print(){
     return ;
 }
 
+void BigInt::printAddress(){
+    printf("0%x\n", bytes);
+    return ;
+}
+
 bool BigInt::testBit(int index){
-    int byte_index = index / 8; //TODO might be reverse
+    int byte_index = 31 - index / 8; //TODO check its correctness
     int byte_offset = index % 8;
+    //printf("%hhx %hhx ", bytes[byte_index], byte_offset);
     return CHECK_BIT(bytes[byte_index], byte_offset);
 }
 
@@ -93,13 +124,27 @@ BigInt &BigInt::operator=(const BigInt &a){
     return *this;
 }
 
+bool operator==(const BigInt &a, const BigInt &b){
+    return memcmp(a.bytes, b.bytes, BigInt::capacity) == 0;
+}
+
 BigInt operator+(BigInt &a,const BigInt& b){
 
     BigInt tmp;
-    bool carry = false;
+    char mask = 1 << 7;
+    bool carry1 = false;
+    bool carry2 = false;
+    char one = 1;
+    char zero = 0;
     for(int i = BigInt::capacity - 1; i > 0; i--){
-        tmp.bytes[i] = a.bytes[i] + b.bytes[i];
-        //TODO update carry bit
+        tmp.bytes[i] = a.bytes[i] + b.bytes[i] + (carry1||carry2);
+        carry1 = ((a.bytes[i] & mask) == mask) && ((b.bytes[i] & mask) == mask);
+        carry2 = (((a.bytes[i] & mask) == mask) || ((b.bytes[i] & mask) == mask)) && ((tmp.bytes[i] & mask) !=mask);
+
+        // printf("\n\n  a : %hhx", a.bytes[i]);
+        // printf("   b : %hhx", b.bytes[i]);
+        // printf("   output : %hhx carry1 %d, carry2 %d \n\n", tmp.bytes[i], carry1, carry2);
+
     }
     return tmp;
 }

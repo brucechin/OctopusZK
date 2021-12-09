@@ -15,7 +15,7 @@ import java.security.SecureRandom;
 import java.util.Random;
 
 public class Fp extends AbstractFieldElementExpanded<Fp> implements Serializable {
-    protected final BigInteger number;
+    public BigInteger number;
     public AbstractFpParameters FpParameters;
 
     public Fp(final BigInteger number, final AbstractFpParameters FpParameters) {
@@ -109,6 +109,10 @@ public class Fp extends AbstractFieldElementExpanded<Fp> implements Serializable
 
     public BigInteger toBigInteger() {
         return number;
+    }
+
+    public void setBigInteger(BigInteger bigInteger) {
+        this.number = bigInteger;
     }
 
     public String toString() {
