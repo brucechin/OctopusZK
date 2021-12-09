@@ -72,6 +72,7 @@ public class SerialProver {
         config.beginRuntime("Proof");
 
         config.beginLog("Computing evaluation to query A: summation of variable_i*A_i(t)");
+        System.out.println("query A len:" + provingKey.queryA().size());
         G1T evaluationAt = VariableBaseMSM
                 .serialMSM(primary.elements(), provingKey.queryA().subList(0, numInputs));
         evaluationAt = evaluationAt.add(VariableBaseMSM

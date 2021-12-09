@@ -47,7 +47,7 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
 
   cout <<"multiplesOfBase size " << out_len << " " <<inner_len <<endl;
   vector<vector<BigInt>> multiplesOfBasePtrArray = vector<vector<BigInt>>(out_len, vector<BigInt>(inner_len, BigInt()));
-  //TODO parallelize it
+  //TODO lianke parallelize it
   for(int i = 0; i < out_len;i++){
     for(int j = 0; j < inner_len; j++){
       jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
@@ -71,6 +71,7 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
                 inner |= 1 << i;
             }
         }
+        //TODO lianke this inner for loop to update inner can be done better
         res = res + multiplesOfBasePtrArray[outer][inner];
     }
   }

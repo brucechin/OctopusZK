@@ -62,7 +62,7 @@ public class DistributedzkSNARKTest implements Serializable {
 
         sc = new JavaSparkContext(conf);
 
-        config = new Configuration(8, 8, 32, 16, sc, StorageLevel.MEMORY_ONLY());
+        config = new Configuration(4, 4, 32, 8, sc, StorageLevel.MEMORY_ONLY());
         config.setRuntimeFlag(false);
         config.setDebugFlag(false);
     }

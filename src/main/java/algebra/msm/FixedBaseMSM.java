@@ -80,7 +80,6 @@ public class FixedBaseMSM {
      */
     public static <GroupT extends AbstractGroup<GroupT>> List<List<GroupT>> getWindowTable(
             final GroupT base, final int scalarSize, final int windowSize) {
-        //TODO lianke convert this function to JNI.
         final int numWindows =
                 (scalarSize % windowSize == 0) ? scalarSize / windowSize : scalarSize / windowSize + 1;
         final int innerLimit = (int) Math.pow(2, windowSize);
@@ -145,10 +144,6 @@ public class FixedBaseMSM {
 
         final int outerc = (scalarSize + windowSize - 1) / windowSize;
         final BigInteger bigScalar = scalar.toBigInteger();
-        //System.out.println("on java side, bigScalar is " + bigScalar.toString() + "\nbinary representation " + byteToString(bigScalar.toByteArray()));
-        // for(int i = 0; i < 16; i++){
-        //     System.out.println("bit test " + i + " " + bigScalar.testBit(i));
-        // }
 
         T res = multiplesOfBase.get(0).get(0);
 
@@ -183,30 +178,34 @@ public class FixedBaseMSM {
         System.out.println("multiplesOfBase len : " + multiplesOfBase.size() + " " + multiplesOfBase.get(0).size());
         System.out.println("multiplesOfBase type : " + multiplesOfBase.get(0).get(0).getClass().getName());
         
-        ArrayList<ArrayList<byte[]>> byteArray = new ArrayList<ArrayList<byte[]>>();
-        int out_size = multiplesOfBase.size();
-        int in_size = multiplesOfBase.get(0).size();
-        //System.out.println("start multiplesOfBase toByteArray");
+        //TODO lianke uncomment these code
+        // ArrayList<ArrayList<byte[]>> byteArray = new ArrayList<ArrayList<byte[]>>();
+        // int out_size = multiplesOfBase.size();
+        // int in_size = multiplesOfBase.get(0).size();
+        // //System.out.println("start multiplesOfBase toByteArray");
 
-        for(int i =0; i < out_size; i++){
-            ArrayList<byte[]> tmp = new ArrayList<byte[]>();
-            for(int j = 0; j< in_size; j++){
-                tmp.add(multiplesOfBase.get(i).get(j).toBigInteger().toByteArray());
-            }
-            byteArray.add(tmp);
-        }
-        //System.out.println("end multiplesOfBase toByteArray");
+        // for(int i =0; i < out_size; i++){
+        //     ArrayList<byte[]> tmp = new ArrayList<byte[]>();
+        //     for(int j = 0; j< in_size; j++){
+        //         tmp.add(multiplesOfBase.get(i).get(j).toBigInteger().toByteArray());
+        //     }
+        //     byteArray.add(tmp);
+        // }
+        // //System.out.println("end multiplesOfBase toByteArray");
 
-        final int outerc = (scalarSize + windowSize - 1) / windowSize;
-        ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
-        //System.out.println("start bigScalars toByteArray");
+        // final int outerc = (scalarSize + windowSize - 1) / windowSize;
+        // ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
+        // //System.out.println("start bigScalars toByteArray");
+        // for (FieldT scalar : scalars) {
+        //     bigScalars.add(scalar.toBigInteger().toByteArray());
+        // }
+        // //System.out.println("end bigScalars toByteArray");
+
+        // batchMSMNativeHelper(outerc, windowSize, byteArray, bigScalars);
+        
         for (FieldT scalar : scalars) {
-            bigScalars.add(scalar.toBigInteger().toByteArray());
+            res.add(serialMSM(scalarSize, windowSize, multiplesOfBase, scalar));
         }
-        //System.out.println("end bigScalars toByteArray");
-
-        batchMSMNativeHelper(outerc, windowSize, byteArray, bigScalars);
-
 
         return res;
     }
@@ -248,55 +247,59 @@ public class FixedBaseMSM {
             final List<FieldT> scalars) {
 
         final List<Tuple2<G1T, G2T>> res = new ArrayList<>(scalars.size());
-        System.out.println("doubleBatchMSM info:");
-        System.out.println("batchMSM size :" + scalars.size());
-        System.out.println("scalarSize len :" + scalarSize1 + " " + scalarSize2 );
-        System.out.println("windowSize len :" + windowSize1 + " " + windowSize2);
-        //TODO lianke here if batchMSM len is smaller than some threshold, we can do it on CPU. Here, batchMSM and multiplesOfBase size should be large(somehow equal to the number of constraints).
-        System.out.println("multiplesOfBase1 len : " + multiplesOfBase1.size() + " " + multiplesOfBase1.get(0).size());
-        System.out.println("multiplesOfBase2 len : " + multiplesOfBase2.size() + " " + multiplesOfBase2.get(0).size());
-        System.out.println("multiplesOfBase1 type : " + multiplesOfBase1.get(0).get(0).getClass().getName());
-        System.out.println("multiplesOfBase2 type : " + multiplesOfBase2.get(0).get(0).getClass().getName());
 
-        ArrayList<ArrayList<byte[]>> byteArray1 = new ArrayList<ArrayList<byte[]>>();
-        ArrayList<ArrayList<byte[]>> byteArray2 = new ArrayList<ArrayList<byte[]>>();
+        //TODO lianke uncomment these codes
+        // System.out.println("doubleBatchMSM info:");
+        // System.out.println("batchMSM size :" + scalars.size());
+        // System.out.println("scalarSize len :" + scalarSize1 + " " + scalarSize2 );
+        // System.out.println("windowSize len :" + windowSize1 + " " + windowSize2);
+        // //TODO lianke here if batchMSM len is smaller than some threshold, we can do it on CPU. Here, batchMSM and multiplesOfBase size should be large(somehow equal to the number of constraints).
+        // System.out.println("multiplesOfBase1 len : " + multiplesOfBase1.size() + " " + multiplesOfBase1.get(0).size());
+        // System.out.println("multiplesOfBase2 len : " + multiplesOfBase2.size() + " " + multiplesOfBase2.get(0).size());
+        // System.out.println("multiplesOfBase1 type : " + multiplesOfBase1.get(0).get(0).getClass().getName());
+        // System.out.println("multiplesOfBase2 type : " + multiplesOfBase2.get(0).get(0).getClass().getName());
 
-        int out_size1 = multiplesOfBase1.size();
-        int in_size1 = multiplesOfBase1.get(0).size();
-        int out_size2 = multiplesOfBase2.size();
-        int in_size2 = multiplesOfBase2.get(0).size();
-        //TODO lianke : parallelize it
-        for(int i =0; i < out_size1; i++){
-            ArrayList<byte[]> tmp = new ArrayList<byte[]>();
-            for(int j = 0; j< in_size1; j++){
-                tmp.add(multiplesOfBase1.get(i).get(j).toBigInteger().toByteArray());
-            }
-            byteArray1.add(tmp);
-        }
-        for(int i =0; i < out_size2; i++){
-            ArrayList<byte[]> tmp = new ArrayList<byte[]>();
-            for(int j = 0; j< in_size2; j++){
-                tmp.add(multiplesOfBase2.get(i).get(j).toBigInteger().toByteArray());
-            }
-            byteArray2.add(tmp);
-        }
+        // ArrayList<ArrayList<byte[]>> byteArray1 = new ArrayList<ArrayList<byte[]>>();
+        // ArrayList<ArrayList<byte[]>> byteArray2 = new ArrayList<ArrayList<byte[]>>();
 
-        final int outerc1 = (scalarSize1 + windowSize1 - 1) / windowSize1;
-        final int outerc2 = (scalarSize2 + windowSize2 - 1) / windowSize2;
+        // int out_size1 = multiplesOfBase1.size();
+        // int in_size1 = multiplesOfBase1.get(0).size();
+        // int out_size2 = multiplesOfBase2.size();
+        // int in_size2 = multiplesOfBase2.get(0).size();
+        // //TODO lianke : parallelize it
+        // for(int i =0; i < out_size1; i++){
+        //     ArrayList<byte[]> tmp = new ArrayList<byte[]>();
+        //     for(int j = 0; j< in_size1; j++){
+        //         tmp.add(multiplesOfBase1.get(i).get(j).toBigInteger().toByteArray());
+        //     }
+        //     byteArray1.add(tmp);
+        // }
+        // for(int i =0; i < out_size2; i++){
+        //     ArrayList<byte[]> tmp = new ArrayList<byte[]>();
+        //     for(int j = 0; j< in_size2; j++){
+        //         tmp.add(multiplesOfBase2.get(i).get(j).toBigInteger().toByteArray());
+        //     }
+        //     byteArray2.add(tmp);
+        // }
 
-        ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
-        for (FieldT scalar : scalars) {
-            bigScalars.add(scalar.toBigInteger().toByteArray());
-        }
+        // final int outerc1 = (scalarSize1 + windowSize1 - 1) / windowSize1;
+        // final int outerc2 = (scalarSize2 + windowSize2 - 1) / windowSize2;
 
-        doubleBatchMSMNativeHelper(outerc1, windowSize1, outerc2, windowSize2, byteArray1, byteArray2, bigScalars);
+        // ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
+        // for (FieldT scalar : scalars) {
+        //     bigScalars.add(scalar.toBigInteger().toByteArray());
+        // }
+
+        // doubleBatchMSMNativeHelper(outerc1, windowSize1, outerc2, windowSize2, byteArray1, byteArray2, bigScalars);
         //TODO collect the result from JNI. should be trivial, but brings some overhead.
 
-        // for (FieldT scalar : scalars) {
-        //     res.add(new Tuple2<>(
-        //             serialMSM(scalarSize1, windowSize1, multiplesOfBase1, scalar),
-        //             serialMSM(scalarSize2, windowSize2, multiplesOfBase2, scalar)));
-        // }
+
+        
+        for (FieldT scalar : scalars) {
+            res.add(new Tuple2<>(
+                    serialMSM(scalarSize1, windowSize1, multiplesOfBase1, scalar),
+                    serialMSM(scalarSize2, windowSize2, multiplesOfBase2, scalar)));
+        }
 
         return res;
     }

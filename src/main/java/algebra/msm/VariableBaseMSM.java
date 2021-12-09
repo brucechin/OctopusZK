@@ -15,21 +15,25 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.PriorityQueue;
-import javax.annotation.Nonnull;
 import org.apache.spark.api.java.JavaRDD;
 import scala.Tuple2;
 
 public class VariableBaseMSM {
 
     public static final BigInteger BOS_COSTER_MSM_THRESHOLD = new BigInteger("1048576");
-
+    
+    static {
+		System.loadLibrary("AlgebraMSMVariableBaseMSM");
+        System.out.println("AlgebraMSMVariableBaseMSM loaded");
+	}
+    
     /**
      * The algorithm starts by sorting the input in order of scalar size. For each iteration, it
      * computes the difference of the two largest scalars, and multiplies the accrued base by this
      * difference of exponents. This result is then summed and lastly returned.
      */
     public static <GroupT extends AbstractGroup<GroupT>> GroupT sortedMSM(
-            @Nonnull final List<Tuple2<BigInteger, GroupT>> input) {
+             final List<Tuple2<BigInteger, GroupT>> input) {
 
         GroupT result = input.get(0)._2.zero();
         GroupT base = input.get(0)._2.zero();
@@ -54,7 +58,7 @@ public class VariableBaseMSM {
      * BigInteger values must be positive.
      */
     public static <GroupT extends AbstractGroup<GroupT>> GroupT bosCosterMSM(
-            @Nonnull final List<Tuple2<BigInteger, GroupT>> input) {
+             final List<Tuple2<BigInteger, GroupT>> input) {
 
         final PriorityQueue<Tuple2<BigInteger, GroupT>> sortedScalarPairs =
                 new PriorityQueue<>(input.size(), (v1, v2) -> v2._1.compareTo(v1._1));
@@ -89,7 +93,7 @@ public class VariableBaseMSM {
     }
 
     public static <GroupT extends AbstractGroup<GroupT>> GroupT pippengerMSM(
-            @Nonnull final List<Tuple2<BigInteger, GroupT>> input, final int numBits) {
+             final List<Tuple2<BigInteger, GroupT>> input, final int numBits) {
 
         final int length = input.size();
         final int log2Length = Math.max(1, MathUtils.log2(length));
@@ -141,41 +145,65 @@ public class VariableBaseMSM {
         return result;
     }
 
+    public static native <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
+    T variableBaseSerialMSMNativeHelper(
+            final ArrayList<byte[]> bases,
+            final ArrayList<byte[]> scalars);
 
     public static <
             GroupT extends AbstractGroup<GroupT>,
             FieldT extends AbstractFieldElementExpanded<FieldT>>
     GroupT serialMSM(final List<FieldT> scalars, final List<GroupT> bases) {
-
+        System.out.println("variableBaseSerialMSM info:");
+        System.out.println("variableBaseSerialMSM base size :" + bases.size());
+        System.out.println("variableBaseSerialMSM scalars size :" + scalars.size());
         assert (bases.size() == scalars.size());
 
         final List<Tuple2<BigInteger, GroupT>> filteredInput = new ArrayList<>();
 
         GroupT acc = bases.get(0).zero();
 
-        int numBits = 0;
-        for (int i = 0; i < bases.size(); i++) {
-            final BigInteger scalar = scalars.get(i).toBigInteger();
-            if (scalar.equals(BigInteger.ZERO)) {
-                continue;
-            }
-
-            final GroupT base = bases.get(i);
-
-            if (scalar.equals(BigInteger.ONE)) {
-                acc = acc.add(base);
-            } else {
-                filteredInput.add(new Tuple2<>(scalar, base));
-                numBits = Math.max(numBits, scalar.bitLength());
-            }
+        ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
+        for (FieldT scalar : scalars) {
+            bigScalars.add(scalar.toBigInteger().toByteArray());
+        }
+        ArrayList<byte[]> basesArray = new ArrayList<byte[]>();
+        for (GroupT base : bases){
+            basesArray.add(base.toBigInteger().toByteArray());
         }
 
-        if (!filteredInput.isEmpty()) {
-            acc = acc.add(pippengerMSM(filteredInput, numBits));
-        }
+        variableBaseSerialMSMNativeHelper(basesArray, bigScalars);
+        
+        // int numBits = 0;
+        // for (int i = 0; i < bases.size(); i++) {
+        //     final BigInteger scalar = scalars.get(i).toBigInteger();
+        //     if (scalar.equals(BigInteger.ZERO)) {
+        //         continue;
+        //     }
+
+        //     final GroupT base = bases.get(i);
+
+        //     if (scalar.equals(BigInteger.ONE)) {
+        //         acc = acc.add(base);
+        //     } else {
+        //         filteredInput.add(new Tuple2<>(scalar, base));
+        //         numBits = Math.max(numBits, scalar.bitLength());
+        //     }
+        // }
+
+        // if (!filteredInput.isEmpty()) {
+        //     acc = acc.add(pippengerMSM(filteredInput, numBits));
+        // }
 
         return acc;
     }
+
+
+    public static native <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
+    T variableBaseDoubleMSMNativeHelper(
+            final ArrayList<byte[]> bases1,
+            final ArrayList<byte[]> bases2,
+            final ArrayList<byte[]> scalars);
 
     public static <
             T1 extends AbstractGroup<T1>,
@@ -193,25 +221,46 @@ public class VariableBaseMSM {
 
         T1 acc1 = bases.get(0)._1.zero();
         T2 acc2 = bases.get(0)._2.zero();
-
         int numBits = 0;
-        for (int i = 0; i < size; i++) {
-            final Tuple2<T1, T2> value = bases.get(i);
-            final BigInteger scalar = scalars.get(i).toBigInteger();
-            if (scalar.equals(BigInteger.ZERO)) {
-                continue;
-            }
 
-            // Mixed addition
-            if (scalar.equals(BigInteger.ONE)) {
-                acc1 = acc1.add(value._1);
-                acc2 = acc2.add(value._2);
-            } else {
-                converted1.add(new Tuple2<>(scalar, value._1));
-                converted2.add(new Tuple2<>(scalar, value._2));
-                numBits = Math.max(numBits, scalar.bitLength());
-            }
+        // for (int i = 0; i < size; i++) {
+        //     final Tuple2<T1, T2> value = bases.get(i);
+        //     final BigInteger scalar = scalars.get(i).toBigInteger();
+        //     if (scalar.equals(BigInteger.ZERO)) {
+        //         continue;
+        //     }
+
+        //     // Mixed addition
+        //     if (scalar.equals(BigInteger.ONE)) {
+        //         acc1 = acc1.add(value._1);
+        //         acc2 = acc2.add(value._2);
+        //     } else {
+        //         converted1.add(new Tuple2<>(scalar, value._1));
+        //         converted2.add(new Tuple2<>(scalar, value._2));
+        //         numBits = Math.max(numBits, scalar.bitLength());
+        //     }
+        // }
+
+
+        ///----------------------JNI code------------------------------//
+        System.out.println("variableBaseDoubleMSM info:");
+        System.out.println("variableBaseDoubleMSM base size :" + bases.size());
+        System.out.println("variableBaseDoubleMSM scalars size :" + scalars.size());
+        ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
+        for (FieldT scalar : scalars) {
+            bigScalars.add(scalar.toBigInteger().toByteArray());
         }
+        ArrayList<byte[]> basesArray1 = new ArrayList<byte[]>();
+        ArrayList<byte[]> basesArray2 = new ArrayList<byte[]>();
+
+        for (Tuple2<T1, T2> base : bases){
+            basesArray1.add(base._1.toBigInteger().toByteArray());
+            basesArray2.add(base._2.toBigInteger().toByteArray());
+
+        }
+        variableBaseDoubleMSMNativeHelper(basesArray1, basesArray2, bigScalars);
+        ///----------------------JNI code------------------------------//
+
 
         return new Tuple2<>(
                 converted1.isEmpty() ? acc1 : acc1.add(VariableBaseMSM.pippengerMSM(converted1, numBits)),
@@ -220,7 +269,7 @@ public class VariableBaseMSM {
 
     public static <T1 extends AbstractGroup<T1>, T2 extends AbstractGroup<T2>>
     Tuple2<T1, T2> doubleMSM(final List<Tuple2<BigInteger, Tuple2<T1, T2>>> input) {
-
+        System.out.println("doubleMSM with only one input parameter;" );
         final int size = input.size();
         assert (size > 0);
 

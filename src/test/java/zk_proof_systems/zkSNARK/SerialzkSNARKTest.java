@@ -92,8 +92,8 @@ public class SerialzkSNARKTest implements Serializable {
 
     @Test
     public void SerialFakeProofSystemTest() {
-        final int numInputs = 500;
-        final int numConstraints = 501;
+        final int numInputs = 50000;
+        final int numConstraints = 50001;
 
         FakeInitialize.init();
         final Fp fieldFactory = new FakeFqParameters().ONE();
@@ -109,8 +109,8 @@ public class SerialzkSNARKTest implements Serializable {
 
         final CRS<Fp, FakeG1, FakeG2, FakeGT> CRS = SerialSetup
                 .generate(r1cs, fieldFactory, fakeG1Factory, fakeG2Factory, fakePairing, config);
-        // final Proof<FakeG1, FakeG2> proof = SerialProver
-        //         .prove(CRS.provingKey(), primary, auxiliary, fieldFactory, config);
+        final Proof<FakeG1, FakeG2> proof = SerialProver
+                .prove(CRS.provingKey(), primary, auxiliary, fieldFactory, config);
         // final boolean isValid = Verifier
         //         .verify(CRS.verificationKey(), primary, proof, fakePairing, config);
 
