@@ -4,37 +4,10 @@
 #include<cstring>
 #include <bitset>
 #include <vector>
+#include <chrono>
 #include "algebra_msm_FixedBaseMSM.h"
 #include "BigInteger.h"
 
-
-// ScopedJavaLocalRef<jbyteArray> ToJavaByteArray(JNIEnv* env,
-//                                               const uint8_t* bytes,
-//                                               size_t len) {
-//   jbyteArray byte_array = env->NewByteArray(len);
-//   CheckException(env);
-//   DCHECK(byte_array);
-//   env->SetByteArrayRegion(byte_array, 0, len,
-//                           reinterpret_cast<const jbyte*>(bytes));
-//   CheckException(env);
-//   return ScopedJavaLocalRef<jbyteArray>(env, byte_array);
-// }
-
-// /**
-// * JNI method calling from JAVA 
-// */
-// JNIEXPORT jobjectArray JNICALL Java_com_test_Test_getStudentDetails( JNIEnv *env, jclass cls)
-// {
-//     jobjectArray jPosRecArray = env->NewObjectArray(searchRecordResult.size(), jniPosRec->cls, NULL);
- 
-//     for (size_t i = 0; i < searchRecordResult.size(); i++) {
-//         jobject jPosRec = env->NewObject(jniPosRec->cls, jniPosRec->constructortorID);
-//         FillStudentRecValuesToJni(env, jPosRec, searchRecordResult[i]);
-//         env->SetObjectArrayElement(jPosRecArray, i, jPosRec);
-//     }
- 
-//     return jPosRecArray;
-// }
 
 /*
  * Class:     algebra_msm_FixedBaseMSM
@@ -54,20 +27,36 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   jint inner_len = env->CallIntMethod(env->CallObjectMethod(multiplesOfBase, java_util_ArrayList_get, 0), java_util_ArrayList_size);
   
   jint batch_size = env->CallIntMethod(bigScalars, java_util_ArrayList_size);
-  cout << "cpp side batch size: " << batch_size << endl;
+  //cout << "cpp side batch size: " << batch_size << endl;
   // jclass biginteger = env->GetObjectClass(bigScalar);
 
+
+  auto start = std::chrono::steady_clock::now();
+
+  char* large_memory_bigScalarArray= (char*)malloc(batch_size * BigInt::capacity);
+  memset(large_memory_bigScalarArray, 0, batch_size * BigInt::capacity);
   vector<BigInt> bigScalarArray = vector<BigInt>(batch_size, BigInt());
-  for(int j = 0; j < batch_size; j++){
-      bigScalarArray[j] = BigInt();
+  for(int i = 0; i < batch_size; i++){
+      //bigScalarArray[i] = BigInt();
+      bigScalarArray[i].bytes = &large_memory_bigScalarArray[i * BigInt::capacity];
+      //cout << &bigScalarArray[i].bytes << endl;
   }
+
+
+  char* large_memory_multiplesOfBasePtrArray= (char*)malloc(out_len * inner_len  * BigInt::capacity);
+  memset(large_memory_multiplesOfBasePtrArray, 0, out_len * inner_len * BigInt::capacity);
   vector<vector<BigInt>> multiplesOfBasePtrArray = vector<vector<BigInt>>(out_len, vector<BigInt>(inner_len, BigInt()));
   for(int i = 0; i < out_len;i++){
     for(int j = 0; j < inner_len; j++){
-      multiplesOfBasePtrArray[i][j] = BigInt();
+      //multiplesOfBasePtrArray[i][j] = BigInt();
+      multiplesOfBasePtrArray[i][j].bytes = &large_memory_multiplesOfBasePtrArray[(i * inner_len + j) * BigInt::capacity];
     }
   }
+    auto end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end-start;
+    std::cout << "BigInt allocation elapsed time: " << elapsed_seconds.count() << "s\n";
 
+  start = std::chrono::steady_clock::now();
   for(int i =0; i < batch_size; i++){
       jbyteArray element = (jbyteArray)env->CallObjectMethod(bigScalars, java_util_ArrayList_get, i);
       char* bytes = (char*)env->GetByteArrayElements(element, NULL);
@@ -79,7 +68,6 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
       //bigScalarArray[i].print();
   }
 
-  cout <<"multiplesOfBase size " << out_len << " " <<inner_len <<endl;
 
   //TODO lianke parallelize it
   for(int i = 0; i < out_len;i++){
@@ -92,14 +80,18 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
       //multiplesOfBasePtrArray[i][j].print();
     }
   }
+    end = std::chrono::steady_clock::now();
+    elapsed_seconds = end-start;
+    std::cout << "Read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
 
+
+  start = std::chrono::steady_clock::now();
   jbyteArray resultByteArray = env->NewByteArray((jsize)BigInt::capacity * batch_size);
   for(int batch_index = 0; batch_index < batch_size; batch_index++){
-    BigInt res = multiplesOfBasePtrArray[0][0];
+    BigInt res = multiplesOfBasePtrArray[0][0];//TODO lianke this assignment has a problem. 
 
     for (int outer = 0; outer < outerc; ++outer) {
         int inner = 0;
-        //printf("2");
         for (int i = 0; i < windowSize; ++i) {
             if (bigScalarArray[batch_index].testBit(outer * windowSize + i)) { //Returns true if and only if the designated bit is set.
                 inner |= 1 << i;
@@ -108,11 +100,12 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
         //TODO lianke this inner for loop to update inner can be done better
         res = res + multiplesOfBasePtrArray[outer][inner];
     }    
-
+    //TODO lianke maybe we can set a whole byte array after finish all computation?
     env->SetByteArrayRegion(resultByteArray, batch_index * BigInt::capacity , BigInt::capacity,   reinterpret_cast<const jbyte*>(res.bytes));
-    //env->ReleaseByteArrayElements(resultByteArray, (jbyte*) res.bytes, batch_index * BigInt::capacity);
   }
-
+    end = std::chrono::steady_clock::now();
+    elapsed_seconds = end-start;
+    std::cout << "C++ Compute elapsed time: " << elapsed_seconds.count() << "s\n";
 
   return resultByteArray;
 }

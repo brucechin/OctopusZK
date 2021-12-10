@@ -18,6 +18,8 @@ public:
     BigInt();
     BigInt(string val);
     BigInt(int val);
+    //BigInt(const BigInt& val);
+
     //Direct assignment
     BigInt &operator=(const BigInt &);
  
@@ -70,16 +72,22 @@ BigInt::BigInt(){
     memset(bytes, 0, capacity);
 }
 
+
 BigInt::BigInt(string input){
     //TODO lianke
 }
 
 //TODO lianke implement modulus 
 
+
 BigInt::BigInt(int val){
     memcpy(bytes, &val, capacity - sizeof(int));
 }
 
+// BigInt::BigInt(const BigInt& val){
+//     bytes = new char[capacity];
+//     memcpy(bytes, &val.bytes, capacity);
+// }
 
 // BigInt::BigInt(char* s, int len){
 //     memcpy(bytes, s, BigInt::capacity);

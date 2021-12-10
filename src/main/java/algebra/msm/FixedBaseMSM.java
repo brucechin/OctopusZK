@@ -173,8 +173,8 @@ public class FixedBaseMSM {
             final List<List<T>> multiplesOfBase,
             final List<FieldT> scalars) {
         final List<T> res = new ArrayList<>(scalars.size());
-        System.out.println("scalarSize len :" + scalarSize);
-        System.out.println("windowSize len :" + windowSize);
+        //System.out.println("scalarSize len :" + scalarSize);
+        //System.out.println("windowSize len :" + windowSize);
 
         System.out.println("batchMSM len :" + scalars.size());
         //TODO lianke here if batchMSM len is smaller than some threshold, we can do it on CPU. Here, batchMSM and multiplesOfBase size should be large(somehow equal to the number of constraints).
@@ -184,6 +184,7 @@ public class FixedBaseMSM {
         ArrayList<ArrayList<byte[]>> byteArray = new ArrayList<ArrayList<byte[]>>();
         int out_size = multiplesOfBase.size();
         int in_size = multiplesOfBase.get(0).size();
+        long start = System.currentTimeMillis();
 
         for(int i =0; i < out_size; i++){
             ArrayList<byte[]> tmp = new ArrayList<byte[]>();
@@ -198,15 +199,23 @@ public class FixedBaseMSM {
         for (FieldT scalar : scalars) {
             bigScalars.add(scalar.toBigInteger().toByteArray());
         }
-
+        long finish = System.currentTimeMillis();
+        long timeElapsed = finish - start;
+        System.out.println("data transfer preparation time elapsed: " + timeElapsed + " ms");
         byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, byteArray, bigScalars);
 
 
-        for (FieldT scalar : scalars) {
-            res.add(serialMSM(scalarSize, windowSize, multiplesOfBase, scalar));
-        }
+        // for (FieldT scalar : scalars) {
+        //     res.add(serialMSM(scalarSize, windowSize, multiplesOfBase, scalar));
+        // }
         final List<T> jni_res = new ArrayList<>(scalars.size());
         //TODO move modulus to cpp side to accelerate more.
+
+
+
+        
+
+        start = System.currentTimeMillis();
 
         BigInteger modulus = new BigInteger("1532495540865888858358347027150309183618765510462668801");
         for(int i = 0; i < scalars.size(); i++){
@@ -216,15 +225,17 @@ public class FixedBaseMSM {
             T temp = multiplesOfBase.get(0).get(0).zero();
             temp.setBigInteger(output);
             jni_res.add(temp);
-            if(!res.get(i).toBigInteger().equals(temp.toBigInteger())){
-                System.out.println("error in FixedBaseMSM.batchMSM JNI computation");
-            }
+            // if(!res.get(i).toBigInteger().equals(temp.toBigInteger())){
+            //     System.out.println("error in FixedBaseMSM.batchMSM JNI computation");
+            // }
             // System.out.println(
             // "\n                 res:" + res.get(i).toBigInteger()+
             // "\n jni modulus output :" + temp.toBigInteger() + " " + res.get(i).toBigInteger().equals(temp.toBigInteger()) );
         }
 
-
+        finish = System.currentTimeMillis();
+        timeElapsed = finish - start;
+        System.out.println("data receive transformation time elapsed: " + timeElapsed + " ms");
         return res;
     }
 
