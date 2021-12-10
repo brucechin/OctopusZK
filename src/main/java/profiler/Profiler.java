@@ -210,6 +210,7 @@ public class Profiler {
                 final Configuration config = new Configuration();
                 serialApp(app, config, size);
             } else if (args.length == 5 || args.length == 6) {
+                //System.out.println("parameter received\n\n\n");
                 final int numExecutors = Integer.parseInt(args[0]);
                 final int numCores = Integer.parseInt(args[1]);
                 final int numMemory = Integer.parseInt(args[2].substring(0, args[2].length() - 1));

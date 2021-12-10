@@ -62,7 +62,7 @@ public class DistributedzkSNARKTest implements Serializable {
 
         sc = new JavaSparkContext(conf);
 
-        config = new Configuration(4, 4, 32, 8, sc, StorageLevel.MEMORY_ONLY());
+        config = new Configuration(8, 8, 64, 16, sc, StorageLevel.MEMORY_ONLY());
         config.setRuntimeFlag(false);
         config.setDebugFlag(false);
     }
@@ -113,8 +113,8 @@ public class DistributedzkSNARKTest implements Serializable {
 
     @Test
     public void DistributedFakeProofSystemTest() {
-        final int numInputs = 100023;
-        final int numConstraints = 100024;
+        final int numInputs = 1000023;
+        final int numConstraints = 1000024;
 
         FakeInitialize.init();
         final Fp fieldFactory = new FakeFqParameters().ONE();

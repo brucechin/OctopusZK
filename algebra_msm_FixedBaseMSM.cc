@@ -98,7 +98,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
             }
         }
         //TODO lianke this inner for loop to update inner can be done better
-        res = res + multiplesOfBasePtrArray[outer][inner];
+        //res = res + multiplesOfBasePtrArray[outer][inner];
     }    
     //TODO lianke maybe we can set a whole byte array after finish all computation?
     env->SetByteArrayRegion(resultByteArray, batch_index * BigInt::capacity , BigInt::capacity,   reinterpret_cast<const jbyte*>(res.bytes));

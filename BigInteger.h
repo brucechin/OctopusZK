@@ -8,18 +8,17 @@
 #define CHECK_BIT(var,pos) (((var)>>(pos)) & 1)
 
 using namespace std;
+//TODO we also need to implement BN254, not just for FakeG1 and FakeG2
 
 class BigInt{
 public:
-    char bytes[32]; //we should have 32 bytes
+    char* bytes; //we should have 32 bytes
     static const int capacity = 32;
     int len = 0; // number of bytes
     //TODO add modulus here
     BigInt();
     BigInt(string val);
     BigInt(int val);
-    //BigInt(const BigInt& val);
-
     //Direct assignment
     BigInt &operator=(const BigInt &);
  
@@ -69,9 +68,9 @@ public:
 const BigInt FqModulusParameter = BigInt("1532495540865888858358347027150309183618765510462668801");
 
 BigInt::BigInt(){
+    bytes = new char[32];
     memset(bytes, 0, capacity);
 }
-
 
 BigInt::BigInt(string input){
     //TODO lianke
@@ -79,15 +78,11 @@ BigInt::BigInt(string input){
 
 //TODO lianke implement modulus 
 
-
 BigInt::BigInt(int val){
+    bytes = new char[32];
     memcpy(bytes, &val, capacity - sizeof(int));
 }
 
-// BigInt::BigInt(const BigInt& val){
-//     bytes = new char[capacity];
-//     memcpy(bytes, &val.bytes, capacity);
-// }
 
 // BigInt::BigInt(char* s, int len){
 //     memcpy(bytes, s, BigInt::capacity);
