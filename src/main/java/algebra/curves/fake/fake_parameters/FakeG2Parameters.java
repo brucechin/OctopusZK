@@ -32,11 +32,11 @@ public class FakeG2Parameters extends AbstractFakeG2Parameters implements Serial
     }
 
     public FakeG2 ZERO() {
-        if (ZERO == null) {
-            ZERO = new FakeG2(BigInteger.ZERO, this);
-        }
+        // if (ZERO == null) {
+        //     ZERO = new FakeG2(BigInteger.ZERO, this);
+        // }
 
-        return ZERO;
+        return new FakeG2(BigInteger.ZERO, this);
     }
 
     public FakeG2 ONE() {

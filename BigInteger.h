@@ -11,13 +11,12 @@ using namespace std;
 
 class BigInt{
 public:
-    char* bytes; //we should have 32 bytes
+    char bytes[32]; //we should have 32 bytes
     static const int capacity = 32;
     int len = 0; // number of bytes
     //TODO add modulus here
     BigInt();
-
-    BigInt(char *, int len);
+    BigInt(string val);
     BigInt(int val);
     //Direct assignment
     BigInt &operator=(const BigInt &);
@@ -59,31 +58,35 @@ public:
     void print();
     void printAddress();
 
+    
     bool isZero();
     bool isOne();
     int bitLength();
     bool testBit(int index); //same with the java BigInteger testBit
 };
+const BigInt FqModulusParameter = BigInt("1532495540865888858358347027150309183618765510462668801");
 
 BigInt::BigInt(){
-    bytes = new char[capacity];
     memset(bytes, 0, capacity);
 }
 
+BigInt::BigInt(string input){
+    //TODO lianke
+}
+
+//TODO lianke implement modulus 
+
 BigInt::BigInt(int val){
-    bytes = new char[capacity];
     memcpy(bytes, &val, capacity - sizeof(int));
 }
 
 
-BigInt::BigInt(char *s, int len){
-    bytes = s;
-    len = len; 
-}
+// BigInt::BigInt(char* s, int len){
+//     memcpy(bytes, s, BigInt::capacity);
+//     len = len; 
+// }
 
-int BigInt::bitLength(){
 
-}
 
 bool BigInt::isZero(){
     //TODO lianke test its correctness
@@ -120,7 +123,7 @@ bool BigInt::testBit(int index){
 }
 
 BigInt &BigInt::operator=(const BigInt &a){
-    bytes = a.bytes;
+    memcpy(bytes, a.bytes, BigInt::capacity);
     return *this;
 }
 
@@ -136,6 +139,7 @@ BigInt operator+(BigInt &a,const BigInt& b){
     bool carry2 = false;
     char one = 1;
     char zero = 0;
+    int max_len = max(a.len, b.len);
     for(int i = BigInt::capacity - 1; i > 0; i--){
         tmp.bytes[i] = a.bytes[i] + b.bytes[i] + (carry1||carry2);
         carry1 = ((a.bytes[i] & mask) == mask) && ((b.bytes[i] & mask) == mask);

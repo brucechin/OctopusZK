@@ -135,151 +135,151 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseDoubleMSM
 
     jint scalars_size = env->CallIntMethod(scalars, java_util_ArrayList_size);
 
-    vector<BigInt> bigScalarArray = vector<BigInt>(scalars_size, BigInt());
-    for(int i =0; i < scalars_size; i++){
-        jbyteArray element = (jbyteArray)env->CallObjectMethod(scalars, java_util_ArrayList_get, i);
-        bigScalarArray[i].bytes = (char*)env->GetByteArrayElements(element, NULL);
-    }
+    // vector<BigInt> bigScalarArray = vector<BigInt>(scalars_size, BigInt());
+    // for(int i =0; i < scalars_size; i++){
+    //     jbyteArray element = (jbyteArray)env->CallObjectMethod(scalars, java_util_ArrayList_get, i);
+    //     bigScalarArray[i].bytes = (char*)env->GetByteArrayElements(element, NULL);
+    // }
 
-    vector<BigInt> baseArray1 = vector<BigInt>(base_size1, BigInt());
-    for(int i =0; i < base_size1; i++){
-        jbyteArray element = (jbyteArray)env->CallObjectMethod(base1, java_util_ArrayList_get, i);
-        baseArray1[i].bytes = (char*)env->GetByteArrayElements(element, NULL);
-    }
+    // vector<BigInt> baseArray1 = vector<BigInt>(base_size1, BigInt());
+    // for(int i =0; i < base_size1; i++){
+    //     jbyteArray element = (jbyteArray)env->CallObjectMethod(base1, java_util_ArrayList_get, i);
+    //     baseArray1[i].bytes = (char*)env->GetByteArrayElements(element, NULL);
+    // }
 
-    vector<BigInt> baseArray2 = vector<BigInt>(base_size2, BigInt());
-    for(int i =0; i < base_size2; i++){
-        jbyteArray element = (jbyteArray)env->CallObjectMethod(base2, java_util_ArrayList_get, i);
-        baseArray2[i].bytes = (char*)env->GetByteArrayElements(element, NULL);
-    }
+    // vector<BigInt> baseArray2 = vector<BigInt>(base_size2, BigInt());
+    // for(int i =0; i < base_size2; i++){
+    //     jbyteArray element = (jbyteArray)env->CallObjectMethod(base2, java_util_ArrayList_get, i);
+    //     baseArray2[i].bytes = (char*)env->GetByteArrayElements(element, NULL);
+    // }
 
-    BigInt acc1;//should be init to zero.
-    BigInt acc2;//should be init to zero.
+    // BigInt acc1;//should be init to zero.
+    // BigInt acc2;//should be init to zero.
 
-    vector<tuple<BigInt, BigInt>> filteredInput1;
-    vector<tuple<BigInt, BigInt>> filteredInput2;
+    // vector<tuple<BigInt, BigInt>> filteredInput1;
+    // vector<tuple<BigInt, BigInt>> filteredInput2;
 
-    int numBits = 0;
-    for(int i = 0; i < base_size1; i++){
-      BigInt scalar = bigScalarArray[i];
-      if(scalar.isZero()){
-        continue;
-      }
+    // int numBits = 0;
+    // for(int i = 0; i < base_size1; i++){
+    //   BigInt scalar = bigScalarArray[i];
+    //   if(scalar.isZero()){
+    //     continue;
+    //   }
 
-      BigInt base = baseArray1[i];//TODO lianke this base does not contain modulus yet.
-      if(scalar.isOne()){
-        acc1 = acc1 + base;
-      }else{
-        filteredInput1.push_back(make_tuple(scalar, base));
-        numBits = max(numBits, scalar.len);
-      }
-    }
+    //   BigInt base = baseArray1[i];//TODO lianke this base does not contain modulus yet.
+    //   if(scalar.isOne()){
+    //     acc1 = acc1 + base;
+    //   }else{
+    //     filteredInput1.push_back(make_tuple(scalar, base));
+    //     numBits = max(numBits, scalar.len);
+    //   }
+    // }
 
-    for(int i = 0; i < base_size2; i++){
-      BigInt scalar = bigScalarArray[i];
-      if(scalar.isZero()){
-        continue;
-      }
+    // for(int i = 0; i < base_size2; i++){
+    //   BigInt scalar = bigScalarArray[i];
+    //   if(scalar.isZero()){
+    //     continue;
+    //   }
 
-      BigInt base = baseArray2[i];//TODO lianke this base does not contain modulus yet.
-      if(scalar.isOne()){
-        acc2 = acc2 + base;
-      }else{
-        filteredInput2.push_back(make_tuple(scalar, base));
-        numBits = max(numBits, scalar.len);
-      }
-    }
+    //   BigInt base = baseArray2[i];//TODO lianke this base does not contain modulus yet.
+    //   if(scalar.isOne()){
+    //     acc2 = acc2 + base;
+    //   }else{
+    //     filteredInput2.push_back(make_tuple(scalar, base));
+    //     numBits = max(numBits, scalar.len);
+    //   }
+    // }
 
-    if(!filteredInput1.empty()){
-      int length = filteredInput1.size();
-      int log2Length =  max(1, (int)log2(length));
-      int c = log2Length - (log2Length / 3);
-      int numBuckets = 1 << c;
-      int numGroups = (numBits + c - 1)/c;
-      BigInt zero; //TODO lianke modulus should be std::get<1>(filteredInput[0]) they are fakeG1 or fakeG2.
-      vector<BigInt> bucketsModel = vector<BigInt>(numBuckets, zero);
-      BigInt result = zero;
-      for(int k = numGroups - 1; k >=0; k--){
-        if (k < numGroups - 1) {
-            for (int i = 0; i < c; i++) {
-                result = result + result;
-            }
+    // if(!filteredInput1.empty()){
+    //   int length = filteredInput1.size();
+    //   int log2Length =  max(1, (int)log2(length));
+    //   int c = log2Length - (log2Length / 3);
+    //   int numBuckets = 1 << c;
+    //   int numGroups = (numBits + c - 1)/c;
+    //   BigInt zero; //TODO lianke modulus should be std::get<1>(filteredInput[0]) they are fakeG1 or fakeG2.
+    //   vector<BigInt> bucketsModel = vector<BigInt>(numBuckets, zero);
+    //   BigInt result = zero;
+    //   for(int k = numGroups - 1; k >=0; k--){
+    //     if (k < numGroups - 1) {
+    //         for (int i = 0; i < c; i++) {
+    //             result = result + result;
+    //         }
 
-            vector<BigInt> buckets = vector<BigInt>(bucketsModel);
+    //         vector<BigInt> buckets = vector<BigInt>(bucketsModel);
 
-            for (int i = 0; i < length; i++) {
-                  int id = 0;
-                  for (int j = 0; j < c; j++) {
-                      if (std::get<1>(filteredInput1[i]).testBit(k * c + j)) {
-                          id |= 1 << j;
-                      }
-                  }
+    //         for (int i = 0; i < length; i++) {
+    //               int id = 0;
+    //               for (int j = 0; j < c; j++) {
+    //                   if (std::get<1>(filteredInput1[i]).testBit(k * c + j)) {
+    //                       id |= 1 << j;
+    //                   }
+    //               }
 
-                  if (id == 0) {
-                      continue;
-                  }
+    //               if (id == 0) {
+    //                   continue;
+    //               }
 
-                  // Potentially use mixed addition here.
-                  buckets[id] = buckets[id] + std::get<1>(filteredInput1[i]);
-            }
+    //               // Potentially use mixed addition here.
+    //               buckets[id] = buckets[id] + std::get<1>(filteredInput1[i]);
+    //         }
 
-            BigInt runningSum = zero;
-            for(int i = numBuckets - 1; i > 0; i--){
-              runningSum = runningSum + buckets[i];
-              result = result + runningSum;
-            }
+    //         BigInt runningSum = zero;
+    //         for(int i = numBuckets - 1; i > 0; i--){
+    //           runningSum = runningSum + buckets[i];
+    //           result = result + runningSum;
+    //         }
 
-        }
-      }
+    //     }
+    //   }
 
-      acc1 = acc1 + result;
-    }
+    //   acc1 = acc1 + result;
+    // }
     
   
-    if(!filteredInput2.empty()){
-      int length = filteredInput2.size();
-      int log2Length =  max(1, (int)log2(length));
-      int c = log2Length - (log2Length / 3);
-      int numBuckets = 1 << c;
-      int numGroups = (numBits + c - 1)/c;
-      BigInt zero; //TODO lianke modulus should be std::get<1>(filteredInput[0]) they are fakeG1 or fakeG2.
-      vector<BigInt> bucketsModel = vector<BigInt>(numBuckets, zero);
-      BigInt result = zero;
-      for(int k = numGroups - 1; k >=0; k--){
-        if (k < numGroups - 1) {
-            for (int i = 0; i < c; i++) {
-                result = result + result;
-            }
+    // if(!filteredInput2.empty()){
+    //   int length = filteredInput2.size();
+    //   int log2Length =  max(1, (int)log2(length));
+    //   int c = log2Length - (log2Length / 3);
+    //   int numBuckets = 1 << c;
+    //   int numGroups = (numBits + c - 1)/c;
+    //   BigInt zero; //TODO lianke modulus should be std::get<1>(filteredInput[0]) they are fakeG1 or fakeG2.
+    //   vector<BigInt> bucketsModel = vector<BigInt>(numBuckets, zero);
+    //   BigInt result = zero;
+    //   for(int k = numGroups - 1; k >=0; k--){
+    //     if (k < numGroups - 1) {
+    //         for (int i = 0; i < c; i++) {
+    //             result = result + result;
+    //         }
 
-            vector<BigInt> buckets = vector<BigInt>(bucketsModel);
+    //         vector<BigInt> buckets = vector<BigInt>(bucketsModel);
 
-            for (int i = 0; i < length; i++) {
-                  int id = 0;
-                  for (int j = 0; j < c; j++) {
-                      if (std::get<1>(filteredInput2[i]).testBit(k * c + j)) {
-                          id |= 1 << j;
-                      }
-                  }
+    //         for (int i = 0; i < length; i++) {
+    //               int id = 0;
+    //               for (int j = 0; j < c; j++) {
+    //                   if (std::get<1>(filteredInput2[i]).testBit(k * c + j)) {
+    //                       id |= 1 << j;
+    //                   }
+    //               }
 
-                  if (id == 0) {
-                      continue;
-                  }
+    //               if (id == 0) {
+    //                   continue;
+    //               }
 
-                  // Potentially use mixed addition here.
-                  buckets[id] = buckets[id] + std::get<1>(filteredInput2[i]);
-            }
+    //               // Potentially use mixed addition here.
+    //               buckets[id] = buckets[id] + std::get<1>(filteredInput2[i]);
+    //         }
 
-            BigInt runningSum = zero;
-            for(int i = numBuckets - 1; i > 0; i--){
-              runningSum = runningSum + buckets[i];
-              result = result + runningSum;
-            }
+    //         BigInt runningSum = zero;
+    //         for(int i = numBuckets - 1; i > 0; i--){
+    //           runningSum = runningSum + buckets[i];
+    //           result = result + runningSum;
+    //         }
 
-        }
-      }
+    //     }
+    //   }
 
-      acc2 = acc2 + result;
-    }
+    //   acc2 = acc2 + result;
+    // }
 
     //TODO return acc1 and acc2
 
