@@ -243,26 +243,6 @@ public class VariableBaseMSM {
         }
 
 
-        ///----------------------JNI code------------------------------//
-        System.out.println("variableBaseDoubleMSM info:");
-        System.out.println("variableBaseDoubleMSM base size :" + bases.size());
-        System.out.println("variableBaseDoubleMSM scalars size :" + scalars.size());
-        ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
-        for (FieldT scalar : scalars) {
-            bigScalars.add(scalar.toBigInteger().toByteArray());
-        }
-        ArrayList<byte[]> basesArray1 = new ArrayList<byte[]>();
-        ArrayList<byte[]> basesArray2 = new ArrayList<byte[]>();
-
-        for (Tuple2<T1, T2> base : bases){
-            basesArray1.add(base._1.toBigInteger().toByteArray());
-            basesArray2.add(base._2.toBigInteger().toByteArray());
-
-        }
-        variableBaseDoubleMSMNativeHelper(basesArray1, basesArray2, bigScalars);
-        ///----------------------JNI code------------------------------//
-
-
         return new Tuple2<>(
                 converted1.isEmpty() ? acc1 : acc1.add(VariableBaseMSM.pippengerMSM(converted1, numBits)),
                 converted2.isEmpty() ? acc2 : acc2.add(VariableBaseMSM.pippengerMSM(converted2, numBits)));

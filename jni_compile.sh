@@ -1,6 +1,7 @@
 JAVA_HOME='/usr/lib/jvm/java-8-openjdk-amd64'
 
 sudo rm lib*.so
+
 g++ -o3 -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -shared -fPIC  algebra_msm_FixedBaseMSM.cc -o libAlgebraMSMFixedBaseMSM.so 
 g++ -o3 -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -shared -fPIC  algebra_msm_VariableBaseMSM.cc -o libAlgebraMSMVariableBaseMSM.so 
 sudo cp lib*.so /usr/lib/
