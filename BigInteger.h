@@ -19,6 +19,8 @@ public:
 
     BigInt(char *, int len);
     BigInt(int val);
+    //BigInt(const BigInt& val);
+
     //Direct assignment
     BigInt &operator=(const BigInt &);
  
@@ -70,11 +72,16 @@ BigInt::BigInt(){
     memset(bytes, 0, capacity);
 }
 
+
 BigInt::BigInt(int val){
     bytes = new char[capacity];
     memcpy(bytes, &val, capacity - sizeof(int));
 }
 
+// BigInt::BigInt(const BigInt& val){
+//     bytes = new char[capacity];
+//     memcpy(bytes, &val.bytes, capacity);
+// }
 
 BigInt::BigInt(char *s, int len){
     bytes = s;
