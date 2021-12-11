@@ -18,7 +18,10 @@ public:
     //TODO add modulus here
     BigInt();
     BigInt(string val);
-    BigInt(int val);
+    BigInt(unsigned int val);
+    BigInt(unsigned long long val);
+    BigInt(BigInt val);
+    
     //Direct assignment
     BigInt &operator=(const BigInt &);
  
@@ -68,9 +71,10 @@ public:
 const BigInt FqModulusParameter = BigInt("1532495540865888858358347027150309183618765510462668801");
 
 BigInt::BigInt(){
-    bytes = new char[32];
+    bytes = new char[BigInt::capacity];
     memset(bytes, 0, capacity);
 }
+
 
 BigInt::BigInt(string input){
     //TODO lianke
@@ -78,11 +82,15 @@ BigInt::BigInt(string input){
 
 //TODO lianke implement modulus 
 
-BigInt::BigInt(int val){
-    bytes = new char[32];
-    memcpy(bytes, &val, capacity - sizeof(int));
+BigInt::BigInt(unsigned int val){
+    bytes = new char[BigInt::capacity];
+    memcpy(bytes, &val, capacity - sizeof(unsigned int));
 }
 
+BigInt::BigInt(unsigned long long val){
+    bytes = new char[BigInt::capacity];
+    memcpy(bytes, &val, capacity - sizeof(unsigned long long ));
+}
 
 // BigInt::BigInt(char* s, int len){
 //     memcpy(bytes, s, BigInt::capacity);
@@ -135,6 +143,28 @@ bool operator==(const BigInt &a, const BigInt &b){
 }
 
 BigInt operator+(BigInt &a,const BigInt& b){
+
+    BigInt tmp;
+    char mask = 1 << 7;
+    bool carry1 = false;
+    bool carry2 = false;
+    char one = 1;
+    char zero = 0;
+    int max_len = max(a.len, b.len);
+    for(int i = BigInt::capacity - 1; i > 0; i--){
+        tmp.bytes[i] = a.bytes[i] + b.bytes[i] + (carry1||carry2);
+        carry1 = ((a.bytes[i] & mask) == mask) && ((b.bytes[i] & mask) == mask);
+        carry2 = (((a.bytes[i] & mask) == mask) || ((b.bytes[i] & mask) == mask)) && ((tmp.bytes[i] & mask) !=mask);
+
+        // printf("\n\n  a : %hhx", a.bytes[i]);
+        // printf("   b : %hhx", b.bytes[i]);
+        // printf("   output : %hhx carry1 %d, carry2 %d \n\n", tmp.bytes[i], carry1, carry2);
+
+    }
+    return tmp;
+}
+
+BigInt operator*(BigInt &a,const BigInt& b){
 
     BigInt tmp;
     char mask = 1 << 7;
