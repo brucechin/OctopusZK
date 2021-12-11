@@ -32,7 +32,7 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerialMSM
     for(int i =0; i < scalars_size; i++){
         jbyteArray element = (jbyteArray)env->CallObjectMethod(scalars, java_util_ArrayList_get, i);
         bigScalarArray[i].len = env->GetArrayLength(element);
-        memcpy(bigScalarArray[i].bytes + BigInt::capacity - bigScalarArray[i].len, (char*)env->GetByteArrayElements(element, NULL), bigScalarArray[i].len);
+        memcpy(bigScalarArray[i].bytes + BigInt::num_of_bytes - bigScalarArray[i].len, (char*)env->GetByteArrayElements(element, NULL), bigScalarArray[i].len);
         //bigScalarArray[i].print();
     }
 
@@ -40,7 +40,7 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerialMSM
     for(int i =0; i < base_size; i++){
         jbyteArray element = (jbyteArray)env->CallObjectMethod(bases, java_util_ArrayList_get, i);
         baseArray[i].len = env->GetArrayLength(element);
-        memcpy(baseArray[i].bytes + BigInt::capacity - baseArray[i].len, (char*)env->GetByteArrayElements(element, NULL), baseArray[i].len);
+        memcpy(baseArray[i].bytes + BigInt::num_of_bytes - baseArray[i].len, (char*)env->GetByteArrayElements(element, NULL), baseArray[i].len);
         //baseArray[i].print();
     }
 

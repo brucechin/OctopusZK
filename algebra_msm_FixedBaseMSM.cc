@@ -35,7 +35,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
 
   auto start = std::chrono::steady_clock::now();
 
-  char* large_memory_bigScalarArray= (char*)malloc(batch_size * BigInt::capacity);
+  uint32_t* large_memory_bigScalarArray= (char*)malloc(batch_size * BigInt::capacity);
   memset(large_memory_bigScalarArray, 0, batch_size * BigInt::capacity);
   vector<BigInt> bigScalarArray = vector<BigInt>(batch_size, BigInt());
   for(int i = 0; i < batch_size; i++){
@@ -45,7 +45,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   }
 
 
-  char* large_memory_multiplesOfBasePtrArray= (char*)malloc(out_len * inner_len  * BigInt::capacity);
+  uint32_t* large_memory_multiplesOfBasePtrArray= (char*)malloc(out_len * inner_len  * BigInt::capacity);
   memset(large_memory_multiplesOfBasePtrArray, 0, out_len * inner_len * BigInt::capacity);
   vector<vector<BigInt>> multiplesOfBasePtrArray = vector<vector<BigInt>>(out_len, vector<BigInt>(inner_len, BigInt()));
   for(int i = 0; i < out_len;i++){
@@ -64,7 +64,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
       char* bytes = (char*)env->GetByteArrayElements(element, NULL);
       bigScalarArray[i].len = env->GetArrayLength(element);
 
-      memcpy(bigScalarArray[i].bytes + BigInt::capacity - bigScalarArray[i].len, 
+      memcpy(bigScalarArray[i].bytes + BigInt::num_of_bytes - bigScalarArray[i].len, 
                                 bytes,
                                 bigScalarArray[i].len);
       //bigScalarArray[i].print();
@@ -77,7 +77,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
       jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
       char* bytes = (char*)env->GetByteArrayElements(element, NULL);
       multiplesOfBasePtrArray[i][j].len = env->GetArrayLength(element);
-      memcpy(multiplesOfBasePtrArray[i][j].bytes + BigInt::capacity - multiplesOfBasePtrArray[i][j].len, bytes,  multiplesOfBasePtrArray[i][j].len);
+      memcpy(multiplesOfBasePtrArray[i][j].bytes + BigInt::num_of_bytes - multiplesOfBasePtrArray[i][j].len, bytes,  multiplesOfBasePtrArray[i][j].len);
       //cout << i << " " <<j  << " bytes len:" <<multiplesOfBasePtrArray[i][j].len <<endl;
       //multiplesOfBasePtrArray[i][j].print();
     }
@@ -88,7 +88,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
 
 
   start = std::chrono::steady_clock::now();
-  jbyteArray resultByteArray = env->NewByteArray((jsize)BigInt::capacity * batch_size);
+  jbyteArray resultByteArray = env->NewByteArray((jsize)BigInt::num_of_bytes * batch_size);
   for(int batch_index = 0; batch_index < batch_size; batch_index++){
     BigInt res = multiplesOfBasePtrArray[0][0];//TODO lianke this assignment has a problem. 
 
@@ -103,7 +103,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
         res = res + multiplesOfBasePtrArray[outer][inner];
     }    
     //TODO lianke maybe we can set a whole byte array after finish all computation?
-    env->SetByteArrayRegion(resultByteArray, batch_index * BigInt::capacity , BigInt::capacity,   reinterpret_cast<const jbyte*>(res.bytes));
+    env->SetByteArrayRegion(resultByteArray, batch_index * BigInt::num_of_bytes , BigInt::num_of_bytes,   reinterpret_cast<const jbyte*>(res.bytes));
   }
     end = std::chrono::steady_clock::now();
     elapsed_seconds = end-start;
@@ -139,7 +139,7 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeHelp
   for(int i =0; i < batch_size; i++){
       jbyteArray element = (jbyteArray)env->CallObjectMethod(bigScalars, java_util_ArrayList_get, i);
       bigScalarArray[i].len = env->GetArrayLength(element);
-      memcpy(bigScalarArray[i].bytes + BigInt::capacity - bigScalarArray[i].len, (char*)env->GetByteArrayElements(element, NULL), bigScalarArray[i].len);
+      memcpy(bigScalarArray[i].bytes + BigInt::num_of_bytes - bigScalarArray[i].len, (char*)env->GetByteArrayElements(element, NULL), bigScalarArray[i].len);
   }
 
   //jobject first_element = env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase1, java_util_ArrayList_get, 0), java_util_ArrayList_get, 0);
@@ -156,7 +156,7 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeHelp
       jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase1, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
       char* bytes = (char*)env->GetByteArrayElements(element, NULL);
       multiplesOfBasePtrArray1[i][j].len = env->GetArrayLength(element);
-      memcpy(multiplesOfBasePtrArray1[i][j].bytes + BigInt::capacity - multiplesOfBasePtrArray1[i][j].len, bytes,  multiplesOfBasePtrArray1[i][j].len);
+      memcpy(multiplesOfBasePtrArray1[i][j].bytes + BigInt::num_of_bytes - multiplesOfBasePtrArray1[i][j].len, bytes,  multiplesOfBasePtrArray1[i][j].len);
     }
   }
 
@@ -165,7 +165,7 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeHelp
       jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase2, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
       char* bytes = (char*)env->GetByteArrayElements(element, NULL);
       multiplesOfBasePtrArray2[i][j].len = env->GetArrayLength(element);
-      memcpy(multiplesOfBasePtrArray2[i][j].bytes + BigInt::capacity - multiplesOfBasePtrArray2[i][j].len, bytes,  multiplesOfBasePtrArray2[i][j].len);
+      memcpy(multiplesOfBasePtrArray2[i][j].bytes + BigInt::num_of_bytes - multiplesOfBasePtrArray2[i][j].len, bytes,  multiplesOfBasePtrArray2[i][j].len);
     }
   }
 
