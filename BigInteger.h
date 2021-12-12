@@ -1,3 +1,5 @@
+
+
 #include<iostream>
 #include<stdexcept>
 #include<unistd.h>
@@ -9,6 +11,159 @@
 
 using namespace std;
 //TODO we also need to implement BN254, not just for FakeG1 and FakeG2
+
+// class BigInt{
+// public:
+//     char bytes[32]; //we should have 32 bytes
+//     static const int capacity = 32;
+//     static const int num_of_bytes = 32;
+
+//     int len = 0; // number of bytes
+//     //TODO add modulus here
+//     BigInt();
+//     BigInt(string val);
+//     BigInt(int val);
+//     //Direct assignment
+//     BigInt &operator=(const BigInt &);
+ 
+//     //Post/Pre - Incrementation
+//     BigInt &operator++();
+//     BigInt operator++(int temp);
+//     BigInt &operator--();
+//     BigInt operator--(int temp);
+ 
+//     //Addition and Subtraction
+//     friend BigInt &operator+=(BigInt &, const BigInt &);
+//     friend BigInt operator+(const BigInt &, const BigInt &);
+//     friend BigInt operator-(const BigInt &, const BigInt &);
+//     friend BigInt &operator-=(BigInt &, const BigInt &);
+ 
+//     //Comparison operators
+//     friend bool operator==(const BigInt &, const BigInt &);
+//     friend bool operator!=(const BigInt &, const BigInt &);
+ 
+//     friend bool operator>(const BigInt &, const BigInt &);
+//     friend bool operator>=(const BigInt &, const BigInt &);
+//     friend bool operator<(const BigInt &, const BigInt &);
+//     friend bool operator<=(const BigInt &, const BigInt &);
+
+//     //Multiplication and Division
+//     friend BigInt &operator*=(BigInt &, const BigInt &);
+//     friend BigInt operator*(const BigInt &, const BigInt &);
+
+//     //Modulo
+//     friend BigInt operator%(const BigInt &, const BigInt &);
+//     friend BigInt &operator%=(BigInt &, const BigInt &);
+
+//     //Power Function
+//     friend BigInt &operator^=(BigInt &,const BigInt &);
+//     friend BigInt operator^(BigInt &, const BigInt &);
+
+//     //Read and Write
+//     void print();
+//     void printAddress();
+
+    
+//     bool isZero();
+//     bool isOne();
+//     int bitLength();
+//     bool testBit(int index); //same with the java BigInteger testBit
+// };
+// const BigInt FqModulusParameter = BigInt("1532495540865888858358347027150309183618765510462668801");
+
+// BigInt::BigInt(){
+//     memset(bytes, 0, capacity);
+// }
+
+// BigInt::BigInt(string input){
+//     //TODO lianke
+// }
+
+// //TODO lianke implement modulus 
+
+// BigInt::BigInt(int val){
+//     memcpy(bytes, &val, capacity - sizeof(int));
+// }
+
+
+// // BigInt::BigInt(char* s, int len){
+// //     memcpy(bytes, s, BigInt::capacity);
+// //     len = len; 
+// // }
+
+
+
+// bool BigInt::isZero(){
+//     //TODO lianke test its correctness
+//     char testblock[BigInt::capacity];
+//     memset(testblock, 0, sizeof(testblock));
+//     return memcmp(testblock, bytes, BigInt::capacity) == 0;
+// }
+
+// bool BigInt::isOne(){
+//     //TODO lianke test its correctness
+//     BigInt one(1);
+//     return *this == one;
+// }
+
+
+// void BigInt::print(){
+//     for (int i = 0; i < capacity; i++){
+//         printf("%hhx |", bytes[i]);
+//     }
+//     printf("\n");
+//     return ;
+// }
+
+// void BigInt::printAddress(){
+//     printf("0%x\n", bytes);
+//     return ;
+// }
+
+// bool BigInt::testBit(int index){
+//     int byte_index = 31 - index / 8; //TODO check its correctness
+//     int byte_offset = index % 8;
+//     //printf("%hhx %hhx ", bytes[byte_index], byte_offset);
+//     return CHECK_BIT(bytes[byte_index], byte_offset);
+// }
+
+// BigInt &BigInt::operator=(const BigInt &a){
+//     memcpy(bytes, a.bytes, BigInt::capacity);
+//     return *this;
+// }
+
+// bool operator==(const BigInt &a, const BigInt &b){
+//     return memcmp(a.bytes, b.bytes, BigInt::capacity) == 0;
+// }
+
+// BigInt operator+(BigInt &a,const BigInt& b){
+
+//     BigInt tmp;
+//     char mask = 1 << 7;
+//     bool carry1 = false;
+//     bool carry2 = false;
+//     char one = 1;
+//     char zero = 0;
+//     int max_len = max(a.len, b.len);
+//     for(int i = BigInt::capacity - 1; i > 0; i--){
+//         tmp.bytes[i] = a.bytes[i] + b.bytes[i] + (carry1||carry2);
+//         carry1 = ((a.bytes[i] & mask) == mask) && ((b.bytes[i] & mask) == mask);
+//         carry2 = (((a.bytes[i] & mask) == mask) || ((b.bytes[i] & mask) == mask)) && ((tmp.bytes[i] & mask) !=mask);
+
+//         // printf("\n\n  a : %hhx", a.bytes[i]);
+//         // printf("   b : %hhx", b.bytes[i]);
+//         // printf("   output : %hhx carry1 %d, carry2 %d \n\n", tmp.bytes[i], carry1, carry2);
+
+//     }
+//     return tmp;
+// }
+
+//TODO lianke implement several other functions
+
+
+
+
+// //TODO we also need to implement BN254, not just for FakeG1 and FakeG2
 
 int digitsPerInt[] = {0, 0, 30, 19, 15, 13, 11,
         11, 10, 9, 9, 8, 8, 8, 8, 7, 7, 7, 7, 7, 7, 7, 6, 6, 6, 6,
@@ -26,17 +181,23 @@ int intRadix[] = {0, 0,
 
 class BigInt{
 public:
-    uint32_t* bytes; //we should have 32 bytes
-    static const int capacity = 8;
-    static const int num_of_bytes = 32;
+    char bytes[64]; //we should have 64 bytes
+    static const int capacity = 64;
+    static const int num_of_bytes = 64;
+    static const int bits_per_word = 8;
+
+    static const long LONG_MASK = 0xffffffffL;
 
     int len = 0; // number of bytes
     //TODO add modulus here
     BigInt();
     BigInt(string val);
-    BigInt(unsigned int val);
+    BigInt(string val, int radix);
+    BigInt(uint32_t val);
+    BigInt(int val);
+
     BigInt(unsigned long long val);
-    BigInt(BigInt val);
+    //BigInt(const BigInt& val);
     
     //Direct assignment
     BigInt &operator=(const BigInt &);
@@ -75,32 +236,37 @@ public:
     friend BigInt operator^(BigInt &, const BigInt &);
 
     //Read and Write
-    void print();
+    void printBinary();
+    void printDigits();
     void printAddress();
-
+    void printHex();
     
     bool isZero();
     bool isOne();
     int bitLength();
     bool testBit(int index); //same with the java BigInteger testBit
+    BigInt mod(BigInt modulus);
 };
-const BigInt FqModulusParameter = BigInt("1532495540865888858358347027150309183618765510462668801");
+
+//const BigInt FqModulusParameter = BigInt("1532495540865888858358347027150309183618765510462668801");
 
 BigInt::BigInt(){
-    bytes = new uint32_t[BigInt::capacity];
     memset(bytes, 0, num_of_bytes);
 }
 
 
 //TODO lianke implement modulus 
 
-BigInt::BigInt(unsigned int val){
-    bytes = new uint32_t[BigInt::capacity];
-    memcpy(bytes, &val, num_of_bytes - sizeof(unsigned int));
+BigInt::BigInt(uint32_t val){
+    memcpy(bytes, &val, num_of_bytes - sizeof(uint32_t));
+}
+
+BigInt::BigInt(int val)
+{
+    memcpy(bytes, &val, num_of_bytes - sizeof(int));
 }
 
 BigInt::BigInt(unsigned long long val){
-    bytes = new uint32_t[BigInt::capacity];
     memcpy(bytes, &val, num_of_bytes - sizeof(unsigned long long ));
 }
 
@@ -120,13 +286,26 @@ bool BigInt::isOne(){
 }
 
 
-void BigInt::print(){
+void BigInt::printBinary(){
     for (int i = 0; i < capacity; i++){
-        std::bitset<32> tmp(bytes[i]);
-        cout << tmp << "|";
+        std::bitset<8> tmp(bytes[i]);
+        cout << tmp;
     }
     printf("\n");
     return ;
+}
+
+void BigInt::printHex(){
+    for (int i = 0; i < capacity; i++){
+        printf("%x", bytes[i] & 0xff);
+
+    }
+    printf("\n");
+    return ;
+}
+
+
+BigInt::BigInt(string val) : BigInt(val, 10){
 }
 
 void BigInt::printAddress(){
@@ -136,11 +315,13 @@ void BigInt::printAddress(){
 
 bool BigInt::testBit(int n){
     //TODO lianke this is wrong now, due to we change the internal storage type.
-    // int byte_index = BigInt::capacity - 1 - index / 8; 
-    // int byte_offset = index % 8;
-    // //printf("%hhx %hhx ", bytes[byte_index], byte_offset);
-    // return CHECK_BIT(bytes[byte_index], byte_offset);
-    return (bytes[n >>> 5] & (1 << (n & 31))) != 0;
+    int byte_index = BigInt::capacity - 1 - (n / BigInt::bits_per_word); 
+    int byte_offset = n % BigInt::bits_per_word;
+    //printf("%hhx %hhx ", bytes[byte_index], byte_offset);
+
+   return CHECK_BIT(bytes[byte_index], byte_offset);
+    //cout << ((bytes[n >> 5] & (1 << (n & 31))) != 0) <<endl;
+    //return (bytes[n >> 5] & (1 << (n & 31))) != 0;
 }
 
 BigInt &BigInt::operator=(const BigInt &a){
@@ -152,107 +333,140 @@ bool operator==(const BigInt &a, const BigInt &b){
     return memcmp(a.bytes, b.bytes, BigInt::num_of_bytes) == 0;
 }
 
-// BigInt operator+(BigInt &a,const BigInt& b){
-
-//     BigInt tmp;
-//     char mask = 1 << 7;
-//     bool carry1 = false;
-//     bool carry2 = false;
-//     char one = 1;
-//     char zero = 0;
-//     int max_len = max(a.len, b.len);
-//     for(int i = BigInt::capacity - 1; i > 0; i--){
-//         tmp.bytes[i] = a.bytes[i] + b.bytes[i] + (carry1||carry2);
-//         carry1 = ((a.bytes[i] & mask) == mask) && ((b.bytes[i] & mask) == mask);
-//         carry2 = (((a.bytes[i] & mask) == mask) || ((b.bytes[i] & mask) == mask)) && ((tmp.bytes[i] & mask) !=mask);
-
-//         // printf("\n\n  a : %hhx", a.bytes[i]);
-//         // printf("   b : %hhx", b.bytes[i]);
-//         // printf("   output : %hhx carry1 %d, carry2 %d \n\n", tmp.bytes[i], carry1, carry2);
-
-//     }
-//     return tmp;
-// }
-
-BigInt &operator+=(BigInt & lvalue, const BigInt & rvalue){
-
-}
-
-
-
-BigInt operator*(BigInt &a,const BigInt& b){
+BigInt operator+(BigInt &a,const BigInt& b){
 
     BigInt tmp;
+    char mask = 1 << (BigInt::bits_per_word - 1);
+    bool carry1 = false;
+    bool carry2 = false;
+    char one = 1;
+    char zero = 0;
+    int max_len = max(a.len, b.len);
+    for(int i = BigInt::capacity - 1; i >= 0; i--){
+        tmp.bytes[i] = a.bytes[i] + b.bytes[i] + (carry1||carry2);
+        carry1 = ((a.bytes[i] & mask) == mask) && ((b.bytes[i] & mask) == mask);
+        carry2 = (((a.bytes[i] & mask) == mask) || ((b.bytes[i] & mask) == mask)) && ((tmp.bytes[i] & mask) !=mask);
 
+        // printf("\n\n  a : %hhx", a.bytes[i]);
+        // printf("   b : %hhx", b.bytes[i]);
+        // printf("   output : %hhx carry1 %d, carry2 %d \n\n", tmp.bytes[i], carry1, carry2);
+
+    }
     return tmp;
 }
 
-//TODO lianke implement several other functions
-
-// Multiply x array times word y in place, and add word z
-    void destructiveMulAdd(int[] x, int y, int z) {
-    // Perform the multiplication word by word
-    long ylong = y & LONG_MASK;
-    long zlong = z & LONG_MASK;
-    int len = x.length;
-
-    long product = 0;
-    long carry = 0;
-    for (int i = len-1; i >= 0; i--) {
-        product = ylong * (x[i] & LONG_MASK) + carry;
-        x[i] = (int)product;
-        carry = product >>> 32;
-    }
-
-    // Perform the addition
-    long sum = (x[len-1] & LONG_MASK) + zlong;
-    x[len-1] = (int)sum;
-    carry = sum >>> 32;
-    for (int i = len-2; i >= 0; i--) {
-        sum = (x[i] & LONG_MASK) + carry;
-        x[i] = (int)sum;
-        carry = sum >>> 32;
-    }
-}
 
 
-/**
- * Translates the String representation of a BigInteger in the
- * specified radix into a BigInteger.  The String representation
- * consists of an optional minus or plus sign followed by a
- * sequence of one or more digits in the specified radix.  The
- * character-to-digit mapping is provided by {@code
- * Character.digit}.  The String may not contain any extraneous
- * characters (whitespace, for example).
- *
- * @param val String representation of BigInteger.
- * @param radix radix to be used in interpreting {@code val}.
- * @throws NumberFormatException {@code val} is not a valid representation
- *         of a BigInteger in the specified radix, or {@code radix} is
- *         outside the range from {@link Character#MIN_RADIX} to
- *         {@link Character#MAX_RADIX}, inclusive.
- * @see    Character#digit
- */
-BigInt::BigInt(string val, int radix) {
-    int cursor = 0;
-    len = val.size();
+// BigInt operator+(BigInt &a, const BigInt& b) {
+//     BigInt result;
+//     uint64_t temp = 0;
+//     bool carry = false;
+//     //lianke: we only use the lower half. the higher half is for storing larger multiplication results.
+//     for(int i = BigInt::capacity - 1; i >= 0; i--) {
+//         //cout << a.bytes[i] << " " << b.bytes[i] << " " <<temp << endl;
 
-    //to simplify implementation, we do not do input checking here.
+//         temp = (uint64_t)a.bytes[i] + b.bytes[i] + carry;
+//         result.bytes[i] = (uint32_t)temp;
+//         carry = (temp >> BigInt::bits_per_word != 0);
+//     }
+//     return result;
 
-    //TODO lianke： still need to translate this java to cpp code.
-    // Process first (potentially short) digit group
-    int firstGroupLen = len % digitsPerInt[radix];
-    if (firstGroupLen == 0)
-        firstGroupLen = digitsPerInt[radix];
-    string group = val.substring(cursor, cursor += firstGroupLen);
-    bytes[BigInt::capacity - 1] = Integer.parseInt(group, radix);
+// }
 
-    // Process remaining digit groups
-    int superRadix = intRadix[radix];
-    int groupVal = 0;
-    while (cursor < len) {
-        group = val.substring(cursor, cursor += digitsPerInt[radix]);
-        groupVal = Integer.parseInt(group, radix);
-        destructiveMulAdd(bytes, superRadix, groupVal);
-    }
-}
+// BigInt &operator+=(BigInt & a, const BigInt & b){
+//     uint64_t temp = 0;
+//     bool carry = false;
+//     //lianke: we only use the lower half. the higher half is for storing larger multiplication results.
+//     for(int i = BigInt::capacity/2 - 1; i >= 0; i--) {
+//         temp = (uint64_t)a.bytes[i] + b.bytes[i] + carry;
+//         a.bytes[i] = (uint32_t)temp;
+//         carry = (temp >> 32 != 0);
+//     }
+//     return a;
+// }
+
+// BigInt BigInt::mod(BigInt modulus){
+    
+// }
+
+
+// BigInt operator*(BigInt &a,const BigInt& b){
+
+//     BigInt result;
+//     //TODO lianke implement Karatsuba multiplication.
+//     uint16_t temp[BigInt::capacity] = {0}; 
+//     for(int i = BigInt::capacity - 1; i >= BigInt::capacity/2; i--){
+//         for(int j = BigInt::capacity - 1; j>= BigInt::capacity/2; j--){
+//             temp[i + j - BigInt::capacity + 1] += (uint16_t)a.bytes[i] * b.bytes[j];
+//         }
+//     }
+//     uint16_t tmp = 0;
+//     uint16_t carry = 0;
+//     for(int i = BigInt::capacity - 1; i >= 0; i--){
+//         tmp = temp[i] + carry;
+//         result.bytes[i] = (char)tmp;
+//         carry = (tmp >> 32);
+//     }
+//     return result;
+// }
+
+
+
+
+
+// // Multiply x array times word y in place, and add word z
+// void destructiveMulAdd(uint32_t x[], int y, int z) {
+//     // Perform the multiplication word by word
+//     long ylong = y & BigInt::LONG_MASK;
+//     long zlong = z & BigInt::LONG_MASK;
+//     int len = BigInt::capacity;
+
+//     unsigned long long product = 0;
+//     unsigned long carry = 0;
+//     for (int i = len-1; i >= 0; i--) {
+//         product = ylong * (x[i] & BigInt::LONG_MASK) + carry;
+//         x[i] = (uint32_t)product;
+//         carry = product >> 32;
+//     }
+
+//     // Perform the addition
+//     unsigned long sum = (x[len-1] & BigInt::LONG_MASK) + zlong;
+//     x[len-1] = (uint32_t)sum;
+//     carry = sum >> 32;
+//     for (int i = len-2; i >= 0; i--) {
+//         sum = (x[i] & BigInt::LONG_MASK) + carry;
+//         x[i] = (uint32_t)sum;
+//         carry = sum >> 32;
+//     }
+// }
+
+
+
+// BigInt::BigInt(string val, int radix) {
+//     int cursor = 0;
+//     len = val.size();
+//     memset(bytes, 0, BigInt::num_of_bytes);
+//     //to simplify implementation, we do not do input checking here.
+
+//     // Process first (potentially short) digit group
+//     int firstGroupLen = len % digitsPerInt[radix];
+//     if (firstGroupLen == 0)
+//         firstGroupLen = digitsPerInt[radix];
+//     string group = val.substr(cursor, firstGroupLen);
+//     cursor+= firstGroupLen;
+//     bytes[BigInt::capacity - 1] = stoi(group);
+//     //cout << group << endl;
+
+//     // Process remaining digit groups
+//     int superRadix = intRadix[radix];
+//     int groupVal = 0;
+//     while (cursor < len) {
+//         //cout << cursor << " " << cursor + digitsPerInt[radix] << endl;
+//         group = val.substr(cursor, digitsPerInt[radix]);
+//         cursor += digitsPerInt[radix];
+//         //cout << "read in :" << group << endl;
+//         groupVal = stoi(group);
+//         destructiveMulAdd(bytes, superRadix, groupVal);
+//     }
+// }
+

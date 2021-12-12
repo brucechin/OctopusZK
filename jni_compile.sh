@@ -11,7 +11,7 @@ cp src/main/java/algebra/msm/FixedBaseMSM.class target/classes/algebra/msm/
 cp src/main/java/algebra/msm/VariableBaseMSM.class target/classes/algebra/msm/
 
 #compile the whole project and skip unit test.
-mvn install -DskipTests
+#mvn install -DskipTests
 
 #run a java class
 #CLASSPATH=target/classes/:target/test-classes:dependency/spark-core_2.10-2.2.2.jar:dependency/scala-library-2.10.6.jar java algebra.msm.FixedBaseMSM 

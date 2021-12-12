@@ -198,6 +198,9 @@ public class FixedBaseMSM {
         ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
         for (FieldT scalar : scalars) {
             bigScalars.add(scalar.toBigInteger().toByteArray());
+            if(scalars.size() == 4){
+                System.out.println(byteToString(scalar.toBigInteger().toByteArray()));
+            }
         }
         long finish = System.currentTimeMillis();
         long timeElapsed = finish - start;
@@ -205,9 +208,9 @@ public class FixedBaseMSM {
         byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, byteArray, bigScalars);
 
 
-        // for (FieldT scalar : scalars) {
-        //     res.add(serialMSM(scalarSize, windowSize, multiplesOfBase, scalar));
-        // }
+        for (FieldT scalar : scalars) {
+            res.add(serialMSM(scalarSize, windowSize, multiplesOfBase, scalar));
+        }
         final List<T> jni_res = new ArrayList<>(scalars.size());
         //TODO move modulus to cpp side to accelerate more.
 
@@ -216,21 +219,22 @@ public class FixedBaseMSM {
         
 
         start = System.currentTimeMillis();
-
+        int size_of_bigint_cpp_side = 64;
         BigInteger modulus = new BigInteger("1532495540865888858358347027150309183618765510462668801");
         for(int i = 0; i < scalars.size(); i++){
-            byte[] slice = Arrays.copyOfRange(resultByteArray, i*32, (i+1)*32);//in cpp side, BigInt is 32 bytes.
+            byte[] slice = Arrays.copyOfRange(resultByteArray, i*size_of_bigint_cpp_side, (i+1)*size_of_bigint_cpp_side);//in cpp side, BigInt is 32 bytes.
             BigInteger bi = new BigInteger(slice);
             BigInteger output = bi.mod(modulus);
             T temp = multiplesOfBase.get(0).get(0).zero();
             temp.setBigInteger(output);
             jni_res.add(temp);
-            // if(!res.get(i).toBigInteger().equals(temp.toBigInteger())){
-            //     System.out.println("error in FixedBaseMSM.batchMSM JNI computation");
-            // }
+            if(!res.get(i).toBigInteger().equals(temp.toBigInteger())){
+                System.out.println("error in FixedBaseMSM.batchMSM JNI computation");
+            }
             // System.out.println(
             // "\n                 res:" + res.get(i).toBigInteger()+
             // "\n jni modulus output :" + temp.toBigInteger() + " " + res.get(i).toBigInteger().equals(temp.toBigInteger()) );
+        
         }
 
         finish = System.currentTimeMillis();
