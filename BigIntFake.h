@@ -11,159 +11,6 @@
 using namespace std;
 //TODO we also need to implement BN254, not just for FakeG1 and FakeG2
 
-// class BigIntFake{
-// public:
-//     char bytes[32]; //we should have 32 bytes
-//     static const int capacity = 32;
-//     static const int num_of_bytes = 32;
-
-//     int len = 0; // number of bytes
-//     //TODO add modulus here
-//     BigIntFake();
-//     BigIntFake(string val);
-//     BigIntFake(int val);
-//     //Direct assignment
-//     BigIntFake &operator=(const BigIntFake &);
- 
-//     //Post/Pre - Incrementation
-//     BigIntFake &operator++();
-//     BigIntFake operator++(int temp);
-//     BigIntFake &operator--();
-//     BigIntFake operator--(int temp);
- 
-//     //Addition and Subtraction
-//     friend BigIntFake &operator+=(BigIntFake &, const BigIntFake &);
-//     friend BigIntFake operator+(const BigIntFake &, const BigIntFake &);
-//     friend BigIntFake operator-(const BigIntFake &, const BigIntFake &);
-//     friend BigIntFake &operator-=(BigIntFake &, const BigIntFake &);
- 
-//     //Comparison operators
-//     friend bool operator==(const BigIntFake &, const BigIntFake &);
-//     friend bool operator!=(const BigIntFake &, const BigIntFake &);
- 
-//     friend bool operator>(const BigIntFake &, const BigIntFake &);
-//     friend bool operator>=(const BigIntFake &, const BigIntFake &);
-//     friend bool operator<(const BigIntFake &, const BigIntFake &);
-//     friend bool operator<=(const BigIntFake &, const BigIntFake &);
-
-//     //Multiplication and Division
-//     friend BigIntFake &operator*=(BigIntFake &, const BigIntFake &);
-//     friend BigIntFake operator*(const BigIntFake &, const BigIntFake &);
-
-//     //Modulo
-//     friend BigIntFake operator%(const BigIntFake &, const BigIntFake &);
-//     friend BigIntFake &operator%=(BigIntFake &, const BigIntFake &);
-
-//     //Power Function
-//     friend BigIntFake &operator^=(BigIntFake &,const BigIntFake &);
-//     friend BigIntFake operator^(BigIntFake &, const BigIntFake &);
-
-//     //Read and Write
-//     void print();
-//     void printAddress();
-
-    
-//     bool isZero();
-//     bool isOne();
-//     int bitLength();
-//     bool testBit(int index); //same with the java BigInteger testBit
-// };
-// const BigIntFake FqModulusParameter = BigIntFake("1532495540865888858358347027150309183618765510462668801");
-
-// BigIntFake::BigIntFake(){
-//     memset(bytes, 0, capacity);
-// }
-
-// BigIntFake::BigIntFake(string input){
-//     //TODO lianke
-// }
-
-// //TODO lianke implement modulus 
-
-// BigIntFake::BigIntFake(int val){
-//     memcpy(bytes, &val, capacity - sizeof(int));
-// }
-
-
-// // BigIntFake::BigIntFake(char* s, int len){
-// //     memcpy(bytes, s, BigIntFake::capacity);
-// //     len = len; 
-// // }
-
-
-
-// bool BigIntFake::isZero(){
-//     //TODO lianke test its correctness
-//     char testblock[BigIntFake::capacity];
-//     memset(testblock, 0, sizeof(testblock));
-//     return memcmp(testblock, bytes, BigIntFake::capacity) == 0;
-// }
-
-// bool BigIntFake::isOne(){
-//     //TODO lianke test its correctness
-//     BigIntFake one(1);
-//     return *this == one;
-// }
-
-
-// void BigIntFake::print(){
-//     for (int i = 0; i < capacity; i++){
-//         printf("%hhx |", bytes[i]);
-//     }
-//     printf("\n");
-//     return ;
-// }
-
-// void BigIntFake::printAddress(){
-//     printf("0%x\n", bytes);
-//     return ;
-// }
-
-// bool BigIntFake::testBit(int index){
-//     int byte_index = 31 - index / 8; //TODO check its correctness
-//     int byte_offset = index % 8;
-//     //printf("%hhx %hhx ", bytes[byte_index], byte_offset);
-//     return CHECK_BIT(bytes[byte_index], byte_offset);
-// }
-
-// BigIntFake &BigIntFake::operator=(const BigIntFake &a){
-//     memcpy(bytes, a.bytes, BigIntFake::capacity);
-//     return *this;
-// }
-
-// bool operator==(const BigIntFake &a, const BigIntFake &b){
-//     return memcmp(a.bytes, b.bytes, BigIntFake::capacity) == 0;
-// }
-
-// BigIntFake operator+(BigIntFake &a,const BigIntFake& b){
-
-//     BigIntFake tmp;
-//     char mask = 1 << 7;
-//     bool carry1 = false;
-//     bool carry2 = false;
-//     char one = 1;
-//     char zero = 0;
-//     int max_len = max(a.len, b.len);
-//     for(int i = BigIntFake::capacity - 1; i > 0; i--){
-//         tmp.bytes[i] = a.bytes[i] + b.bytes[i] + (carry1||carry2);
-//         carry1 = ((a.bytes[i] & mask) == mask) && ((b.bytes[i] & mask) == mask);
-//         carry2 = (((a.bytes[i] & mask) == mask) || ((b.bytes[i] & mask) == mask)) && ((tmp.bytes[i] & mask) !=mask);
-
-//         // printf("\n\n  a : %hhx", a.bytes[i]);
-//         // printf("   b : %hhx", b.bytes[i]);
-//         // printf("   output : %hhx carry1 %d, carry2 %d \n\n", tmp.bytes[i], carry1, carry2);
-
-//     }
-//     return tmp;
-// }
-
-//TODO lianke implement several other functions
-
-
-
-
-// //TODO we also need to implement BN254, not just for FakeG1 and FakeG2
-
 
 
 class BigIntFake{
@@ -302,9 +149,8 @@ void BigIntFake::printAddress(){
 
 bool BigIntFake::testBit(int n){
     //TODO lianke this is wrong now, due to we change the internal storage type.
-    int n_tmp = n/8 * 8 + 7 - (n%8);
-    int byte_index = BigIntFake::capacity - 1 - (n_tmp / BigIntFake::bits_per_word); 
-    int byte_offset = BigIntFake::bits_per_word - 1 - n_tmp % BigIntFake::bits_per_word;
+    int byte_index = BigIntFake::capacity - 1 - (n / BigIntFake::bits_per_word); 
+    int byte_offset =  n % BigIntFake::bits_per_word;
     //printf("%hhx %hhx ", bytes[byte_index], byte_offset);
     
     return CHECK_BIT(bytes[byte_index], byte_offset);
@@ -321,46 +167,43 @@ bool operator==(const BigIntFake &a, const BigIntFake &b){
     return memcmp(a.bytes, b.bytes, BigIntFake::num_of_bytes) == 0;
 }
 
-BigIntFake operator+(BigIntFake &a,const BigIntFake& b){
+// BigIntFake operator+(BigIntFake &a,const BigIntFake& b){
 
-    BigIntFake tmp;
-    char mask = 1 << 7;
-    bool carry1 = false;
-    bool carry2 = false;
-    char one = 1;
-    char zero = 0;
-    char* aa = (char*)&a.bytes[0];
-    char* bb = (char*)&b.bytes[0];
-    char* tmptmp = (char*)&tmp.bytes[0];
+//     BigIntFake tmp;
+//     uint32_t mask = 1 << 31;
+//     bool carry1 = false;
+//     bool carry2 = false;
+//     char one = 1;
+//     char zero = 0;
 
-    for(int i = BigIntFake::num_of_bytes - 1; i >= 0; i--){
-        tmptmp[i] = aa[i] + bb[i] + (carry1||carry2);
-        carry1 = ((aa[i] & mask) == mask) && ((bb[i] & mask) == mask);
-        carry2 = (((aa[i] & mask) == mask) || ((bb[i] & mask) == mask)) && ((tmptmp[i] & mask) !=mask);
+//     for(int i = BigIntFake::capacity - 1; i >= 0; i--){
+//         tmp.bytes[i] = a.bytes[i] + b.bytes[i] + (carry1||carry2);
+//         carry1 = ((a.bytes[i] & mask) == mask) && ((b.bytes[i] & mask) == mask);
+//         carry2 = (((a.bytes[i] & mask) == mask) || ((b.bytes[i] & mask) == mask)) && ((tmp.bytes[i] & mask) !=mask);
 
-        // printf("\n\n  a : %hhx", a.bytes[i]);
-        // printf("   b : %hhx", b.bytes[i]);
-        // printf("   output : %hhx carry1 %d, carry2 %d \n\n", tmp.bytes[i], carry1, carry2);
+//         // printf("\n\n  a : %hhx", a.bytes[i]);
+//         // printf("   b : %hhx", b.bytes[i]);
+//         // printf("   output : %hhx carry1 %d, carry2 %d \n\n", tmp.bytes[i], carry1, carry2);
 
-    }
-    return tmp;
-}
-
-
-
-// BigIntFake operator+(BigIntFake &a, const BigIntFake& b) {
-//     BigIntFake result;
-//     uint64_t temp = 0;
-//     bool carry = false;
-//     //lianke: we only use the lower half. the higher half is for storing larger multiplication results.
-//     for(int i = BigIntFake::capacity - 1; i >= 0; i--) {
-//         //cout << a.bytes[i] << " " << b.bytes[i] << " " <<temp << endl;
-//         temp = (uint64_t)a.bytes[i] + b.bytes[i] + carry;
-//         result.bytes[i] = (uint32_t)temp;
-//         carry = (temp >> BigIntFake::bits_per_word != 0);
 //     }
-//     return result;
+//     return tmp;
 // }
+
+
+
+BigIntFake operator+(BigIntFake &a, const BigIntFake& b) {
+    BigIntFake result;
+    uint64_t temp = 0;
+    bool carry = false;
+    //lianke: we only use the lower half. the higher half is for storing larger multiplication results.
+    for(int i = BigIntFake::capacity - 1; i >= 0; i--) {
+        //cout << a.bytes[i] << " " << b.bytes[i] << " " <<temp << endl;
+        temp = (uint64_t)a.bytes[i] + b.bytes[i] + carry;
+        result.bytes[i] = (uint32_t)temp;
+        carry = (temp >> BigIntFake::bits_per_word != 0);
+    }
+    return result;
+}
 
 
 
@@ -460,6 +303,4 @@ BigIntFake operator+(BigIntFake &a,const BigIntFake& b){
 //         destructiveMulAdd(bytes, superRadix, groupVal);
 //     }
 // }
-
-
 

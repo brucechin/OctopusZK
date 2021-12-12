@@ -65,17 +65,45 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
       memcpy(&bigScalarArray[i].bytes[BigInt::num_of_bytes - bigScalarArray[i].len], 
                                 bytes,
                                 bigScalarArray[i].len);
+
+
+
+      char* bytes_converted = new char[bigScalarArray[i].len ];
+      //convert the byte array endian.
+      int j = bigScalarArray[i].len - 1;
+      for(; j >=3 ; j-=4){
+          bytes_converted[ j] = bytes[j-3];
+          bytes_converted[ j-1] = bytes[j-2];
+          bytes_converted[ j-2] = bytes[j-1];
+          bytes_converted[ j-3] = bytes[j];
+      }
+      if(j == 2){
+          bytes_converted[2] = bytes[j-2];
+          bytes_converted[1] = bytes[j-1];
+          bytes_converted[0] = bytes[j];
+      }else if(j == 1){
+         bytes_converted[1] = bytes[j-1];
+          bytes_converted[0] = bytes[j];
+      }else if(j == 0){
+        bytes_converted[0] = bytes[j];
+      }
+
+
       char* tmp = (char*)&bigScalarArrayFake[i].bytes;
+      int size_diff =bigScalarArrayFake[i].len  - bigScalarArrayFake[i].len /4 * 4;
+      memcpy(tmp + BigIntFake::num_of_bytes - bigScalarArrayFake[i].len / 4 * 4, 
+                                bytes_converted + size_diff,
+                                bigScalarArrayFake[i].len /4   * 4);
+      memcpy(tmp + BigIntFake::num_of_bytes - (bigScalarArrayFake[i].len /4 + 1)* 4, 
+                                bytes_converted,
+                                size_diff);//deal withe the tail bytes which can not form a int32_t.(could be 3,2 or 1 byte. but we need to insert it into a 4byte int space.)
+      //if(batch_size == 4){
+      //char* tmp = (char*)&bigScalarArrayFake[i].bytes;
 
-      memcpy(tmp + BigIntFake::num_of_bytes - bigScalarArrayFake[i].len, 
-                                bytes,
-                                bigScalarArrayFake[i].len);
+      // cout << "--------scalar cmp------------"<<endl;
+      //  cout << memcmp(bytes, bytes_converted, bigScalarArray[i].len) << endl;
 
-      if(batch_size == 4){
-        char* tmp = (char*)&bigScalarArrayFake[i].bytes;
-
-      cout << "--------scalar cmp------------"<<endl;
-      cout << memcmp(bigScalarArray[i].bytes, bigScalarArrayFake[i].bytes, BigInt::num_of_bytes) <<endl;
+      // cout << memcmp(bigScalarArray[i].bytes, bigScalarArrayFake[i].bytes, BigInt::num_of_bytes) <<endl;
 
       // printf("%X\n", bigScalarArrayFake[i].bytes);
       // printf("%X\n", bigScalarArrayFake[i].bytes + BigIntFake::num_of_bytes - bigScalarArrayFake[i].len);
@@ -89,14 +117,13 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
       // cout <<endl;
       // bigScalarArray[i].printBinary();
       // bigScalarArrayFake[i].printBinary();
-      cout << "-----------------------------"<<endl;
-      }
+      // cout << "-----------------------------"<<endl;
+      //}
 
 
   }
 
-
-  // //TODO lianke parallelize it
+    //TODO lianke parallelize it
   //TODO lianke use GetIntArrayElements instead of GetByteArrayElements
   for(int i = 0; i < out_len;i++){
     for(int j = 0; j < inner_len; j++){
@@ -104,12 +131,42 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
       char* bytes = (char*)env->GetByteArrayElements(element, NULL);
       multiplesOfBasePtrArray[i][j].len = env->GetArrayLength(element);
       memcpy((char*)multiplesOfBasePtrArray[i][j].bytes + BigInt::num_of_bytes - multiplesOfBasePtrArray[i][j].len, bytes,  multiplesOfBasePtrArray[i][j].len);
-      
-      char* tmp = (char*)multiplesOfBasePtrArrayFake[i][j].bytes;
+      multiplesOfBasePtrArrayFake[i][j].len  = env->GetArrayLength(element);
 
-      memcpy(tmp + BigIntFake::num_of_bytes -  multiplesOfBasePtrArray[i][j].len, 
-                                bytes,
-                                multiplesOfBasePtrArray[i][j].len);
+
+
+      char* bytes_converted = new char[multiplesOfBasePtrArrayFake[i][j].len];
+      //convert the byte array endian.
+      int k = multiplesOfBasePtrArrayFake[i][j].len - 1;
+      for(; k >=3 ; k-=4){
+          bytes_converted[ k] = bytes[k-3];
+          bytes_converted[ k-1] = bytes[k-2];
+          bytes_converted[ k-2] = bytes[k-1];
+          bytes_converted[ k-3] = bytes[k];
+      }
+      if(k == 2){
+          bytes_converted[2] = bytes[k-2];
+          bytes_converted[1] = bytes[k-1];
+          bytes_converted[0] = bytes[k];
+      }else if(k == 1){
+         bytes_converted[1] = bytes[k-1];
+          bytes_converted[0] = bytes[k];
+      }else if(k == 0){
+        bytes_converted[0] = bytes[k];
+      }
+      // for(int m =0; m < multiplesOfBasePtrArrayFake[i][j].len; m++)
+      // {
+      //   cout << bytes_converted[i] ;
+      // }
+      char* tmp = (char*)multiplesOfBasePtrArrayFake[i][j].bytes;
+      int size_diff =  multiplesOfBasePtrArrayFake[i][j].len - multiplesOfBasePtrArrayFake[i][j].len /4 * 4;
+      memcpy(tmp + BigIntFake::num_of_bytes - multiplesOfBasePtrArrayFake[i][j].len / 4 * 4, 
+                                bytes_converted + size_diff,
+                                multiplesOfBasePtrArrayFake[i][j].len /4   * 4);
+      memcpy(tmp + BigIntFake::num_of_bytes - (multiplesOfBasePtrArrayFake[i][j].len /4 + 1)* 4, 
+                                bytes_converted,
+                                size_diff);//deal withe the tail bytes which can not form a int32_t.(could be 3,2 or 1 byte. but we need to insert it into a 4byte int space.)
+      //multiplesOfBasePtrArrayFake[i][j].printBinary();
       // cout << "--------multiplesOfBase cmp------------"<<endl;
                       
       // cout << memcmp(multiplesOfBasePtrArray[i][j].bytes, multiplesOfBasePtrArrayFake[i][j].bytes, BigInt::num_of_bytes) <<endl;
@@ -128,7 +185,12 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   for(int batch_index = 0; batch_index < batch_size; batch_index++){
     BigInt res = multiplesOfBasePtrArray[0][0];//TODO lianke this assignment has a problem. 
     BigIntFake res2 = multiplesOfBasePtrArrayFake[0][0];//TODO lianke this assignment has a problem. 
-
+    // if(batch_size == 4){
+    //   bigScalarArray[batch_index].printBinary();
+    //   bigScalarArrayFake[batch_index].printBinary();
+    //   cout << endl;
+    // }
+  
     for (int outer = 0; outer < outerc; ++outer) {
         int inner = 0;
         int inner2 = 0;
@@ -141,26 +203,31 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
             if (bigScalarArrayFake[batch_index].testBit(outer * windowSize + i)) { //Returns true if and only if the designated bit is set.
                 inner2 |= 1 << i;
             }
-            if(bigScalarArrayFake[batch_index].testBit(outer * windowSize + i) != bigScalarArray[batch_index].testBit(outer * windowSize + i)){
-              cout << "testBit error " <<batch_index << endl;
-              cout << bigScalarArrayFake[batch_index].testBit(outer * windowSize + i) << " " << bigScalarArray[batch_index].testBit(outer * windowSize + i) <<endl;
-          }
+          //   if(bigScalarArrayFake[batch_index].testBit(outer * windowSize + i) != bigScalarArray[batch_index].testBit(outer * windowSize + i)){
+          //     cout << "testBit error " <<batch_index << " " <<  outer * windowSize + i << endl;
+          //     cout << bigScalarArrayFake[batch_index].testBit(outer * windowSize + i) << " " << bigScalarArray[batch_index].testBit(outer * windowSize + i) <<endl;
+          // }
         }
+        // cout << "inner1 and 2 " << inner << " " << inner2 <<endl; 
+        // multiplesOfBasePtrArray[outer][inner].printBinary();
+        // multiplesOfBasePtrArrayFake[outer][inner2].printBinary();
 
-        //TODO lianke this inner for loop to update inner can be done better
         res = res + multiplesOfBasePtrArray[outer][inner];
         res2 = res2 + multiplesOfBasePtrArrayFake[outer][inner2];
 
     }  
-      cout << "--------res cmp------------"<<endl;
-        res.printBinary();
-        res2.printBinary();
-       cout <<  memcmp(res.bytes, res2.bytes, BigInt::num_of_bytes) <<endl;
-        cout << "---------------------------"<<endl;  
+
+      // cout << "--------res cmp------------"<<endl;
+      //   res.printBinary();
+      //   res2.printBinary();
+      //  //cout <<  memcmp(res.bytes, res2.bytes, BigInt::num_of_bytes) <<endl;
+      //   cout << "---------------------------"<<endl;  
         //TODO lianke maybe we can set a whole byte array after finish all computation?
+
+
+
     env->SetByteArrayRegion(resultByteArray, batch_index * BigInt::num_of_bytes , BigInt::num_of_bytes,   reinterpret_cast<const jbyte*>(res2.bytes));
   }
-  cout <<batch_size <<endl;
     end = std::chrono::steady_clock::now();
     elapsed_seconds = end-start;
     std::cout << "C++ Compute elapsed time: " << elapsed_seconds.count() << "s\n";
