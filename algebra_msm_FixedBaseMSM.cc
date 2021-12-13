@@ -36,7 +36,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
 
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed_seconds = end-start;
-    std::cout << "BigInt allocation elapsed time: " << elapsed_seconds.count() << "s\n";
+    //std::cout << "BigInt allocation elapsed time: " << elapsed_seconds.count() << "s\n";
 
 
 
@@ -89,7 +89,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   }
     end = std::chrono::steady_clock::now();
     elapsed_seconds = end-start;
-    std::cout << "Read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
+    //std::cout << "Read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
 
 
   start = std::chrono::steady_clock::now();
@@ -123,7 +123,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   }
     end = std::chrono::steady_clock::now();
     elapsed_seconds = end-start;
-    std::cout << "C++ Compute elapsed time: " << elapsed_seconds.count() << "s\n";
+   // std::cout << "C++ Compute elapsed time: " << elapsed_seconds.count() << "s\n";
   
 
   return resultByteArray;
@@ -160,7 +160,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
 
   auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
-  std::cout << "doubleBatchMSM BigInt allocation elapsed time: " << elapsed_seconds.count() << "s\n";
+  //std::cout << "doubleBatchMSM BigInt allocation elapsed time: " << elapsed_seconds.count() << "s\n";
 
 
 
@@ -202,7 +202,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
 
     end = std::chrono::steady_clock::now();
     elapsed_seconds = end-start;
-    std::cout << "doubleBatchMSM Read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
+    //std::cout << "doubleBatchMSM Read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
 
 
   start = std::chrono::steady_clock::now();
@@ -239,7 +239,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
 
     end = std::chrono::steady_clock::now();
     elapsed_seconds = end-start;
-    std::cout << "doubleBatchMSM C++ Compute elapsed time: " << elapsed_seconds.count() << "s\n";
+    //std::cout << "doubleBatchMSM C++ Compute elapsed time: " << elapsed_seconds.count() << "s\n";
   
 
   return resultByteArray;

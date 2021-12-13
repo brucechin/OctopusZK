@@ -103,11 +103,11 @@ public:
 //const BigInt FqModulusParameter = BigInt("1532495540865888858358347027150309183618765510462668801");
 
 BigInt BigInt::ZERO(){
-    return BigInt(0);
+    return BigInt("0");
 }
 
 BigInt BigInt::ONE(){
-    return BigInt(1);
+    return BigInt("1");
 }
 
 
@@ -124,6 +124,7 @@ BigInt::BigInt(uint32_t val){
 
 BigInt::BigInt(int val)
 {
+    //TODO this is wrong
     memcpy(bytes, &val, num_of_bytes - sizeof(int));
 }
 
@@ -131,7 +132,30 @@ BigInt::BigInt(unsigned long long val){
     memcpy(bytes, &val, num_of_bytes - sizeof(unsigned long long ));
 }
 
+int LeadingZeros(int x)
+{
+    const int numIntBits = sizeof(int) * 8; //compile time constant
+    //do the smearing
+    x |= x >> 1; 
+    x |= x >> 2;
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+    //count the ones
+    x -= x >> 1 & 0x55555555;
+    x = (x >> 2 & 0x33333333) + (x & 0x33333333);
+    x = (x >> 4) + x & 0x0f0f0f0f;
+    x += x >> 8;
+    x += x >> 16;
+    return numIntBits - (x & 0x0000003f); //subtract # of 1s from 32
+}
 
+int BigInt::bitLength(){
+    int bits = (len - 4) * 8;
+    int leading_int = bytes[BigInt::capacity - len/4];
+    return bits + 32 - LeadingZeros(leading_int);
+
+}
 
 bool BigInt::isZero(){
     //TODO lianke test its correctness
@@ -142,7 +166,7 @@ bool BigInt::isZero(){
 
 bool BigInt::isOne(){
     //TODO lianke test its correctness
-    BigInt one(1);
+    BigInt one("1");
     return *this == one;
 }
 
@@ -150,7 +174,7 @@ bool BigInt::isOne(){
 void BigInt::printBinary(){
     for (int i = 0; i < capacity; i++){
         std::bitset<32> tmp(bytes[i]);
-        cout << tmp;
+        cout << tmp << "|";
     }
     printf("\n");
     return ;
