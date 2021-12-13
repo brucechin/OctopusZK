@@ -18,9 +18,9 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
 /*
  * Class:     algebra_msm_FixedBaseMSM
  * Method:    doubleBatchMSMNativeHelper
- * Signature: (IIIILjava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;)Lalgebra/groups/AbstractGroup;
+ * Signature: (IIIILjava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;)[B
  */
-JNIEXPORT jobject JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeHelper
+JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeHelper
   (JNIEnv *, jclass, jint, jint, jint, jint, jobject, jobject, jobject);
 
 #ifdef __cplusplus

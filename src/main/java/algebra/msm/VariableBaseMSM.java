@@ -92,6 +92,33 @@ public class VariableBaseMSM {
         return result;
     }
 
+
+    public static byte[] bigIntegerToByteArrayHelper(BigInteger bigint){
+        byte[] temp = bigint.toByteArray();
+
+        byte[] res = new byte[temp.length / 4 * 4 + 4];
+        int size_diff = temp.length / 4 * 4 + 4 - temp.length;
+        int j = temp.length - 1;
+        for(; j >= 3; j-=4){
+            res[ size_diff+ j] = temp[j-3];
+            res[size_diff+ j-1] = temp[j-2];
+            res[ size_diff+j-2] = temp[j-1];
+            res[ size_diff+j-3] = temp[j];
+        }
+        if(j == 2){
+            res[2] = temp[j-2];
+            res[1] = temp[j-1];
+            res[0] = temp[j];
+        }else if(j == 1){
+            res[1] = temp[j-1];
+            res[0] = temp[j];
+        }else if(j == 0){
+            res[0] = temp[j];
+        }
+        return res;
+
+    }
+
     public static <GroupT extends AbstractGroup<GroupT>> GroupT pippengerMSM(
              final List<Tuple2<BigInteger, GroupT>> input, final int numBits) {
 
@@ -146,7 +173,7 @@ public class VariableBaseMSM {
     }
 
     public static native <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
-    T variableBaseSerialMSMNativeHelper(
+    byte[] variableBaseSerialMSMNativeHelper(
             final ArrayList<byte[]> bases,
             final ArrayList<byte[]> scalars);
 
@@ -164,17 +191,7 @@ public class VariableBaseMSM {
 
         GroupT acc = bases.get(0).zero();
 
-        ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
-        for (FieldT scalar : scalars) {
-            bigScalars.add(scalar.toBigInteger().toByteArray());
-        }
-        ArrayList<byte[]> basesArray = new ArrayList<byte[]>();
-        for (GroupT base : bases){
-            basesArray.add(base.toBigInteger().toByteArray());
-        }
 
-        variableBaseSerialMSMNativeHelper(basesArray, bigScalars);
-        
         int numBits = 0;
         for (int i = 0; i < bases.size(); i++) {
             final BigInteger scalar = scalars.get(i).toBigInteger();
@@ -195,6 +212,41 @@ public class VariableBaseMSM {
         if (!filteredInput.isEmpty()) {
             acc = acc.add(pippengerMSM(filteredInput, numBits));
         }
+
+
+
+
+        ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
+        for (FieldT scalar : scalars) {
+            bigScalars.add(bigIntegerToByteArrayHelper(scalar.toBigInteger()));
+        }
+        ArrayList<byte[]> basesArray = new ArrayList<byte[]>();
+        for (GroupT base : bases){
+            basesArray.add(bigIntegerToByteArrayHelper(base.toBigInteger()));
+        }
+
+        byte[] resArray = variableBaseSerialMSMNativeHelper(basesArray, bigScalars);
+        
+        int size_of_bigint_cpp_side = 64;
+        BigInteger modulus = new BigInteger("1532495540865888858358347027150309183618765510462668801");
+        byte[] converted_back = new byte[size_of_bigint_cpp_side];
+        for(int j = 63; j >= 3; j-=4){
+            converted_back[j] = resArray[j - 3];
+            converted_back[j-1] = resArray[j - 2];
+            converted_back[j-2] = resArray[j - 1];
+            converted_back[j-3] = resArray[j];
+        }
+        BigInteger bi = new BigInteger(converted_back);
+        BigInteger output = bi.mod(modulus);
+        GroupT temp = bases.get(0).zero();
+        temp.setBigInteger(output);
+
+        //TODO lianke: currently the calculation is wrong, but because A,B,C are all calculate wrong, A*B=C verification can pass... LOL
+        if(!acc.toBigInteger().equals(temp.toBigInteger())){
+            System.out.println("error in VariableBaseMSM .serialMSM JNI computation");
+            System.out.println(acc.toBigInteger() + " " + temp.toBigInteger());
+        }
+
 
         return acc;
     }

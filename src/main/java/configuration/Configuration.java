@@ -97,7 +97,7 @@ public class Configuration implements Serializable {
         if (verboseFlag) {
             System.out.println("");
             printIndentation();
-            System.out.println("Starting : " + message + " " + elapsedTimeInSeconds());
+            System.out.println("\nStarting : " + message + " " + elapsedTimeInSeconds());
 
             if (indent) {
                 indentation++;
@@ -159,7 +159,7 @@ public class Configuration implements Serializable {
 
                 // Print message.
                 System.out
-                        .println("Ending   : " + message + " " + elapsedTimeInSeconds() + " - " + timeOutput);
+                        .println("Ending   : " + message + " " + elapsedTimeInSeconds() + " - " + timeOutput + "\n");
             }
 
             previousEnd = true;

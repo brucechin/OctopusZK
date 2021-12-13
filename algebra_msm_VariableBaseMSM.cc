@@ -18,7 +18,7 @@
  * Signature: (Ljava/util/ArrayList;Ljava/util/ArrayList;)Lalgebra/groups/AbstractGroup;
  */
 //TODO lianke: I plan to pass the modulus through the JNI func parameter to reduce the overhead.
-JNIEXPORT jobject JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerialMSMNativeHelper
+JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerialMSMNativeHelper
   (JNIEnv * env, jclass obj, jobject bases, jobject scalars){
     jclass java_util_ArrayList      = static_cast<jclass>(env->NewGlobalRef(env->FindClass("java/util/ArrayList")));
     jmethodID java_util_ArrayList_size = env->GetMethodID(java_util_ArrayList, "size", "()I");
@@ -28,21 +28,30 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerialMSM
     jint base_size = env->CallIntMethod(bases, java_util_ArrayList_size);
     jint scalars_size = env->CallIntMethod(scalars, java_util_ArrayList_size);
 
+
+
+
     vector<BigInt> bigScalarArray = vector<BigInt>(scalars_size, BigInt());
     for(int i =0; i < scalars_size; i++){
         jbyteArray element = (jbyteArray)env->CallObjectMethod(scalars, java_util_ArrayList_get, i);
         bigScalarArray[i].len = env->GetArrayLength(element);
-        memcpy(bigScalarArray[i].bytes + BigInt::num_of_bytes - bigScalarArray[i].len, (char*)env->GetByteArrayElements(element, NULL), bigScalarArray[i].len);
-        //bigScalarArray[i].print();
+        char* bytes = (char*)env->GetByteArrayElements(element, NULL);
+        char* tmp = (char*)&bigScalarArray[i].bytes;
+
+        memcpy(tmp +BigInt::num_of_bytes - bigScalarArray[i].len, 
+                                bytes,
+                                bigScalarArray[i].len);
     }
 
     vector<BigInt> baseArray = vector<BigInt>(base_size, BigInt());
     for(int i =0; i < base_size; i++){
         jbyteArray element = (jbyteArray)env->CallObjectMethod(bases, java_util_ArrayList_get, i);
         baseArray[i].len = env->GetArrayLength(element);
-        memcpy(baseArray[i].bytes + BigInt::num_of_bytes - baseArray[i].len, (char*)env->GetByteArrayElements(element, NULL), baseArray[i].len);
-        //baseArray[i].print();
+        char* bytes = (char*)env->GetByteArrayElements(element, NULL);
+        char* tmp = (char*)baseArray[i].bytes;
+        memcpy(tmp + BigInt::num_of_bytes - baseArray[i].len, bytes,  baseArray[i].len);
     }
+
 
     BigInt acc;//should be init to zero.
     vector<tuple<BigInt, BigInt>> filteredInput;
@@ -108,13 +117,15 @@ JNIEXPORT jobject JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerialMSM
         }
       }
 
+
       acc = acc + result;
     }
-    
 
-  //TODO return acc;
 
-    return scalars;
+    jbyteArray resultByteArray = env->NewByteArray((jsize)BigInt::num_of_bytes );
+    env->SetByteArrayRegion(resultByteArray, 0 , BigInt::num_of_bytes,   reinterpret_cast<const jbyte*>(acc.bytes));
+
+    return resultByteArray;
 
   }
 
