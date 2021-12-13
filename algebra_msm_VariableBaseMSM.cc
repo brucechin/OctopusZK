@@ -7,7 +7,7 @@
 #include <tuple>
 #include <cmath>
 #include "algebra_msm_VariableBaseMSM.h"
-#include "BigInteger.h"
+#include "BigInt.h"
 
 
 
