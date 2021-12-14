@@ -215,13 +215,11 @@ void BigInt::printAddress(){
 }
 
 bool BigInt::testBit(int n){
-    //TODO lianke this is wrong now, due to we change the internal storage type.
     int byte_index = BigInt::capacity - 1 - (n / BigInt::bits_per_word); 
     int byte_offset =  n % BigInt::bits_per_word;
     //printf("%hhx %hhx ", bytes[byte_index], byte_offset);
     
     return CHECK_BIT(bytes[byte_index], byte_offset);
-    //cout << ((bytes[n >> 5] & (1 << (n & 31))) != 0) <<endl;
     //return (bytes[n >> 5] & (1 << (n & 31))) != 0;
 }
 
@@ -244,6 +242,7 @@ bool operator<(const BigInt &a, const BigInt &b){
 }
 
 BigInt &operator%=(BigInt &a,  BigInt &b){
+    //TODO lianke optimize this func
     while(!(a < b)){
         a = a - b;
     }
@@ -414,16 +413,6 @@ BigInt &operator+=(BigInt & a, const BigInt & b){
 
 
 
-
-
-
-
-
-
-BigInt BigInt::mod(BigInt modulus){
-    //TODO lianke
-
-}
 
 
 BigInt operator*(BigInt &a,const BigInt& b){

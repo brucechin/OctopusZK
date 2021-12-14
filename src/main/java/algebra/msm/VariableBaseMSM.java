@@ -290,11 +290,45 @@ public class VariableBaseMSM {
             GroupT extends AbstractGroup<GroupT>,
             FieldT extends AbstractFieldElementExpanded<FieldT>>
     GroupT serialMSM(final List<FieldT> scalars, final List<GroupT> bases) {
-        System.out.println("variableBaseSerialMSM info:");
-        System.out.println("variableBaseSerialMSM base size :" + bases.size() + " type:" +bases.get(0).getClass().getName());
-        System.out.println("variableBaseSerialMSM scalars size :" + scalars.size() + " type:"+scalars.get(0).getClass().getName());
+        // System.out.println("variableBaseSerialMSM info:");
+        // System.out.println("variableBaseSerialMSM base size :" + bases.size() + " type:" +bases.get(0).getClass().getName());
+        // System.out.println("variableBaseSerialMSM scalars size :" + scalars.size() + " type:"+scalars.get(0).getClass().getName());
 
         assert (bases.size() == scalars.size());
+
+
+
+
+        ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
+        for (FieldT scalar : scalars) {
+            bigScalars.add(bigIntegerToByteArrayHelper(scalar.toBigInteger()));
+        }
+        ArrayList<byte[]> basesArray = new ArrayList<byte[]>();
+        for (GroupT base : bases){
+            basesArray.add(bigIntegerToByteArrayHelper(base.toBigInteger()));
+        }
+
+        byte[] resArray = variableBaseSerialMSMNativeHelper(basesArray, bigScalars);
+        
+        int size_of_bigint_cpp_side = 64;
+        BigInteger modulus = new BigInteger("1532495540865888858358347027150309183618765510462668801");
+        
+        byte[] converted_back = new byte[size_of_bigint_cpp_side];
+        for(int j = 63; j >= 3; j-=4){
+            converted_back[j] = resArray[ j - 3];
+            converted_back[j-1] = resArray[j - 2];
+            converted_back[j-2] = resArray[ j - 1];
+            converted_back[j-3] = resArray[ j];
+        }
+        BigInteger bi = new BigInteger(converted_back);
+        BigInteger output = bi.mod(modulus);
+        GroupT res = bases.get(0).zero();
+        res.setBigInteger(output);
+
+
+
+
+        // lianke: below is the original code used for verify the JNI cpp side code computation is correct
 
         //final List<Tuple2<BigInteger, GroupT>> filteredInput = new ArrayList<>();
 
@@ -330,35 +364,6 @@ public class VariableBaseMSM {
         //     //System.out.println("java side final acc :" + byteToString(acc.toBigInteger().toByteArray()));
         // }
 
-
-
-
-        ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
-        for (FieldT scalar : scalars) {
-            bigScalars.add(bigIntegerToByteArrayHelper(scalar.toBigInteger()));
-        }
-        ArrayList<byte[]> basesArray = new ArrayList<byte[]>();
-        for (GroupT base : bases){
-            basesArray.add(bigIntegerToByteArrayHelper(base.toBigInteger()));
-        }
-
-        byte[] resArray = variableBaseSerialMSMNativeHelper(basesArray, bigScalars);
-        
-        int size_of_bigint_cpp_side = 64;
-        BigInteger modulus = new BigInteger("1532495540865888858358347027150309183618765510462668801");
-        
-        byte[] converted_back = new byte[size_of_bigint_cpp_side];
-        for(int j = 63; j >= 3; j-=4){
-            converted_back[j] = resArray[ j - 3];
-            converted_back[j-1] = resArray[j - 2];
-            converted_back[j-2] = resArray[ j - 1];
-            converted_back[j-3] = resArray[ j];
-        }
-        BigInteger bi = new BigInteger(converted_back);
-        BigInteger output = bi.mod(modulus);
-        GroupT res = bases.get(0).zero();
-        res.setBigInteger(output);
-
         // if(! res.toBigInteger().equals(acc.toBigInteger())){
         //     System.out.println("found error in pippengerMSM JNI computation");
         // }
@@ -381,17 +386,14 @@ public class VariableBaseMSM {
             T2 extends AbstractGroup<T2>,
             FieldT extends AbstractFieldElementExpanded<FieldT>>
     Tuple2<T1, T2> doubleMSM(final List<FieldT> scalars, final List<Tuple2<T1, T2>> bases) {
-        System.out.println("variableBaseDoubleMSM info:");
-        System.out.println("variableBaseDoubleMSM base size :" + bases.size() + " type:" +bases.get(0)._1.getClass().getName() + " " +bases.get(0)._2.getClass().getName()  );
-        System.out.println("variableBaseDoubleMSM scalars size :" + scalars.size() + " type:"+scalars.get(0).getClass().getName());
+        // System.out.println("variableBaseDoubleMSM info:");
+        // System.out.println("variableBaseDoubleMSM base size :" + bases.size() + " type:" +bases.get(0)._1.getClass().getName() + " " +bases.get(0)._2.getClass().getName()  );
+        // System.out.println("variableBaseDoubleMSM scalars size :" + scalars.size() + " type:"+scalars.get(0).getClass().getName());
 
         assert (bases.size() == scalars.size());
 
         final int size = bases.size();
         assert (size > 0);
-
-
-
 
 
 
@@ -438,34 +440,41 @@ public class VariableBaseMSM {
 
 
 
-        final ArrayList<Tuple2<BigInteger, T1>> converted1 = new ArrayList<>(size);
-        final ArrayList<Tuple2<BigInteger, T2>> converted2 = new ArrayList<>(size);
-
-        T1 acc1 = bases.get(0)._1.zero();
-        T2 acc2 = bases.get(0)._2.zero();
-        int numBits = 0;
-
-        for (int i = 0; i < size; i++) {
-            final Tuple2<T1, T2> value = bases.get(i);
-            final BigInteger scalar = scalars.get(i).toBigInteger();
-            if (scalar.equals(BigInteger.ZERO)) {
-                continue;
-            }
-
-            // Mixed addition
-            if (scalar.equals(BigInteger.ONE)) {
-                acc1 = acc1.add(value._1);
-                acc2 = acc2.add(value._2);
-            } else {
-                converted1.add(new Tuple2<>(scalar, value._1));
-                converted2.add(new Tuple2<>(scalar, value._2));
-                numBits = Math.max(numBits, scalar.bitLength());
-            }
-        }
 
 
-        T1 true_res1 = converted1.isEmpty() ? acc1 : acc1.add(VariableBaseMSM.pippengerMSM(converted1, numBits));
-        T2 true_res2 =  converted2.isEmpty() ? acc2 : acc2.add(VariableBaseMSM.pippengerMSM(converted2, numBits));
+        // lianke: below is the original code used for verify the JNI cpp side code computation is correct
+
+        // final ArrayList<Tuple2<BigInteger, T1>> converted1 = new ArrayList<>(size);
+        // final ArrayList<Tuple2<BigInteger, T2>> converted2 = new ArrayList<>(size);
+
+        // T1 acc1 = bases.get(0)._1.zero();
+        // T2 acc2 = bases.get(0)._2.zero();
+        // int numBits = 0;
+
+        // for (int i = 0; i < size; i++) {
+        //     final Tuple2<T1, T2> value = bases.get(i);
+        //     final BigInteger scalar = scalars.get(i).toBigInteger();
+        //     if (scalar.equals(BigInteger.ZERO)) {
+        //         continue;
+        //     }
+
+        //     // Mixed addition
+        //     if (scalar.equals(BigInteger.ONE)) {
+        //         acc1 = acc1.add(value._1);
+        //         acc2 = acc2.add(value._2);
+        //     } else {
+        //         converted1.add(new Tuple2<>(scalar, value._1));
+        //         converted2.add(new Tuple2<>(scalar, value._2));
+        //         numBits = Math.max(numBits, scalar.bitLength());
+        //     }
+        // }
+
+
+        // T1 true_res1 = converted1.isEmpty() ? acc1 : acc1.add(VariableBaseMSM.pippengerMSM(converted1, numBits));
+        // T2 true_res2 =  converted2.isEmpty() ? acc2 : acc2.add(VariableBaseMSM.pippengerMSM(converted2, numBits));
+       
+        // System.out.println("java side final acc1 :" + byteToString(true_res1.toBigInteger().toByteArray()));
+        // System.out.println("java side final acc2 :" + byteToString(true_res2.toBigInteger().toByteArray()));
 
         // if(!true_res1.toBigInteger().equals(res1.toBigInteger())){
         //     System.out.println("error in first VariableBaseMSM .doubleMSM JNI computation");
@@ -476,7 +485,7 @@ public class VariableBaseMSM {
         //     System.out.println("error in second VariableBaseMSM .doubleMSM JNI computation");
         //     System.out.println(true_res2.toBigInteger() + " " + res2.toBigInteger());
         // }
-        return new Tuple2<>(true_res1, true_res2);
+        return new Tuple2<>(res1, res2);
 
 
 

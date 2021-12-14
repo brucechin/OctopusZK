@@ -231,15 +231,18 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseDouble
     vector<tuple<BigInt, BigInt>> filteredInput2;
 
     int numBits = 0;
+
     for(int i = 0; i < base_size1; i++){
       BigInt scalar = bigScalarArray[i];
       if(scalar.isZero()){
         continue;
       }
 
-      BigInt base = baseArray1[i];//TODO lianke this base does not contain modulus yet.
+      BigInt base = baseArray1[i];
       if(scalar.isOne()){
         acc1 = acc1 + base;
+        acc1 %= FqModulusParameter;
+
       }else{
         filteredInput1.push_back(make_tuple(scalar, base));
         numBits = max(numBits, scalar.bitLength());
@@ -252,14 +255,37 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseDouble
         continue;
       }
 
-      BigInt base = baseArray2[i];//TODO lianke this base does not contain modulus yet.
+      BigInt base = baseArray2[i];
       if(scalar.isOne()){
         acc2 = acc2 + base;
+        acc2 %= FqModulusParameter;
+
       }else{
         filteredInput2.push_back(make_tuple(scalar, base));
         //numBits = max(numBits, scalar.bitLength());
       }
     }
+
+    // for(int i = 0; i < base_size1; i++){
+    //   BigInt scalar = bigScalarArray[i];
+    //   if(scalar.isZero()){
+    //     continue;
+    //   }
+
+    //   BigInt base1 = baseArray1[i];
+    //   BigInt base2 = baseArray2[i];
+    //   if(scalar.isOne()){
+    //     acc1 = acc1 + base1;
+    //     acc1 %= FqModulusParameter;
+    //     acc2 = acc2 + base2;
+    //     acc2 %= FqModulusParameter;
+    //   }else{
+    //     filteredInput1.push_back(make_tuple(scalar, base1));
+    //     filteredInput2.push_back(make_tuple(scalar, base2));
+    //     numBits = max(numBits, scalar.bitLength());
+    //   }
+    // }
+
 
     if(!filteredInput1.empty()){
       int length = filteredInput1.size();
@@ -267,43 +293,50 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseDouble
       int c = log2Length - (log2Length / 3);
       int numBuckets = 1 << c;
       int numGroups = (numBits + c - 1)/c;
-      BigInt zero("0"); //TODO lianke modulus should be std::get<1>(filteredInput[0]) they are fakeG1 or fakeG2.
+      BigInt zero("0"); 
       vector<BigInt> bucketsModel = vector<BigInt>(numBuckets, zero);
-      BigInt result = zero;
+      BigInt result("0");
       for(int k = numGroups - 1; k >=0; k--){
         if (k < numGroups - 1) {
             for (int i = 0; i < c; i++) {
                 result = result + result;
+                result %= FqModulusParameter; 
             }
+        }
+        vector<BigInt> buckets = vector<BigInt>(bucketsModel);
 
-            vector<BigInt> buckets = vector<BigInt>(bucketsModel);
-
-            for (int i = 0; i < length; i++) {
-                  int id = 0;
-                  for (int j = 0; j < c; j++) {
-                      if (std::get<0>(filteredInput1[i]).testBit(k * c + j)) {
-                          id |= 1 << j;
-                      }
+        for (int i = 0; i < length; i++) {
+              int id = 0;
+              for (int j = 0; j < c; j++) {
+                  if (std::get<0>(filteredInput1[i]).testBit(k * c + j)) {
+                      id |= 1 << j;
                   }
+              }
 
-                  if (id == 0) {
-                      continue;
-                  }
+              if (id == 0) {
+                  continue;
+              }
 
-                  // Potentially use mixed addition here.
-                  buckets[id] = buckets[id] + std::get<1>(filteredInput1[i]);
-            }
-
-            BigInt runningSum = zero;
-            for(int i = numBuckets - 1; i > 0; i--){
-              runningSum = runningSum + buckets[i];
-              result = result + runningSum;
-            }
+              // Potentially use mixed addition here.
+              buckets[id] = buckets[id] + std::get<1>(filteredInput1[i]);
+              buckets[id]  %= FqModulusParameter;
 
         }
+
+        BigInt runningSum("0");
+        for(int i = numBuckets - 1; i > 0; i--){
+          runningSum = (runningSum + buckets[i]);
+          runningSum %= FqModulusParameter;
+          result = (result + runningSum);
+          result %= FqModulusParameter;
+        }
+
+        
       }
 
       acc1 = acc1 + result;
+      acc1 %= FqModulusParameter;
+
     }
     
   
@@ -313,14 +346,16 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseDouble
       int c = log2Length - (log2Length / 3);
       int numBuckets = 1 << c;
       int numGroups = (numBits + c - 1)/c;
-      BigInt zero(0); //TODO lianke modulus should be std::get<1>(filteredInput[0]) they are fakeG1 or fakeG2.
+      BigInt zero("0"); 
       vector<BigInt> bucketsModel = vector<BigInt>(numBuckets, zero);
-      BigInt result = zero;
+      BigInt result("0");
       for(int k = numGroups - 1; k >=0; k--){
         if (k < numGroups - 1) {
             for (int i = 0; i < c; i++) {
                 result = result + result;
+                result %= FqModulusParameter; 
             }
+        }
 
             vector<BigInt> buckets = vector<BigInt>(bucketsModel);
 
@@ -338,19 +373,27 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseDouble
 
                   // Potentially use mixed addition here.
                   buckets[id] = buckets[id] + std::get<1>(filteredInput2[i]);
+                  buckets[id]  %= FqModulusParameter;
             }
 
-            BigInt runningSum = zero;
+            BigInt runningSum("0");
             for(int i = numBuckets - 1; i > 0; i--){
-              runningSum = runningSum + buckets[i];
-              result = result + runningSum;
+                runningSum = (runningSum + buckets[i]);
+                runningSum %= FqModulusParameter;
+                result = (result + runningSum);
+                result %= FqModulusParameter;
             }
 
-        }
       }
 
       acc2 = acc2 + result;
+      acc2 %= FqModulusParameter;
+
     }
+
+    // cout << "cpp side final acc1 and acc2"<<endl;
+    // acc1.printBinary();
+    // acc2.printBinary();
 
     jbyteArray resultByteArray = env->NewByteArray((jsize)BigInt::num_of_bytes * 2 );
     env->SetByteArrayRegion(resultByteArray, 0 , BigInt::num_of_bytes,   reinterpret_cast<const jbyte*>(acc1.bytes));

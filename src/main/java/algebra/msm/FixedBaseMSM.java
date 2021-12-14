@@ -204,10 +204,9 @@ public class FixedBaseMSM {
         //System.out.println("scalarSize len :" + scalarSize);
         //System.out.println("windowSize len :" + windowSize);
 
-        System.out.println("batchMSM len :" + scalars.size());
-        //TODO lianke here if batchMSM len is smaller than some threshold, we can do it on CPU. Here, batchMSM and multiplesOfBase size should be large(somehow equal to the number of constraints).
-        System.out.println("multiplesOfBase len : " + multiplesOfBase.size() + " " + multiplesOfBase.get(0).size());
-        System.out.println("multiplesOfBase type : " + multiplesOfBase.get(0).get(0).getClass().getName());
+        // System.out.println("batchMSM len :" + scalars.size());
+        // System.out.println("multiplesOfBase len : " + multiplesOfBase.size() + " " + multiplesOfBase.get(0).size());
+        // System.out.println("multiplesOfBase type : " + multiplesOfBase.get(0).get(0).getClass().getName());
         
         ArrayList<ArrayList<byte[]>> byteArray = new ArrayList<ArrayList<byte[]>>();
         int out_size = multiplesOfBase.size();

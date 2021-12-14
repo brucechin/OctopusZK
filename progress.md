@@ -19,7 +19,7 @@ Therefore, i need to define some toIntArray from java, and pass the intarray rep
 
 # 2021.12.13
 
-kind of stuck in building lightweighted cpp fix length cpp bigint library.
+kind of stuck in building lightweighted cpp fix length cpp bigint library. implement a simple modulus function. implement and verify the correctness of JNI cpp side `VariableBaseMSM.serialMSM` and `VariableBaseMSM.doubleMSM`. next step is to implement the FFT on JNI cpp code side. Also notice that the BN254a curve is not implemented yet.
 
 
 

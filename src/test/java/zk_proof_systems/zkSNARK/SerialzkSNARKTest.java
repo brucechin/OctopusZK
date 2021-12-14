@@ -93,7 +93,7 @@ public class SerialzkSNARKTest implements Serializable {
 
     @Test
     public void SerialFakeProofSystemTest() {
-        final int numInputs = 123000;
+        final int numInputs = 100000;
         final int numConstraints = 200000;
 
         FakeInitialize.init();
