@@ -9,6 +9,7 @@
 #include "algebra_msm_VariableBaseMSM.h"
 #include "BigInt.h"
 
+    BigInt FqModulusParameter("1532495540865888858358347027150309183618765510462668801");
 
 
 
@@ -67,11 +68,16 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
 
       BigInt base = baseArray[i];//TODO lianke this base does not contain modulus yet.
       if(scalar.isOne()){
-        acc = acc + base;
+        acc = (acc + base);
+        acc  %= FqModulusParameter;
       }else{
         filteredInput.push_back(make_tuple(scalar, base));
         numBits = max(numBits, scalar.bitLength());
+        cout << "cpp side add <scalar, base> index:" << i << " \n"; 
+        scalar.printBinary();
+        base.printBinary();
       }
+
     }
 
     cout << "cpp side filteredInput size: " << filteredInput.size() << " numBits : " << numBits << endl;
@@ -88,16 +94,17 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
       int numGroups = (numBits + c - 1)/c;
       BigInt zero("0"); //TODO lianke modulus should be std::get<1>(filteredInput[0]) they are fakeG1 or fakeG2.
       vector<BigInt> bucketsModel = vector<BigInt>(numBuckets, zero);
-      BigInt result = zero; //TODO lianke this result should be FakeG1 or FakeG2
+      BigInt result("0"); //TODO lianke this result should be FakeG1 or FakeG2
       cout << "cpp side length " << length << " log2 length " << log2Length <<" c "  << c <<" numGroups " << numGroups << " numBuckets " << numBuckets << endl;
       for(int k = numGroups - 1; k >=0; k--){
         if (k < numGroups - 1) {
             for (int i = 0; i < c; i++) {
-                result = result + result;//TODO maybe mod here?
+                result = (result + result) ;
+                result %= FqModulusParameter; 
             }
         }
        // cout << "cpp side k=" << k << " after exp result is :";
-        //result.printBinary();
+      //result.printBinary();
 
         vector<BigInt> buckets = vector<BigInt>(bucketsModel);
 
@@ -114,13 +121,16 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
               }
 
               // Potentially use mixed addition here.
-              buckets[id] = buckets[id] + std::get<1>(filteredInput[i]);
+              buckets[id] = (buckets[id] + std::get<1>(filteredInput[i]));
+              buckets[id]  %= FqModulusParameter;
         }
 
         BigInt runningSum = zero;
         for(int i = numBuckets - 1; i > 0; i--){
-          runningSum = runningSum + buckets[i];
-          result = result + runningSum;
+          runningSum = (runningSum + buckets[i]);
+          runningSum %= FqModulusParameter;
+          result = (result + runningSum);
+          result %= FqModulusParameter;
         }
         //cout << "cpp side k=" << k << " after adding runningSum result is :";
         //result.printBinary();
@@ -130,7 +140,8 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
       }
 
 
-      acc = acc + result;
+      acc = (acc + result);
+      acc %= FqModulusParameter;
     }
 
 

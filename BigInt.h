@@ -43,6 +43,7 @@ public:
     BigInt(string val, int radix);
     BigInt(uint32_t val);
     BigInt(int val);
+    BigInt(const BigInt& val);
 
 
     BigInt(unsigned long long val);
@@ -60,7 +61,7 @@ public:
     //Addition and Subtraction
     friend BigInt &operator+=(BigInt &, const BigInt &);
     friend BigInt operator+(const BigInt &, const BigInt &);
-    friend BigInt operator-(const BigInt &, const BigInt &);
+    friend BigInt operator-( BigInt &,  BigInt &);
     friend BigInt &operator-=(BigInt &, const BigInt &);
  
     //Comparison operators
@@ -77,8 +78,8 @@ public:
     friend BigInt operator*(const BigInt &, const BigInt &);
 
     //Modulo
-    friend BigInt operator%(const BigInt &, const BigInt &);
-    friend BigInt &operator%=(BigInt &, const BigInt &);
+    friend BigInt operator%( BigInt &,  BigInt &);
+    friend BigInt &operator%=(BigInt &,  BigInt &);
 
     //Power Function
     friend BigInt &operator^=(BigInt &,const BigInt &);
@@ -98,9 +99,9 @@ public:
     int bitLength();
     bool testBit(int index); //same with the java BigInteger testBit
     BigInt mod(BigInt modulus);
+    int getLowestSetBit() ;
 };
 
-//const BigInt FqModulusParameter = BigInt("1532495540865888858358347027150309183618765510462668801");
 
 BigInt BigInt::ZERO(){
     return BigInt("0");
@@ -131,6 +132,18 @@ BigInt::BigInt(int val)
 BigInt::BigInt(unsigned long long val){
     memcpy(bytes, &val, num_of_bytes - sizeof(unsigned long long ));
 }
+
+BigInt::BigInt(const BigInt& val){
+    memcpy(bytes, &val.bytes, num_of_bytes);
+    len  = val.len;
+}
+
+
+
+
+
+
+
 
 int LeadingZeros(int x)
 {
@@ -171,8 +184,11 @@ bool BigInt::isOne(){
 }
 
 
+
 void BigInt::printBinary(){
+    uint32_t zero = 0;
     for (int i = 0; i < capacity; i++){
+        if(memcmp(&bytes[i], &zero, sizeof(uint32_t)) == 0 && i !=capacity-1){ continue; }
         std::bitset<32> tmp(bytes[i]);
         cout << tmp << "|";
     }
@@ -218,9 +234,51 @@ bool operator==(const BigInt &a, const BigInt &b){
     return memcmp(a.bytes, b.bytes, BigInt::num_of_bytes) == 0;
 }
 
+bool operator<(const BigInt &a, const BigInt &b){
+    for(int i = 0; i < BigInt::capacity; i++){
+        if(a.bytes[i] == 0 && b.bytes[i] == 0){ 
+            continue;
+        }
+        return a.bytes[i] < b.bytes[i];
+    }
+}
 
+BigInt &operator%=(BigInt &a,  BigInt &b){
+    while(!(a < b)){
+        a = a - b;
+    }
+    return a;
+}
 
+BigInt operator%( BigInt &a,  BigInt &b){
+    BigInt temp;
+    temp = a;
+    temp %= b;
+    return temp;
+}
 
+BigInt operator-(BigInt &a,  BigInt& b) {
+    BigInt result;
+    uint64_t temp = 0;
+    bool carry = false;
+    //lianke: we only use the lower half. the higher half is for storing larger multiplication results.
+    for(int i = BigInt::capacity - 1; i >= 0; i--) {
+        //cout << a.bytes[i] << " " << b.bytes[i] << " " <<temp << endl;
+        temp = (uint64_t)a.bytes[i];
+        if(carry){
+            temp--;
+        }
+        carry = temp < (uint64_t)b.bytes[i];
+        if(carry){
+            temp += (1 << 32);
+        }
+        result.bytes[i] = (uint32_t)(temp - (uint64_t)b.bytes[i]);
+    }
+    if(carry){
+        printf("-------------------BigInt subtraction failure detected!!----------------\n");
+    }
+    return result;
+}
 
 BigInt operator+(BigInt &a, const BigInt& b) {
     BigInt result;
@@ -242,13 +300,125 @@ BigInt &operator+=(BigInt & a, const BigInt & b){
     uint64_t temp = 0;
     bool carry = false;
     //lianke: we only use the lower half. the higher half is for storing larger multiplication results.
-    for(int i = BigInt::capacity/2 - 1; i >= 0; i--) {
+    for(int i = BigInt::capacity - 1; i >= 0; i--) {
         temp = (uint64_t)a.bytes[i] + b.bytes[i] + carry;
         a.bytes[i] = (uint32_t)temp;
-        carry = (temp >> 32 != 0);
+        carry = (temp >> BigInt::bits_per_word != 0);
     }
     return a;
 }
+
+
+
+//     /**
+//      * Compare the magnitude of two MutableBigIntegers. Returns -1, 0 or 1
+//      * as this MutableBigInteger is numerically less than, equal to, or
+//      * greater than <tt>b</tt>.
+//      */
+//     int compare(BigInt b) {
+//         int blen = b.len;
+//         if (len < blen) 
+//             return -1;
+//         if (len > blen)
+//            return 1;
+
+//         // Add Integer.MIN_VALUE to make the comparison act as unsigned integer
+//         // comparison.
+//         int bval[BigInt::capacity] = b.bytes;
+//         for (int i = BigInt::capacity - 1; i >=0; i--) {
+//             int b1 = value[i] + 0x80000000;
+//             int b2 = bval[i]  + 0x80000000;
+//             if (b1 < b2)
+//                 return -1;
+//             if (b1 > b2)
+//                 return 1;
+//         }
+//         return 0;
+//     }
+
+
+//     int numberOfTrailingZeros(int i) {
+//         // HD, Figure 5-14
+//         int y;
+//         if (i == 0) return 32;
+//         int n = 31;
+//         y = i <<16; if (y != 0) { n = n -16; i = y; }
+//         y = i << 8; if (y != 0) { n = n - 8; i = y; }
+//         y = i << 4; if (y != 0) { n = n - 4; i = y; }
+//         y = i << 2; if (y != 0) { n = n - 2; i = y; }
+//         return n - ((i << 1) >>> 31);
+//     }
+
+//    /**
+//      * Return the index of the lowest set bit in this MutableBigInteger. If the
+//      * magnitude of this MutableBigInteger is zero, -1 is returned.
+//      */
+//     int BigInt::getLowestSetBit() {
+//         if (len == 0)
+//             return -1;
+//         int j, b;
+//         for (j=BitInt::capacity-1; (j >= 0) && (bytes[j] == 0); j--)
+//             ;
+//         b = value[j];
+//         if (b == 0)
+//             return -1;
+//         return ((BigInt::capacity-1-j)<<5) + numberOfTrailingZeros(b);
+//     }
+
+
+//     BigInt divideKnuth(BigInt b, BigInt quotient, bool needRemainder) {
+
+//         // Dividend is zero
+//         if (intLen == 0) {
+//             quotient.intLen = quotient.offset = 0;
+//             return needRemainder ? new MutableBigInteger() : null;
+//         }
+
+//         int cmp = compare(b);
+//         // Dividend less than divisor
+//         if (cmp < 0) {
+//             quotient.intLen = quotient.offset = 0;
+//             return needRemainder ? BigInt(this): null;
+//         }
+
+
+//         quotient.clear();
+//         // Special case one word divisor
+//         if (b.intLen == 1) {
+//             int r = divideOneWord(b.value[b.offset], quotient);
+//             if(needRemainder) {
+//                 if (r == 0)
+//                     return new MutableBigInteger();
+//                 return new MutableBigInteger(r);
+//             } else {
+//                 return null;
+//             }
+//         }
+
+//         // Cancel common powers of two if we're above the KNUTH_POW2_* thresholds
+//         if (intLen >= KNUTH_POW2_THRESH_LEN) {
+//             int trailingZeroBits = Math.min(getLowestSetBit(), b.getLowestSetBit());
+//             if (trailingZeroBits >= KNUTH_POW2_THRESH_ZEROS*32) {
+//                 MutableBigInteger a = new MutableBigInteger(this);
+//                 b = new MutableBigInteger(b);
+//                 a.rightShift(trailingZeroBits);
+//                 b.rightShift(trailingZeroBits);
+//                 MutableBigInteger r = a.divideKnuth(b, quotient);
+//                 r.leftShift(trailingZeroBits);
+//                 return r;
+//             }
+//         }
+
+//         return divideMagnitude(b, quotient, needRemainder);
+//     }
+
+
+
+
+
+
+
+
 
 BigInt BigInt::mod(BigInt modulus){
     //TODO lianke
@@ -335,4 +505,6 @@ BigInt::BigInt(string val, int radix) {
         destructiveMulAdd(bytes, superRadix, groupVal);
     }
 }
+
+
 

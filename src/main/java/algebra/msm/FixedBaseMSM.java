@@ -226,10 +226,11 @@ public class FixedBaseMSM {
         final int outerc = (scalarSize + windowSize - 1) / windowSize;
         ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
         for (FieldT scalar : scalars) {
+
             bigScalars.add(bigIntegerToByteArrayHelper(scalar.toBigInteger()));
-            // if(scalars.size() == 4){
-            //     System.out.println(byteToString(scalar.toBigInteger().toByteArray()));
-            // }
+            if(scalars.size() == 4){
+                System.out.println(byteToString(scalar.toBigInteger().toByteArray()));
+            }
         }
         long finish = System.currentTimeMillis();
         long timeElapsed = finish - start;
@@ -252,6 +253,7 @@ public class FixedBaseMSM {
         BigInteger modulus = new BigInteger("1532495540865888858358347027150309183618765510462668801");
         for(int i = 0; i < scalars.size(); i++){
             byte[] slice = Arrays.copyOfRange(resultByteArray, i*size_of_bigint_cpp_side, (i+1)*size_of_bigint_cpp_side);//in cpp side, BigInt is 32 bytes.
+
             byte[] converted_back = new byte[64];
             for(int j = 63; j >= 3; j-=4){
                 converted_back[j] = slice[j - 3];
@@ -259,11 +261,21 @@ public class FixedBaseMSM {
                 converted_back[j-2] = slice[j - 1];
                 converted_back[j-3] = slice[j ];
             }
+
             BigInteger bi = new BigInteger(converted_back);
             BigInteger output = bi.mod(modulus);
             T temp = multiplesOfBase.get(0).get(0).zero();
             temp.setBigInteger(output);
             jni_res.add(temp);
+            // if(i == 0){
+            //     System.out.println("java side fixedbase msm slice " + byteToString(slice));
+            //     System.out.println("java side fixedbase msm convertedback " + byteToString(converted_back));
+            //     System.out.println("java side fixedbase msm bi" + byteToString(bi.toByteArray()));  
+            //     System.out.println("java side fixedbase msm res " + byteToString(bigIntegerToByteArrayHelper(res.get(i).toBigInteger())));
+            //     System.out.println("java side fixedbase msm jni res " + byteToString(bigIntegerToByteArrayHelper(temp.toBigInteger())));  
+            // }
+ 
+
             if(!res.get(i).toBigInteger().equals(temp.toBigInteger())){
                 System.out.println("error in FixedBaseMSM.batchMSM JNI computation");
             }
@@ -447,3 +459,7 @@ public class FixedBaseMSM {
                         serialMSM(scalarSize2, windowSize2, baseBroadcast2.value(), scalar._2))));
     }
 }
+
+// |00001110|10111110|11110011|10010100|11001101|01011010|11110111|10000011|00011000|11010100|01101011|01010011|00110011|01010110|00111110|11100001|11101011|10101001|00101111|01110001|01011111|00111000|11010101|
+// 00000000011110110100010001101111|11011101111111111101110001011000|00010110011001000010001010100110|00101001000110010001011010100110|11111111010001001011100101011111|         00100110101000101110101011101101|
+

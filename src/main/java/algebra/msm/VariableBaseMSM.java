@@ -227,6 +227,8 @@ public class VariableBaseMSM {
                 acc = acc.add(base);
             } else {
                 filteredInput.add(new Tuple2<>(scalar, base));
+                System.out.println("java side filteredInput add <scalar,base> index:" + i + "\n"  +  byteToString(scalar.toByteArray()) + ",\n " + byteToString(base.toBigInteger().toByteArray()));
+
                 numBits = Math.max(numBits, scalar.bitLength());
             }
         }

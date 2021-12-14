@@ -53,16 +53,9 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
                                 bigScalarArray[i].len);
 
 
-      // cout << i << " " <<bigScalarArray[i].len<<endl;
-      // for (int j = 0; j < bigScalarArray[i].len ; j++){
-      //   std::bitset<8> tmp(bytes[j]);
-      //   cout << tmp;
-      // }
-      // cout <<endl;
-      // bigScalarArray[i].printBinary();
-      // bigScalarArrayFake[i].printBinary();
-      // cout << "-----------------------------"<<endl;
-      //}
+      if(batch_size == 4){
+        bigScalarArray[i].printBinary();
+      }
 
 
   }
@@ -115,8 +108,10 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
 
     }  
 
-
-
+// if(batch_index == 0){
+//   cout << "cpp side fixedbase msm print res"<<endl;
+//   res.printBinary();
+// }
 
 
     env->SetByteArrayRegion(resultByteArray, batch_index * BigInt::num_of_bytes , BigInt::num_of_bytes,   reinterpret_cast<const jbyte*>(res.bytes));
