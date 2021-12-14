@@ -53,15 +53,13 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
                                 bigScalarArray[i].len);
 
 
-      if(batch_size == 4){
-        bigScalarArray[i].printBinary();
-      }
+      // if(batch_size == 4){
+      //   bigScalarArray[i].printBinary();
+      // }
 
 
   }
 
-    //TODO lianke parallelize it
-  //TODO lianke use GetIntArrayElements instead of GetByteArrayElements
   for(int i = 0; i < out_len;i++){
     for(int j = 0; j < inner_len; j++){
       jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase, java_util_ArrayList_get, i), java_util_ArrayList_get, j);

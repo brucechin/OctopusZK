@@ -73,19 +73,20 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
       }else{
         filteredInput.push_back(make_tuple(scalar, base));
         numBits = max(numBits, scalar.bitLength());
-        cout << "cpp side add <scalar, base> index:" << i << " \n"; 
-        scalar.printBinary();
-        base.printBinary();
+        // cout << "cpp side add <scalar, base> index:" << i << " \n"; 
+        // scalar.printBinary();
+        // base.printBinary();
       }
 
     }
 
-    cout << "cpp side filteredInput size: " << filteredInput.size() << " numBits : " << numBits << endl;
-    cout << "cpp side current acc is ";
-    acc.printBinary();
+    //cout << "cpp side filteredInput size: " << filteredInput.size() << " numBits : " << numBits << endl;
+    // cout << "cpp side current acc is ";
+    // acc.printBinary();
+
+    jbyteArray resultByteArray = env->NewByteArray((jsize)BigInt::num_of_bytes);
 
     if(!filteredInput.empty()){
-      //TODO lianke call pippengerMSM here. maybe we can make it as a helper function for further usage.
 
       int length = filteredInput.size();
       int log2Length =  max(1, (int)log2(length));
@@ -95,7 +96,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
       BigInt zero("0"); //TODO lianke modulus should be std::get<1>(filteredInput[0]) they are fakeG1 or fakeG2.
       vector<BigInt> bucketsModel = vector<BigInt>(numBuckets, zero);
       BigInt result("0"); //TODO lianke this result should be FakeG1 or FakeG2
-      cout << "cpp side length " << length << " log2 length " << log2Length <<" c "  << c <<" numGroups " << numGroups << " numBuckets " << numBuckets << endl;
+      //cout << "cpp side length " << length << " log2 length " << log2Length <<" c "  << c <<" numGroups " << numGroups << " numBuckets " << numBuckets << endl;
       for(int k = numGroups - 1; k >=0; k--){
         if (k < numGroups - 1) {
             for (int i = 0; i < c; i++) {
@@ -103,8 +104,11 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
                 result %= FqModulusParameter; 
             }
         }
-       // cout << "cpp side k=" << k << " after exp result is :";
-      //result.printBinary();
+      //   if(k > numGroups - 20) { 
+      //  cout << "cpp side k=" << k << " after exp result is :";
+      //   result.printBinary();
+      //   }
+
 
         vector<BigInt> buckets = vector<BigInt>(bucketsModel);
 
@@ -120,32 +124,49 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
                   continue;
               }
 
+              // if(k == 80 && i < 10){
+              //   cout << "cpp side i=" << i << " after testBit, id is :" << id << endl;
+              // }
+
               // Potentially use mixed addition here.
               buckets[id] = (buckets[id] + std::get<1>(filteredInput[i]));
               buckets[id]  %= FqModulusParameter;
         }
+        // if(k == 80){
+        //   for(int i = 0; i < numBuckets; i++){
+        //     cout <<"cpp side buckets index " << i << ":";
+        //     buckets[i].printBinary();
+        //   }
+        // }
 
-        BigInt runningSum = zero;
+        BigInt runningSum("0");
         for(int i = numBuckets - 1; i > 0; i--){
+          // if(k == numGroups - 1){
+          //   cout << "cpp side k " << k << " bucket index " << i << " runningSum" << endl;
+          //   runningSum.printBinary();
+          //   result.printBinary();
+          // }
           runningSum = (runningSum + buckets[i]);
           runningSum %= FqModulusParameter;
           result = (result + runningSum);
           result %= FqModulusParameter;
         }
-        //cout << "cpp side k=" << k << " after adding runningSum result is :";
-        //result.printBinary();
+        // if(k < 10){ 
+        // cout << "cpp side numGroups:" << numGroups <<" k= " << k << " after adding runningSum result is :";
+        // result.printBinary();
+        // }
+        //env->SetByteArrayRegion(resultByteArray, k * BigInt::num_of_bytes, BigInt::num_of_bytes,   reinterpret_cast<const jbyte*>(result.bytes));
 
-
-        
       }
 
 
       acc = (acc + result);
       acc %= FqModulusParameter;
     }
+    // cout << "cpp side final acc" << endl;
+    // acc.printBinary();
 
 
-    jbyteArray resultByteArray = env->NewByteArray((jsize)BigInt::num_of_bytes );
     env->SetByteArrayRegion(resultByteArray, 0 , BigInt::num_of_bytes,   reinterpret_cast<const jbyte*>(acc.bytes));
 
     return resultByteArray;

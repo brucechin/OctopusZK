@@ -228,9 +228,9 @@ public class FixedBaseMSM {
         for (FieldT scalar : scalars) {
 
             bigScalars.add(bigIntegerToByteArrayHelper(scalar.toBigInteger()));
-            if(scalars.size() == 4){
-                System.out.println(byteToString(scalar.toBigInteger().toByteArray()));
-            }
+            // if(scalars.size() == 4){
+            //     System.out.println(byteToString(scalar.toBigInteger().toByteArray()));
+            // }
         }
         long finish = System.currentTimeMillis();
         long timeElapsed = finish - start;
