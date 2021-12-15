@@ -49,7 +49,10 @@ public class BN254aFields {
         public BN254aFr zero() {
             return ZERO;
         }
-
+        public void setBigInteger(BigInteger bigInteger) {
+            //this.number = bigInteger;
+        }
+    
         public BN254aFr one() {
             return ONE;
         }
@@ -89,7 +92,10 @@ public class BN254aFields {
         public BN254aFq(final BigInteger number) {
             this.element = new Fp(number, FqParameters);
         }
-
+        public void setBigInteger(BigInteger bigInteger) {
+            //this.number = bigInteger;
+        }
+    
         public BN254aFq(final String number) {
             this(new BigInteger(number));
         }
@@ -186,7 +192,12 @@ public class BN254aFields {
 
         public BN254aFq2 construct(final long c0, final long c1) {
             return new BN254aFq2(c0, c1);
+        }   
+        
+        public void setBigInteger(BigInteger bigInteger) {
+            //this.number = bigInteger;
         }
+    
 
         public String toString() {
             return this.element.toString();
@@ -233,7 +244,10 @@ public class BN254aFields {
         public BN254aFq6 construct(final Fp6_3Over2 element) {
             return new BN254aFq6(element);
         }
-
+        public void setBigInteger(BigInteger bigInteger) {
+            //this.number = bigInteger;
+        }
+    
         public String toString() {
             return this.element.toString();
         }
@@ -275,7 +289,10 @@ public class BN254aFields {
         public BN254aFq12 construct(final Fp12_2Over3Over2 element) {
             return new BN254aFq12(element);
         }
-
+        public void setBigInteger(BigInteger bigInteger) {
+            //this.number = bigInteger;
+        }
+    
         public String toString() {
             return this.element.toString();
         }

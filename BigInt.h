@@ -74,8 +74,8 @@ public:
     friend bool operator<=(const BigInt &, const BigInt &);
 
     //Multiplication and Division
-    friend BigInt &operator*=(BigInt &, const BigInt &);
-    friend BigInt operator*(const BigInt &, const BigInt &);
+    friend BigInt &operator*=(BigInt &,  BigInt &);
+    friend BigInt operator*( BigInt &,  BigInt &);
 
     //Modulo
     friend BigInt operator%( BigInt &,  BigInt &);
@@ -84,6 +84,7 @@ public:
     //Power Function
     friend BigInt &operator^=(BigInt &,const BigInt &);
     friend BigInt operator^(BigInt &, const BigInt &);
+    friend BigInt pow(BigInt base, int exponent);
 
     //Read and Write
     void printBinary();
@@ -91,7 +92,6 @@ public:
     void printAddress();
 
     void printHex();
-
     static BigInt ZERO();
     static BigInt ONE();
     bool isZero();
@@ -101,6 +101,8 @@ public:
     BigInt mod(BigInt modulus);
     int getLowestSetBit() ;
 };
+
+
 
 
 BigInt BigInt::ZERO(){
@@ -308,6 +310,25 @@ BigInt &operator+=(BigInt & a, const BigInt & b){
 }
 
 
+BigInt FqModulusParameter("1532495540865888858358347027150309183618765510462668801");
+
+/* Returns this^exponent with long exponent */
+BigInt pow(BigInt base, int exponent) {
+    BigInt value = base;
+    BigInt result("1");
+    int currentExponent = exponent;
+    while (currentExponent > 0) {
+        if (currentExponent % 2 == 1) {
+            result = result * value;
+            result %= FqModulusParameter;
+        }
+        value  = value * value;
+        value %= FqModulusParameter;
+        currentExponent >>= 1;
+    }
+    return result;
+}
+
 
 //     /**
 //      * Compare the magnitude of two MutableBigIntegers. Returns -1, 0 or 1
@@ -413,25 +434,49 @@ BigInt &operator+=(BigInt & a, const BigInt & b){
 
 
 
+BigInt &operator*=(BigInt &a, BigInt& b){
+
+    //TODO lianke implement Karatsuba multiplication.
+    uint64_t temp[BigInt::capacity] = {0}; 
+    for(int i = BigInt::capacity - 1; i >= BigInt::capacity/2; i--){
+        for(int j = BigInt::capacity - 1; j>= BigInt::capacity/2; j--){
+            temp[i + j - BigInt::capacity + 1] += (uint64_t)a.bytes[i] * b.bytes[j];
+        }
+    }
+    uint64_t tmp = 0;
+    uint64_t carry = 0;
+    for(int i = BigInt::capacity - 1; i >= 0; i--){
+        tmp = temp[i] + carry;
+        a.bytes[i] = (char)tmp;
+        carry = (tmp >> 32);
+    }
+
+    a = a % FqModulusParameter;
+
+    return a;
+}
 
 
-BigInt operator*(BigInt &a,const BigInt& b){
+BigInt operator*(BigInt &a, BigInt& b){
 
     BigInt result;
     //TODO lianke implement Karatsuba multiplication.
-    uint16_t temp[BigInt::capacity] = {0}; 
+    uint64_t temp[BigInt::capacity] = {0}; 
     for(int i = BigInt::capacity - 1; i >= BigInt::capacity/2; i--){
         for(int j = BigInt::capacity - 1; j>= BigInt::capacity/2; j--){
-            temp[i + j - BigInt::capacity + 1] += (uint16_t)a.bytes[i] * b.bytes[j];
+            temp[i + j - BigInt::capacity + 1] += (uint64_t)a.bytes[i] * b.bytes[j];
         }
     }
-    uint16_t tmp = 0;
-    uint16_t carry = 0;
+    uint64_t tmp = 0;
+    uint64_t carry = 0;
     for(int i = BigInt::capacity - 1; i >= 0; i--){
         tmp = temp[i] + carry;
         result.bytes[i] = (char)tmp;
         carry = (tmp >> 32);
     }
+
+    result = result % FqModulusParameter;
+
     return result;
 }
 

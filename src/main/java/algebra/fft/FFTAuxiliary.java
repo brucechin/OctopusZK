@@ -15,6 +15,11 @@ import java.util.List;
 
 public class FFTAuxiliary {
 
+
+
+    static native <FieldT extends AbstractFieldElementExpanded<FieldT>> byte[] serialRadix2FFTNativeHelper(
+        final List<byte[]> input,
+        final byte[] omega);
     /**
      * Compute the radix-2 FFT of the vector a over the set S={omega^{0},...,omega^{m-1}}. Result is
      * stored in ArrayList input.
@@ -27,26 +32,24 @@ public class FFTAuxiliary {
         if (n == 1) {
             return;
         }
-        System.out.println("on java side, omega and input class type is "+ omega.getClass().getName());
+        System.out.println("on java side, serialRadix2FFT omega and input class type is "+ omega.getClass().getName());
 
         assert (n == (1 << logn));
 
-        long start = System.currentTimeMillis();
+        //long start = System.currentTimeMillis();
         /* swapping in place (from Storer's book) */
         for (int k = 0; k < n; ++k) {
             final int rk = MathUtils.bitreverse(k, logn);
+            //System.out.println("logn=" + logn + " k=" + k + " rk=" + rk);
             if (k < rk) {
                 Collections.swap(input, k, rk);
             }
         }
-        long end = System.currentTimeMillis();
-        long elapsedTime = end - start;
+        //long end = System.currentTimeMillis();
+        //long elapsedTime = end - start;
         //System.out.println("raidx-2 FFT swapping Elapsed time: " + elapsedTime/1000.0 + " seconds");
 
         int m = 1; // invariant: m = 2^{s-1}
-
-        start = System.currentTimeMillis();
-        // some time passes
 
 
         //TODO LIANKE i think this part is the key overhead in serialFFT, we should CUDA it.
@@ -66,9 +69,7 @@ public class FFTAuxiliary {
             m *= 2;
         }
 
-        end = System.currentTimeMillis();
-        elapsedTime = end - start;
-        //System.out.println("raidx-2 FFT computation Elapsed time: " + elapsedTime/1000.0 + " seconds");
+
 
     }
 

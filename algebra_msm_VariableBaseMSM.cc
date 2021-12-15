@@ -9,7 +9,7 @@
 #include "algebra_msm_VariableBaseMSM.h"
 #include "BigInt.h"
 
-    BigInt FqModulusParameter("1532495540865888858358347027150309183618765510462668801");
+// BigInt FqModulusParameter("1532495540865888858358347027150309183618765510462668801");
 
 
 

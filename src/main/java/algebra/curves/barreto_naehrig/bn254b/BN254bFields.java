@@ -66,7 +66,10 @@ public class BN254bFields {
         public BN254bFr construct(final Fp element) {
             return new BN254bFr(element);
         }
-
+        public void setBigInteger(BigInteger bigInteger) {
+            //this.number = bigInteger;
+        }
+    
         public String toString() {
             return this.element.toString();
         }
@@ -130,7 +133,10 @@ public class BN254bFields {
         public BN254bFq construct(final long number) {
             return new BN254bFq(number);
         }
-
+        public void setBigInteger(BigInteger bigInteger) {
+            //this.number = bigInteger;
+        }
+    
         public String toString() {
             return this.element.toString();
         }

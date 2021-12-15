@@ -100,6 +100,9 @@ public class ComplexField extends AbstractFieldElementExpanded<ComplexField>
     public ComplexField multiplicativeGenerator() {
         return new ComplexField(1);
     }
+    public void setBigInteger(BigInteger bigInteger) {
+        //this.number = bigInteger;
+    }
 
     public ComplexField rootOfUnity(final long size) {
         final double x = 2.0 * Math.PI / size;

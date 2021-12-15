@@ -25,4 +25,7 @@ public abstract class AbstractFieldElementExpanded<
 
     /* Returns this as a BigInteger */
     public abstract BigInteger toBigInteger();
+
+    public abstract void setBigInteger(BigInteger bigInteger) ;
+
 }
