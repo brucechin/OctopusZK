@@ -16,6 +16,23 @@ import java.util.List;
 public class FFTAuxiliary {
 
 
+    public static String byteToString(byte[] b) {
+        byte[] masks = { -128, 64, 32, 16, 8, 4, 2, 1 };
+        StringBuilder builder = new StringBuilder();
+        builder.append('|');
+        for( byte bb : b){
+            for (byte m : masks) {
+                if ((bb & m) == m) {
+                    builder.append('1');
+                } else {
+                    builder.append('0');
+                }
+            }
+            builder.append('|');
+        }
+
+        return builder.toString();
+    }
 
     static native <FieldT extends AbstractFieldElementExpanded<FieldT>> byte[] serialRadix2FFTNativeHelper(
         final List<byte[]> input,
@@ -56,7 +73,7 @@ public class FFTAuxiliary {
         for (int s = 1; s <= logn; ++s) {
             // w_m is 2^s-th root of unity now
             final FieldT w_m = omega.pow(n / (2 * m));
-
+            System.out.println("s=" + s + " w_m=" + byteToString(w_m.toBigInteger().toByteArray()));
             for (int k = 0; k < n; k += 2 * m) {
                 FieldT w = omega.one();
                 for (int j = 0; j < m; ++j) {

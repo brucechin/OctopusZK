@@ -61,6 +61,11 @@ public class SerialFFT<FieldT extends AbstractFieldElementExpanded<FieldT>> impl
             inputByteArray.add(bigIntegerToByteArrayHelper(f.toBigInteger()));
         }
         byte[] omegaBytes = bigIntegerToByteArrayHelper(omega.toBigInteger());
+
+        FFTAuxiliary.serialRadix2FFT(input, omega);
+
+
+
         System.out.println("radix2FFT java side is about to launch");
         byte[] resultByteArray = FFTAuxiliary.serialRadix2FFTNativeHelper(inputByteArray, omegaBytes);
         int size_of_bigint_cpp_side = 64;
@@ -83,7 +88,6 @@ public class SerialFFT<FieldT extends AbstractFieldElementExpanded<FieldT>> impl
             input.set(i, temp);
 
         }
-        //FFTAuxiliary.serialRadix2FFT(input, omega);
     }
 
     /**

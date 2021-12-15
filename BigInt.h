@@ -94,6 +94,7 @@ public:
     void printHex();
     static BigInt ZERO();
     static BigInt ONE();
+    int leadingZeros();
     bool isZero();
     bool isOne();
     int bitLength();
@@ -169,6 +170,22 @@ int BigInt::bitLength(){
     int bits = (len - 4) * 8;
     int leading_int = bytes[BigInt::capacity - len/4];
     return bits + 32 - LeadingZeros(leading_int);
+}
+
+int BigInt::leadingZeros(){
+    int res = 0;
+    uint32_t zero = 0;
+    for(int i = 0; i < BigInt::capacity; i++){
+        //cout << "memcmp result=" << memcmp(&bytes[i], &zero, 4)<<endl;
+        if(memcmp(&bytes[i], &zero, 4) == 0){
+            res += BigInt::bits_per_word;
+            //cout <<"continue i=" <<i<<endl; 
+        }else{
+            res +=LeadingZeros(bytes[i]);
+            break;
+        }
+    }
+    return res;
 
 }
 
@@ -189,8 +206,10 @@ bool BigInt::isOne(){
 
 void BigInt::printBinary(){
     uint32_t zero = 0;
+    bool leadingZeros = true;
     for (int i = 0; i < capacity; i++){
-        if(memcmp(&bytes[i], &zero, sizeof(uint32_t)) == 0 && i !=capacity-1){ continue; }
+        if(memcmp(&bytes[i], &zero, sizeof(uint32_t)) == 0 && i !=capacity-1 && leadingZeros){ continue; }
+        leadingZeros = false; 
         std::bitset<32> tmp(bytes[i]);
         cout << tmp << "|";
     }
@@ -245,8 +264,35 @@ bool operator<(const BigInt &a, const BigInt &b){
 
 BigInt &operator%=(BigInt &a,  BigInt &b){
     //TODO lianke optimize this func
+    int count = 0;
     while(!(a < b)){
-        a = a - b;
+        //cout << "mod index=" << count++ <<endl;
+        //a.printBinary();
+        //b.printBinary();
+        int leadingZerosA = a.leadingZeros();
+        int leadingZerosB = b.leadingZeros();
+        int leadingZeroDiff = leadingZerosB - leadingZerosA;
+        cout << leadingZerosA << " " <<leadingZerosB << " " << leadingZeroDiff <<endl;
+        if(leadingZeroDiff > 0){ 
+            BigInt multiplier("0");
+            int index = BigInt::capacity - 1 - (leadingZeroDiff / BigInt::bits_per_word);
+            uint32_t offset = 1 << ((leadingZeroDiff - 1) % BigInt::bits_per_word);
+            //cout << "index=" << index << " offset=" <<offset <<endl;
+            //memcpy(&multiplier.bytes[index], &offset, sizeof(uint32_t));
+            multiplier.bytes[index] = offset;
+            multiplier.printBinary();
+            BigInt tmp = b;
+            cout <<"previsous tmp" <<endl;
+            tmp.printBinary();
+            tmp = tmp * multiplier;
+            cout << "multiplied tmp:" << endl;
+            tmp.printBinary();
+
+            a = a - tmp;
+        }else{
+            a = a - b;
+        }
+
     }
     return a;
 }
@@ -318,10 +364,18 @@ BigInt pow(BigInt base, int exponent) {
     BigInt result("1");
     int currentExponent = exponent;
     while (currentExponent > 0) {
-        if (currentExponent % 2 == 1) {
-            result = result * value;
-            result %= FqModulusParameter;
-        }
+        cout << "currentExponent=" << currentExponent <<endl;
+        result = result * value;
+
+        result.printBinary();
+        value.printBinary();
+        result %= FqModulusParameter;
+
+        // if (currentExponent % 2 == 1) {
+        //     result = result * value;
+
+        //     result %= FqModulusParameter;
+        // }
         value  = value * value;
         value %= FqModulusParameter;
         currentExponent >>= 1;
@@ -437,18 +491,18 @@ BigInt pow(BigInt base, int exponent) {
 BigInt &operator*=(BigInt &a, BigInt& b){
 
     //TODO lianke implement Karatsuba multiplication.
-    uint64_t temp[BigInt::capacity] = {0}; 
-    for(int i = BigInt::capacity - 1; i >= BigInt::capacity/2; i--){
-        for(int j = BigInt::capacity - 1; j>= BigInt::capacity/2; j--){
-            temp[i + j - BigInt::capacity + 1] += (uint64_t)a.bytes[i] * b.bytes[j];
+    uint64_t temp[BigInt::capacity * 2] = {0}; 
+    for(int i = BigInt::capacity - 1; i >= 0; i--){
+        for(int j = BigInt::capacity - 1; j>=0; j--){
+            temp[i + j  + 1] += (uint64_t)a.bytes[i] * b.bytes[j];
         }
     }
     uint64_t tmp = 0;
     uint64_t carry = 0;
     for(int i = BigInt::capacity - 1; i >= 0; i--){
-        tmp = temp[i] + carry;
-        a.bytes[i] = (char)tmp;
-        carry = (tmp >> 32);
+        tmp = temp[BigInt::capacity + i] + carry;
+        a.bytes[i] = (uint32_t)tmp;
+        carry = (tmp >> BigInt::bits_per_word);
     }
 
     a = a % FqModulusParameter;
@@ -461,20 +515,20 @@ BigInt operator*(BigInt &a, BigInt& b){
 
     BigInt result;
     //TODO lianke implement Karatsuba multiplication.
-    uint64_t temp[BigInt::capacity] = {0}; 
-    for(int i = BigInt::capacity - 1; i >= BigInt::capacity/2; i--){
-        for(int j = BigInt::capacity - 1; j>= BigInt::capacity/2; j--){
-            temp[i + j - BigInt::capacity + 1] += (uint64_t)a.bytes[i] * b.bytes[j];
+    uint64_t temp[BigInt::capacity * 2] = {0}; 
+    for(int i = BigInt::capacity - 1; i >= 0; i--){
+        for(int j = BigInt::capacity - 1; j>= 0; j--){
+            temp[i + j  + 1] += (uint64_t)a.bytes[i] * b.bytes[j];
         }
     }
+
     uint64_t tmp = 0;
     uint64_t carry = 0;
     for(int i = BigInt::capacity - 1; i >= 0; i--){
-        tmp = temp[i] + carry;
-        result.bytes[i] = (char)tmp;
-        carry = (tmp >> 32);
+        tmp = temp[BigInt::capacity + i] + carry;
+        result.bytes[i] = (uint32_t)tmp;
+        carry = (tmp >> BigInt::bits_per_word);
     }
-
     result = result % FqModulusParameter;
 
     return result;
