@@ -73,7 +73,7 @@ public class FFTAuxiliary {
         for (int s = 1; s <= logn; ++s) {
             // w_m is 2^s-th root of unity now
             final FieldT w_m = omega.pow(n / (2 * m));
-            System.out.println("s=" + s + " w_m=" + byteToString(w_m.toBigInteger().toByteArray()));
+            //System.out.println("s=" + s + " w_m=" + byteToString(w_m.toBigInteger().toByteArray()));
             for (int k = 0; k < n; k += 2 * m) {
                 FieldT w = omega.one();
                 for (int j = 0; j < m; ++j) {

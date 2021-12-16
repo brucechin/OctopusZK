@@ -118,7 +118,12 @@ public class FixedBaseMSM {
             final int windowSize,
             final ArrayList<ArrayList<byte[]>> multiplesOfBase,
             final ArrayList<byte[]> bigScalars);
-
+    public static native <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
+            byte[] batchMSMNativeHelperGPU(
+                    final int outerc,
+                    final int windowSize,
+                    final ArrayList<ArrayList<byte[]>> multiplesOfBase,
+                    final ArrayList<byte[]> bigScalars);
     public static String byteToString(byte[] b) {
         byte[] masks = { -128, 64, 32, 16, 8, 4, 2, 1 };
         StringBuilder builder = new StringBuilder();
@@ -201,13 +206,14 @@ public class FixedBaseMSM {
             final List<List<T>> multiplesOfBase,
             final List<FieldT> scalars) {
         final List<T> res = new ArrayList<>(scalars.size());
-        //System.out.println("scalarSize len :" + scalarSize);
-        //System.out.println("windowSize len :" + windowSize);
+        System.out.println("scalarSize len :" + scalarSize);
+        System.out.println("windowSize len :" + windowSize);
 
-        // System.out.println("batchMSM len :" + scalars.size());
-        // System.out.println("multiplesOfBase len : " + multiplesOfBase.size() + " " + multiplesOfBase.get(0).size());
-        // System.out.println("multiplesOfBase type : " + multiplesOfBase.get(0).get(0).getClass().getName());
-        
+        System.out.println("batchMSM len :" + scalars.size());
+        System.out.println("multiplesOfBase len : " + multiplesOfBase.size() + " " + multiplesOfBase.get(0).size());
+        System.out.println("multiplesOfBase type : " + multiplesOfBase.get(0).get(0).getClass().getName());
+        System.out.println("scalars type : " + scalars.get(0).getClass().getName());
+
         ArrayList<ArrayList<byte[]>> byteArray = new ArrayList<ArrayList<byte[]>>();
         int out_size = multiplesOfBase.size();
         int in_size = multiplesOfBase.get(0).size();
@@ -237,9 +243,9 @@ public class FixedBaseMSM {
         byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, byteArray, bigScalars);
 
 
-        for (FieldT scalar : scalars) {
-            res.add(serialMSM(scalarSize, windowSize, multiplesOfBase, scalar));
-        }
+        // for (FieldT scalar : scalars) {
+        //     res.add(serialMSM(scalarSize, windowSize, multiplesOfBase, scalar));
+        // }
         final List<T> jni_res = new ArrayList<>(scalars.size());
         //TODO move modulus to cpp side to accelerate more.
 
@@ -275,9 +281,9 @@ public class FixedBaseMSM {
             // }
  
 
-            if(!res.get(i).toBigInteger().equals(temp.toBigInteger())){
-                System.out.println("error in FixedBaseMSM.batchMSM JNI computation");
-            }
+            // if(!res.get(i).toBigInteger().equals(temp.toBigInteger())){
+            //     System.out.println("error in FixedBaseMSM.batchMSM JNI computation");
+            // }
             // System.out.println(
             // "\n                 res:" + res.get(i).toBigInteger()+
             // "\n jni modulus output :" + temp.toBigInteger() + " " + res.get(i).toBigInteger().equals(temp.toBigInteger()) );
@@ -287,7 +293,7 @@ public class FixedBaseMSM {
         finish = System.currentTimeMillis();
         timeElapsed = finish - start;
         System.out.println("data receive transformation time elapsed: " + timeElapsed + " ms");
-        return res;
+        return jni_res;
     }
 
     public static <GroupT extends AbstractGroup<GroupT>,
@@ -337,6 +343,7 @@ public class FixedBaseMSM {
         System.out.println("multiplesOfBase2 len : " + multiplesOfBase2.size() + " " + multiplesOfBase2.get(0).size());
         System.out.println("multiplesOfBase1 type : " + multiplesOfBase1.get(0).get(0).getClass().getName());
         System.out.println("multiplesOfBase2 type : " + multiplesOfBase2.get(0).get(0).getClass().getName());
+        System.out.println("scalars type : " + scalars.get(0).getClass().getName());
 
         ArrayList<ArrayList<byte[]>> byteArray1 = new ArrayList<ArrayList<byte[]>>();
         ArrayList<ArrayList<byte[]>> byteArray2 = new ArrayList<ArrayList<byte[]>>();
@@ -370,11 +377,11 @@ public class FixedBaseMSM {
         }
 
         //TODO lianke for verification purpose
-        for (FieldT scalar : scalars) {
-            res.add(new Tuple2<>(
-                    serialMSM(scalarSize1, windowSize1, multiplesOfBase1, scalar),
-                    serialMSM(scalarSize2, windowSize2, multiplesOfBase2, scalar)));
-        }
+        // for (FieldT scalar : scalars) {
+        //     res.add(new Tuple2<>(
+        //             serialMSM(scalarSize1, windowSize1, multiplesOfBase1, scalar),
+        //             serialMSM(scalarSize2, windowSize2, multiplesOfBase2, scalar)));
+        // }
 
 
         byte[] resultByteArray = doubleBatchMSMNativeHelper(outerc1, windowSize1, outerc2, windowSize2, byteArray1, byteArray2, bigScalars);
@@ -413,12 +420,12 @@ public class FixedBaseMSM {
             BigInteger output2 = bi2.mod(modulus);
             G2T temp2 = multiplesOfBase2.get(0).get(0).zero();
             temp2.setBigInteger(output2);
-
-
             jni_res.add(new Tuple2<>(temp1, temp2));
-            if(!res.get(i)._1.toBigInteger().equals(temp1.toBigInteger()) || !res.get(i)._2.toBigInteger().equals(temp2.toBigInteger())){
-                System.out.println("error in FixedBaseMSM.doubleBatchMSM JNI computation");
-            }
+
+            // jni_res.add(new Tuple2<>(temp1, temp2));
+            // if(!res.get(i)._1.toBigInteger().equals(temp1.toBigInteger()) || !res.get(i)._2.toBigInteger().equals(temp2.toBigInteger())){
+            //     System.out.println("error in FixedBaseMSM.doubleBatchMSM JNI computation");
+            // }
             // System.out.println(
             // "\n                 res:" + res.get(i).toBigInteger()+
             // "\n jni modulus output :" + temp.toBigInteger() + " " + res.get(i).toBigInteger().equals(temp.toBigInteger()) );
@@ -432,7 +439,7 @@ public class FixedBaseMSM {
 
 
 
-        return res;
+        return jni_res;
     }
 
     public static <G1T extends AbstractG1<G1T>,
@@ -458,7 +465,4 @@ public class FixedBaseMSM {
                         serialMSM(scalarSize2, windowSize2, baseBroadcast2.value(), scalar._2))));
     }
 }
-
-// |00001110|10111110|11110011|10010100|11001101|01011010|11110111|10000011|00011000|11010100|01101011|01010011|00110011|01010110|00111110|11100001|11101011|10101001|00101111|01110001|01011111|00111000|11010101|
-// 00000000011110110100010001101111|11011101111111111101110001011000|00010110011001000010001010100110|00101001000110010001011010100110|11111111010001001011100101011111|         00100110101000101110101011101101|
 

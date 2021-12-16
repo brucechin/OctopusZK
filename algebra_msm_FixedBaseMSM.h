@@ -17,6 +17,14 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
 
 /*
  * Class:     algebra_msm_FixedBaseMSM
+ * Method:    batchMSMNativeHelperGPU
+ * Signature: (IILjava/util/ArrayList;Ljava/util/ArrayList;)[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelperGPU
+  (JNIEnv *, jclass, jint, jint, jobject, jobject);
+
+/*
+ * Class:     algebra_msm_FixedBaseMSM
  * Method:    doubleBatchMSMNativeHelper
  * Signature: (IIIILjava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;)[B
  */

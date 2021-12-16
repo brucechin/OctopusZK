@@ -66,14 +66,14 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_fft_FFTAuxiliary_serialRadix2FFTNative
     }
 
     int m = 1; // invariant: m = 2^{s-1}
-    omega.printBinary();
+    //omega.printBinary();
     //TODO LIANKE i think this part is the key overhead in serialFFT, we should CUDA it.
     for (int s = 1; s <= logn; ++s) {
         // w_m is 2^s-th root of unity now
-        cout << "s=" <<s <<endl;
+        //cout << "s=" <<s <<endl;
         BigInt w_m = pow(omega, (int)input_len / (2 * m));
-        cout <<"finished pow"<<endl;
-        w_m.printBinary();
+        //cout <<"finished pow"<<endl;
+        //w_m.printBinary();
         for (int k = 0; k < input_len; k += 2 * m) {
             BigInt w("1");
             //cout<< "k="<< k <<endl;

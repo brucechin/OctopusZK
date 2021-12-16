@@ -1,4 +1,5 @@
 JAVA_HOME='/usr/lib/jvm/java-8-openjdk-amd64'
+NVCC_FLAGS :=-O3 -I include
 
 sudo rm lib*.so
 

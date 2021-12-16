@@ -8,8 +8,121 @@
 #include "algebra_msm_FixedBaseMSM.h"
 //#include "BigInteger.h"
 #include "BigInt.h"
+//#include "include/xmp.h"
+//#include <cuda_runtime_api.h>
 
 //TODO lianke: G1 and G2 MSM window table generation can be moved to cpp side too.
+
+#define XMP_CHECK_ERROR(fun) \
+{                             \
+  xmpError_t error=fun;     \
+  if(error!=xmpErrorSuccess){ \
+    if(error==xmpErrorCuda)   \
+      printf("CUDA Error %s, %s:%d\n",cudaGetErrorString(cudaGetLastError()),__FILE__,__LINE__); \
+    else  \
+      printf("XMP Error %s, %s:%d\n",xmpGetErrorString(error),__FILE__,__LINE__); \
+    exit(EXIT_FAILURE); \
+  } \
+}
+
+
+/*
+ * Class:     algebra_msm_FixedBaseMSM
+ * Method:    batchMSMNativeHelperGPU
+ * Signature: (IILjava/util/ArrayList;Ljava/util/ArrayList;)[B
+ */
+// JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelperGPU
+// (JNIEnv *env, jclass obj, jint outerc, jint windowSize, jobject multiplesOfBase, jobject bigScalars)
+// {
+
+//   jclass java_util_ArrayList      = static_cast<jclass>(env->NewGlobalRef(env->FindClass("java/util/ArrayList")));
+//   jmethodID java_util_ArrayList_size = env->GetMethodID(java_util_ArrayList, "size", "()I");
+//   jmethodID java_util_ArrayList_get  = env->GetMethodID(java_util_ArrayList, "get", "(I)Ljava/lang/Object;");
+
+//   jint out_len = env->CallIntMethod(multiplesOfBase, java_util_ArrayList_size);
+//   jint inner_len = env->CallIntMethod(env->CallObjectMethod(multiplesOfBase, java_util_ArrayList_get, 0), java_util_ArrayList_size);
+  
+//   jint batch_size = env->CallIntMethod(bigScalars, java_util_ArrayList_size);
+
+
+
+//   uint32_t* bigScalarArray = new uint32_t[batch_size * BigInt::capacity];
+//   uint32_t* multiplesOfBasePtrArray = new uint32_t[out_len * inner_len * BigInt::capacity];
+
+//   for(int i =0; i < batch_size; i++){
+//       jbyteArray element = (jbyteArray)env->CallObjectMethod(bigScalars, java_util_ArrayList_get, i);
+//       char* bytes = (char*)env->GetByteArrayElements(element, NULL);
+//       int len = env->GetArrayLength(element);
+//       char* tmp = (char*)bigScalarArray[i * BigInt::capacity];
+
+//       memcpy(tmp +BigInt::num_of_bytes - len, 
+//                                 bytes,
+//                                 len);
+
+//   }
+
+//   for(int i = 0; i < out_len;i++){
+//     for(int j = 0; j < inner_len; j++){
+//       jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
+//       char* bytes = (char*)env->GetByteArrayElements(element, NULL);
+//       int len = env->GetArrayLength(element);
+//       char* tmp = (char*)multiplesOfBasePtrArray[(i * inner_len +j) * BigInt::capacity];
+//       memcpy(tmp + BigInt::num_of_bytes - len, bytes,  len);
+
+//     }
+//   }
+
+
+
+//   xmpHandle_t handle;
+//   xmpIntegers_t baseXMPArray, scalarXMPArray;
+
+//   cudaSetDevice(0);//TODO lianke: bind device according to spark worker id?
+//   //allocate handle
+//   XMP_CHECK_ERROR(xmpHandleCreate(&handle));
+
+//   XMP_CHECK_ERROR(xmpIntegersCreate(handle,&baseXMPArray, BigInt::num_of_bytes * 8, out_len * inner_len));
+//   XMP_CHECK_ERROR(xmpIntegersCreate(handle,&scalarXMPArray, BigInt::num_of_bytes * 8, batch_size));
+
+
+//   //import 
+//   XMP_CHECK_ERROR(xmpIntegersImport(handle,baseXMPArray,BigInt::capacity,-1,sizeof(uint32_t),0,0,multiplesOfBasePtrArray,out_len * inner_len));
+//   XMP_CHECK_ERROR(xmpIntegersImport(handle,scalarXMPArray,BigInt::capacity,-1,sizeof(uint32_t),0,0,bigScalarArray, batch_size));
+
+//   for(int batch_index = 0; batch_index < batch_size; batch_index++){
+//     BigInt res = multiplesOfBasePtrArray[0][0];//TODO lianke this assignment has a problem. 
+
+//     for (int outer = 0; outer < outerc; ++outer) {
+//         int inner = 0;
+
+//         for (int i = 0; i < windowSize; ++i) {
+//             if (bigScalarArray[batch_index].testBit(outer * windowSize + i)) { //Returns true if and only if the designated bit is set.
+//                 inner |= 1 << i;
+//             }
+
+//         }
+
+//         res = res + multiplesOfBasePtrArray[outer][inner];
+
+//     }  
+
+//   }
+
+
+
+
+
+//   // jbyteArray resultByteArray = env->NewByteArray((jsize)BigInt::num_of_bytes * batch_size);
+//   // env->SetByteArrayRegion(resultByteArray, batch_index * BigInt::num_of_bytes , BigInt::num_of_bytes,   reinterpret_cast<const jbyte*>(res.bytes));
+
+//     // end = std::chrono::steady_clock::now();
+//     // elapsed_seconds = end-start;
+//    // std::cout << "C++ Compute elapsed time: " << elapsed_seconds.count() << "s\n";
+  
+
+//   return resultByteArray;
+// }
+
 
 
 
@@ -53,9 +166,6 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
                                 bigScalarArray[i].len);
 
 
-      // if(batch_size == 4){
-      //   bigScalarArray[i].printBinary();
-      // }
 
 
   }
@@ -68,19 +178,10 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
       char* tmp = (char*)multiplesOfBasePtrArray[i][j].bytes;
       memcpy(tmp + BigInt::num_of_bytes - multiplesOfBasePtrArray[i][j].len, bytes,  multiplesOfBasePtrArray[i][j].len);
 
-
-      //multiplesOfBasePtrArrayFake[i][j].printBinary();
-      // cout << "--------multiplesOfBase cmp------------"<<endl;
-                      
-      // cout << memcmp(multiplesOfBasePtrArray[i][j].bytes, multiplesOfBasePtrArrayFake[i][j].bytes, BigInt::num_of_bytes) <<endl;
-
-      //cout << i << " " <<j  << " bytes len:" <<multiplesOfBasePtrArray[i][j].len <<endl;
-      //multiplesOfBasePtrArray[i][j].print();
     }
   }
     end = std::chrono::steady_clock::now();
     elapsed_seconds = end-start;
-    //std::cout << "Read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
 
 
   start = std::chrono::steady_clock::now();
@@ -101,15 +202,10 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
           // }
         }
 
-
         res = res + multiplesOfBasePtrArray[outer][inner];
 
     }  
 
-// if(batch_index == 0){
-//   cout << "cpp side fixedbase msm print res"<<endl;
-//   res.printBinary();
-// }
 
 
     env->SetByteArrayRegion(resultByteArray, batch_index * BigInt::num_of_bytes , BigInt::num_of_bytes,   reinterpret_cast<const jbyte*>(res.bytes));
