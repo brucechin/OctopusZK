@@ -119,60 +119,60 @@ public class FFTAuxiliary {
         //         Collections.swap(input, k, rk);
         //     }
         // }
-        int m = 512; // invariant: m = 2^{s-1}
-        // for(FieldT f : input){
-        //     System.out.println("on java side intermediate=" + byteToString(f.toBigInteger().toByteArray()));
+        // int m = 1; // invariant: m = 2^{s-1}
+        // // for(FieldT f : input){
+        // //     System.out.println("on java side intermediate=" + byteToString(f.toBigInteger().toByteArray()));
+        // // }
+        // for (int s = 1; s <= logn; ++s) {
+        //     // w_m is 2^s-th root of unity now
+        //     final FieldT w_m = omega.pow(n / (2 * m));
+        //     //System.out.println("java side s=" + s +" exp="+n / (2 * m) + " w_m=" + byteToString(w_m.toBigInteger().toByteArray()));
+        //     for (int k = 0; k < n; k += 2 * m) {
+        //         FieldT w = omega.one();
+        //         for (int j = 0; j < m; ++j) {
+        //             final FieldT t = w.mul(input.get(k + j + m));
+        //             // if(s==2){
+        //             //     System.out.println("k="+k+"j="+j);
+        //             //     System.out.println("java side w="+byteToString(w.toBigInteger().toByteArray()));
+        //             //     System.out.println("java side t="+byteToString(t.toBigInteger().toByteArray()));    
+        //             // }
+
+        //             // System.out.println("input = " + input.get(k + j).toBigInteger());
+        //             //System.out.println("java side t=" + byteToString( t.toBigInteger().toByteArray()));
+        //             //System.out.println("java result sub=" + byteToString(input.get(k + j).sub(t).toBigInteger().toByteArray()));
+        //             //System.out.println("before sub input[k+j]=" + input.get(k + j));
+        //             input.set(k + j + m, input.get(k + j).sub(t));
+        //             // if(s==2){
+        //             //     System.out.println("java side  input="+byteToString(input.get(k+j).toBigInteger().toByteArray()));
+        //             //     System.out.println("java side t="+byteToString(t.toBigInteger().toByteArray()));  
+        //             //     System.out.println("java side t="+t.toBigInteger());  
+
+        //             //     System.out.println("java side  input[k+j+m]="+byteToString(input.get(k+j+m).toBigInteger().toByteArray()));
+
+        //             // }
+        //             // if(s == 2){
+        //             //     System.out.println("java side before input[k+j]=" + byteToString(input.get(k+j).toBigInteger().toByteArray()));
+        //             // }
+        //             input.set(k + j, input.get(k + j).add(t));
+        //             // if(s == 2){
+        //             //     System.out.println("java side after input[k+j]=" + byteToString(input.get(k+j).toBigInteger().toByteArray()));
+        //             // }
+        //             // if(s == 2){
+        //             //     System.out.println("java side before w=" + byteToString(w.toBigInteger().toByteArray()));
+        //             // }
+        //             w = w.mul(w_m);
+        //             // if(s == 2){
+        //             //     System.out.println("java side after w=" + byteToString(w.toBigInteger().toByteArray()));
+        //             // }
+        //         }
+        //     }
+        //     // if(s == 2){
+        //     //     for(FieldT f : input){
+        //     //         System.out.println("on java side intermediate=" + byteToString(f.toBigInteger().toByteArray()));
+        //     //     }
+        //     // }
+        //     m *= 2;
         // }
-        for (int s = 10; s <= logn; ++s) {
-            // w_m is 2^s-th root of unity now
-            final FieldT w_m = omega.pow(n / (2 * m));
-            //System.out.println("java side s=" + s +" exp="+n / (2 * m) + " w_m=" + byteToString(w_m.toBigInteger().toByteArray()));
-            for (int k = 0; k < n; k += 2 * m) {
-                FieldT w = omega.one();
-                for (int j = 0; j < m; ++j) {
-                    final FieldT t = w.mul(input.get(k + j + m));
-                    // if(s==2){
-                    //     System.out.println("k="+k+"j="+j);
-                    //     System.out.println("java side w="+byteToString(w.toBigInteger().toByteArray()));
-                    //     System.out.println("java side t="+byteToString(t.toBigInteger().toByteArray()));    
-                    // }
-
-                    // System.out.println("input = " + input.get(k + j).toBigInteger());
-                    //System.out.println("java side t=" + byteToString( t.toBigInteger().toByteArray()));
-                    //System.out.println("java result sub=" + byteToString(input.get(k + j).sub(t).toBigInteger().toByteArray()));
-                    //System.out.println("before sub input[k+j]=" + input.get(k + j));
-                    input.set(k + j + m, input.get(k + j).sub(t));
-                    // if(s==2){
-                    //     System.out.println("java side  input="+byteToString(input.get(k+j).toBigInteger().toByteArray()));
-                    //     System.out.println("java side t="+byteToString(t.toBigInteger().toByteArray()));  
-                    //     System.out.println("java side t="+t.toBigInteger());  
-
-                    //     System.out.println("java side  input[k+j+m]="+byteToString(input.get(k+j+m).toBigInteger().toByteArray()));
-
-                    // }
-                    // if(s == 2){
-                    //     System.out.println("java side before input[k+j]=" + byteToString(input.get(k+j).toBigInteger().toByteArray()));
-                    // }
-                    input.set(k + j, input.get(k + j).add(t));
-                    // if(s == 2){
-                    //     System.out.println("java side after input[k+j]=" + byteToString(input.get(k+j).toBigInteger().toByteArray()));
-                    // }
-                    // if(s == 2){
-                    //     System.out.println("java side before w=" + byteToString(w.toBigInteger().toByteArray()));
-                    // }
-                    w = w.mul(w_m);
-                    // if(s == 2){
-                    //     System.out.println("java side after w=" + byteToString(w.toBigInteger().toByteArray()));
-                    // }
-                }
-            }
-            // if(s == 2){
-            //     for(FieldT f : input){
-            //         System.out.println("on java side intermediate=" + byteToString(f.toBigInteger().toByteArray()));
-            //     }
-            // }
-            m *= 2;
-        }
 
 
 
