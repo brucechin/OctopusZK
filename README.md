@@ -1,3 +1,19 @@
+How to run this GPU-DIZK repo:
+```$xslt
+mvn compile
+sh jni_compile.sh 
+#test the correctness
+mvn test -Dtest=zk_proof_systems.zkSNARK.SerialzkSNARKTest 
+#benchmark serial zkSNARK performance 
+sh serialzkSNARKProfiler.sh 
+#benchmark distributed zkSNARK performance. remember to setup your Spark cluster first.
+sh distributedzkSNARKProfiler.sh
+```
+
+
+
+
+
 <h1 align="center">DIZK</h1>
 <p align="center">
     <a href="https://travis-ci.org/scipr-lab/dizk"><img src="https://travis-ci.org/scipr-lab/dizk.svg?branch=master"></a>
