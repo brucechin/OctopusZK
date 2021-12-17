@@ -45,6 +45,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_fft_FFTAuxiliary_serialRadix2FFTNative
                                     inputArray[i].len);
     }
 
+
     BigInt omega("0");
     char* bytes = (char*)env->GetByteArrayElements(omegaArray, NULL);
     omega.len = env->GetArrayLength(omegaArray);
@@ -65,31 +66,33 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_fft_FFTAuxiliary_serialRadix2FFTNative
         }
     }
 
-    int m = 1; // invariant: m = 2^{s-1}
-    //omega.printBinary();
-    //TODO LIANKE i think this part is the key overhead in serialFFT, we should CUDA it.
-    for (int s = 1; s <= logn; ++s) {
-        // w_m is 2^s-th root of unity now
-        //cout << "s=" <<s <<endl;
-        BigInt w_m = pow(omega, (int)input_len / (2 * m));
-        //cout <<"finished pow"<<endl;
-        //w_m.printBinary();
+    int m = 1;
+     // invariant: m = 2^{s-1}
+     //TODO lianke profile the time consumption
+    cout << "logn = " << logn <<endl;
+    for (int s = 1; s <= 9; ++s) {
+        //TODO lianke when s == 9, this loop has wrong computation
+        BigInt w_m = pow(omega, (int)input_len / (2 * m), FqModulusParameter);
+;
         for (int k = 0; k < input_len; k += 2 * m) {
             BigInt w("1");
-            //cout<< "k="<< k <<endl;
             for (int j = 0; j < m; ++j) {
-                BigInt t = w * (inputArray[k + j + m]);
-                inputArray[k + j + m]= inputArray[k + j] - t;
-                inputArray[k + j] = inputArray[k + j] + t;
-                w = w * w_m;
+                BigInt t = w.multiply_with_mod(inputArray[k + j + m], FqModulusParameter);
+                inputArray[k + j + m]= inputArray[k + j].minus_with_mod(t, FqModulusParameter);
+                inputArray[k + j] = inputArray[k + j].add_with_mod(t, FqModulusParameter);
+                w = w.multiply_with_mod(w_m, FqModulusParameter);
+
             }
         }
+
         m *= 2;
     }
 
     jbyteArray resultByteArray = env->NewByteArray((jsize)BigInt::num_of_bytes * input_len);
 
     for(int i=0; i < input_len;i++){
+        // cout <<"cpp side output=";
+        // inputArray[i].printBinaryDebug();
         env->SetByteArrayRegion(resultByteArray, i * BigInt::num_of_bytes , BigInt::num_of_bytes,   reinterpret_cast<const jbyte*>(inputArray[i].bytes));
     }
 
@@ -97,3 +100,4 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_fft_FFTAuxiliary_serialRadix2FFTNative
     return resultByteArray;
 
 }
+

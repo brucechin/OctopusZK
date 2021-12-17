@@ -44,6 +44,7 @@ public class Fp extends AbstractFieldElementExpanded<Fp> implements Serializable
     }
 
     public Fp mul(final Fp that) {
+        //System.out.println("Fp Mul Modulus =" + FpParameters.modulus());
         return new Fp(number.multiply(that.number), FpParameters);
     }
 
@@ -54,6 +55,7 @@ public class Fp extends AbstractFieldElementExpanded<Fp> implements Serializable
     public Fp zero() {
         return FpParameters.ZERO();
     }
+
 
     public boolean isZero() {
         return equals(FpParameters.ZERO());

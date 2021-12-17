@@ -101,18 +101,13 @@ public class LargeFpParameters extends AbstractFpParameters implements Serializa
     }
 
     public Fp ZERO() {
-        if (ZERO == null) {
-            ZERO = new Fp(BigInteger.ZERO, this);
-        }
+        ZERO = new Fp(BigInteger.ZERO, this);
 
         return ZERO;
     }
 
     public Fp ONE() {
-        if (ONE == null) {
-            ONE = new Fp(BigInteger.ONE, this);
-        }
-
+        ONE = new Fp(BigInteger.ONE, this);
         return ONE;
     }
 }

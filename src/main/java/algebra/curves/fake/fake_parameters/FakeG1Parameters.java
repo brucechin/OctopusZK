@@ -32,9 +32,7 @@ public class FakeG1Parameters extends AbstractFakeG1Parameters implements Serial
     }
 
     public FakeG1 ZERO() {
-        // if (ZERO == null) {
-        //     ZERO = new FakeG1(BigInteger.ZERO, this);
-        // }
+
 
         return new FakeG1(BigInteger.ZERO, this);
     }

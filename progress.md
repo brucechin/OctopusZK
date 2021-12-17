@@ -21,6 +21,12 @@ Therefore, i need to define some toIntArray from java, and pass the intarray rep
 
 kind of stuck in building lightweighted cpp fix length cpp bigint library. implement a simple modulus function. implement and verify the correctness of JNI cpp side `VariableBaseMSM.serialMSM` and `VariableBaseMSM.doubleMSM`. next step is to implement the FFT on JNI cpp code side. Also notice that the BN254a curve is not implemented yet.
 
+# 2021.12.16
+
+bug fixed:
+(1). support a correct multiplication, mod, and pow with mod.
+(2). fix a bug when (smaller - bigger) mod modulus.
+(3). fix a bug when shift offset is 32: for example: 11 >> 32 = 11, instead of 0. however, 11 >> 31 = 0;
 
 
 

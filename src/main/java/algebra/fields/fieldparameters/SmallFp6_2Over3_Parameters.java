@@ -38,17 +38,13 @@ public class SmallFp6_2Over3_Parameters extends AbstractFp6_2Over3_Parameters
     }
 
     public Fp6_2Over3 ZERO() {
-        if (ZERO == null) {
             ZERO = new Fp6_2Over3(Fp3Parameters.ZERO(), Fp3Parameters.ZERO(), this);
-        }
 
         return ZERO;
     }
 
     public Fp6_2Over3 ONE() {
-        if (ONE == null) {
             ONE = new Fp6_2Over3(Fp3Parameters.ONE(), Fp3Parameters.ZERO(), this);
-        }
 
         return ONE;
     }

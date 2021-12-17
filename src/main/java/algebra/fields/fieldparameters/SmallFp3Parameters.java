@@ -32,17 +32,13 @@ public class SmallFp3Parameters extends AbstractFp3Parameters implements Seriali
     }
 
     public Fp3 ZERO() {
-        if (ZERO == null) {
             ZERO = new Fp3(FpParameters.ZERO(), FpParameters.ZERO(), FpParameters.ZERO(), this);
-        }
 
         return ZERO;
     }
 
     public Fp3 ONE() {
-        if (ONE == null) {
             ONE = new Fp3(FpParameters.ONE(), FpParameters.ZERO(), FpParameters.ZERO(), this);
-        }
 
         return ONE;
     }

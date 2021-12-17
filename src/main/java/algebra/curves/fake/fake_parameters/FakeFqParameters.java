@@ -30,9 +30,7 @@ public class FakeFqParameters extends AbstractFpParameters implements Serializab
     private Fp nqrTot;
 
     public Fp ZERO() {
-        if (ZERO == null) {
-            ZERO = new Fp(BigInteger.ZERO, this);
-        }
+        ZERO = new Fp(BigInteger.ZERO, this);
 
         return ZERO;
     }

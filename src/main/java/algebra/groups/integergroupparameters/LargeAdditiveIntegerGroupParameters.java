@@ -23,17 +23,13 @@ public class LargeAdditiveIntegerGroupParameters extends AbstractAdditiveInteger
     private BigInteger modulus;
 
     public AdditiveIntegerGroup ZERO() {
-        if (ZERO == null) {
             ZERO = new AdditiveIntegerGroup(BigInteger.ZERO, this);
-        }
 
         return ZERO;
     }
 
     public AdditiveIntegerGroup ONE() {
-        if (ONE == null) {
             ONE = new AdditiveIntegerGroup(BigInteger.ONE, this);
-        }
 
         return ONE;
     }

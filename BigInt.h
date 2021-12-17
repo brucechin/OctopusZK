@@ -11,6 +11,20 @@
 using namespace std;
 //TODO we also need to implement BN254, not just for FakeG1 and FakeG2
 
+int uint_msb(uint32_t a) {
+    int n = 4 * sizeof(uint32_t);
+    int inf = 0;
+    for (int s = n / 2; 0 < s; s/=2) {
+    if (a < (uint32_t)1 <<n) {
+            n-=s;   
+        } else {
+            inf = n;
+            n+=s;
+        }
+    }
+    return a < (uint32_t)1 << n ? inf : n;
+}
+
 
 int digitsPerInt[] = {0, 0, 30, 19, 15, 13, 11,
         11, 10, 9, 9, 8, 8, 8, 8, 7, 7, 7, 7, 7, 7, 7, 6, 6, 6, 6,
@@ -59,8 +73,8 @@ public:
     BigInt operator--(int temp);
  
     //Addition and Subtraction
-    friend BigInt &operator+=(BigInt &, const BigInt &);
-    friend BigInt operator+(const BigInt &, const BigInt &);
+    friend BigInt &operator+=(BigInt &,  BigInt &);
+    friend BigInt operator+( BigInt &, BigInt &);
     friend BigInt operator-( BigInt &,  BigInt &);
     friend BigInt &operator-=(BigInt &, const BigInt &);
  
@@ -77,7 +91,9 @@ public:
     friend BigInt &operator*=(BigInt &,  BigInt &);
     friend BigInt operator*( BigInt &,  BigInt &);
     
-    BigInt multiply_without_mod(BigInt&);
+    BigInt multiply_with_mod(BigInt&, BigInt& modulus);
+    BigInt add_with_mod(BigInt&, BigInt& modulus);
+    BigInt minus_with_mod(BigInt&, BigInt& modulus);
 
     //Modulo
     friend BigInt operator%( BigInt &,  BigInt &);
@@ -90,6 +106,8 @@ public:
 
     //Read and Write
     void printBinary();
+    void printBinaryDebug();
+
     void printDigits();
     void printAddress();
 
@@ -100,6 +118,8 @@ public:
     bool isZero();
     bool isOne();
     void shiftLeft(int num_of_bits);
+    void shiftRight(int num_of_bits);
+    void sbit_helper(int num_of_bits);
     int bitLength();
     bool testBit(int index); //same with the java BigInteger testBit
     BigInt mod(BigInt modulus);
@@ -108,6 +128,20 @@ public:
 };
 
 
+int msb(BigInt& a) {
+    int i=0;
+    bool found = 0;
+    for(; i < BigInt::capacity; i++){
+        if (0 < a.bytes[i]) {
+            found = 1;
+            break;
+        }
+    }
+    if (!found) {
+        return 0;
+    }
+    return (BigInt::capacity - i - 1) * 8 * sizeof(uint32_t) + uint_msb(a.bytes[i]);
+}
 
 
 BigInt BigInt::ZERO(){
@@ -147,6 +181,16 @@ BigInt::BigInt(const BigInt& val){
 
 
 
+bool operator>(const BigInt &a, const BigInt &b){
+    for(int i = 0; i < BigInt::capacity; i++){
+        if(a.bytes[i] >b.bytes[i]){
+            return true;
+        }else if(a.bytes[i]  < b.bytes[i]){
+            return false;
+        }   
+    }
+    return false;
+}
 
 
 
@@ -154,16 +198,28 @@ void BigInt::shiftLeft(int num_of_bits){
     int offset = num_of_bits % BigInt::bits_per_word;
     int num_of_words_shifted = num_of_bits / BigInt::bits_per_word;
     int i = 0;
-    for(; i < BigInt::capacity - num_of_words_shifted-1; i++){
-        bytes[i] = (bytes[i + num_of_words_shifted] << offset) | 
-                    (bytes[i + num_of_words_shifted+1] >> (BigInt::bits_per_word - offset));
+    if(offset != 0){
+        for(; i < BigInt::capacity - num_of_words_shifted-1; i++){
+            bytes[i] = (bytes[i + num_of_words_shifted] << offset) | 
+                        (bytes[i + num_of_words_shifted+1] >> (BigInt::bits_per_word - offset));
+            //cout << (bytes[i + num_of_words_shifted+1] >> (BigInt::bits_per_word - offset))  << endl;
+        }
+        //printBinaryDebug();
+        bytes[i++] =  bytes[i + num_of_words_shifted]<<offset;
+        for(; i < BigInt::capacity; i++){
+            bytes[i] = 0;
+        }
+    }else{
+        for(; i < BigInt::capacity - num_of_words_shifted-1; i++){
+            bytes[i] = bytes[i + num_of_words_shifted];
+        }
+        bytes[i++] =  bytes[i + num_of_words_shifted];
+        for(; i < BigInt::capacity; i++){
+            bytes[i] = 0;
+        }
     }
-    bytes[i++] <<= offset;
-    for(; i < BigInt::capacity; i++){
-        bytes[i] = 0;
-    }
-}
 
+}
 
 int LeadingZeros(int x)
 {
@@ -221,6 +277,25 @@ bool BigInt::isOne(){
 
 
 
+void BigInt::printBinaryDebug(){
+    uint32_t zero = 0;
+    bool leadingZeros = true;
+    for (int i = 0; i < capacity; i++){
+        if(memcmp(&bytes[i], &zero, sizeof(uint32_t)) == 0 && i !=capacity-1 && leadingZeros){ continue; }
+        leadingZeros = false; 
+        std::bitset<32> tmp(bytes[i]);
+        for(int i =BigInt::bits_per_word - 1; i >=0; i--){
+            cout << tmp[i];
+            if(i % 8 == 0){
+                cout << "|";
+            }
+
+        }
+    }
+    printf("\n");
+    return ;
+}
+
 void BigInt::printBinary(){
     uint32_t zero = 0;
     bool leadingZeros = true;
@@ -228,7 +303,7 @@ void BigInt::printBinary(){
         if(memcmp(&bytes[i], &zero, sizeof(uint32_t)) == 0 && i !=capacity-1 && leadingZeros){ continue; }
         leadingZeros = false; 
         std::bitset<32> tmp(bytes[i]);
-        cout << tmp << "|";
+        cout << tmp ;
     }
     printf("\n");
     return ;
@@ -280,68 +355,80 @@ bool operator<(const BigInt &a, const BigInt &b){
 }
 
 BigInt &operator%=(BigInt &a,  BigInt &b){
-    //TODO lianke this mod is wrong!!!!
-    int count = 0;
-    while(!(a < b)){
-        //cout << "mod index=" << count++ <<endl;
-        //a.printBinary();
-        //b.printBinary();
-        int leadingZerosA = a.leadingZeros();
-        int leadingZerosB = b.leadingZeros();
-        int leadingZeroDiff = leadingZerosB - leadingZerosA;
-        cout << leadingZerosA << " " <<leadingZerosB << " " << leadingZeroDiff <<endl;
-        if(leadingZeroDiff > 0){ 
-            // BigInt multiplier("1");
-            // multiplier.shiftLeft(leadingZerosDiff - 1);
-            // int index = BigInt::capacity - 1 - (leadingZeroDiff / BigInt::bits_per_word);
-            // uint32_t offset = 1 << ((leadingZeroDiff - 1) % BigInt::bits_per_word);
-            //cout << "index=" << index << " offset=" <<offset <<endl;
-            //memcpy(&multiplier.bytes[index], &offset, sizeof(uint32_t));
-            //multiplier.bytes[index] = offset;
-            //multiplier.printBinary();
-            //cout <<"previsous b" <<endl;
-            //b.printBinary();
-            BigInt tmp = b;
-            tmp.shiftLeft(leadingZeroDiff - 2);
-            a = a - tmp;
-        }else{
-            a = a - b;
-        }
-    }
-    return a;
+    a = a % b;
 }
 
 BigInt operator%( BigInt &a,  BigInt &b){
-    BigInt temp;
-    temp = a;
-    temp %= b;
-    return temp;
+    BigInt div_result;
+    BigInt mod_result;
+    int msb_a = msb(a);
+    int msb_b = msb(b);
+    if (msb_a < msb_b) {
+        mod_result = a;
+    } else {
+        int xbit = msb_a - msb_b;
+        //cout << "msb diff = " << xbit << endl;
+        BigInt xobj = a;
+        BigInt xdiv = b;
+        xdiv.shiftLeft(xbit);
+        for (int i=0; i <= xbit; ++i) {
+            // cout << "xobj binary = ";
+            // xobj.printBinary();
+            // cout << "xdiv binary = ";
+            // xdiv.printBinary();
+            // cout << endl;
+            if (xobj > xdiv) {
+                div_result.sbit_helper(xbit - i);
+                xobj = xobj - xdiv;
+            }
+            xdiv.shiftRight(1);
+        }
+        mod_result = xobj;
+    }
+    return mod_result;
+}
+
+
+uint32_t uint_sub_helper(uint32_t a, uint32_t b, bool &carry) {
+    uint32_t cx = carry? 1:0;
+    uint32_t c = a - b - cx;
+    carry = carry ? a <= c : a < c;
+    return c; 
 }
 
 BigInt operator-(BigInt &a,  BigInt& b) {
     BigInt result;
     uint64_t temp = 0;
     bool carry = false;
-    //lianke: we only use the lower half. the higher half is for storing larger multiplication results.
+
     for(int i = BigInt::capacity - 1; i >= 0; i--) {
-        //cout << a.bytes[i] << " " << b.bytes[i] << " " <<temp << endl;
-        temp = (uint64_t)a.bytes[i];
-        if(carry){
-            temp--;
-        }
-        carry = temp < (uint64_t)b.bytes[i];
-        if(carry){
-            temp += (1 << 32);
-        }
-        result.bytes[i] = (uint32_t)(temp - (uint64_t)b.bytes[i]);
-    }
+        result.bytes[i] = uint_sub_helper(a.bytes[i], b.bytes[i], carry);
+    } 
     if(carry){
         printf("-------------------BigInt subtraction failure detected!!----------------\n");
     }
     return result;
 }
 
-BigInt operator+(BigInt &a, const BigInt& b) {
+
+BigInt BigInt::minus_with_mod(BigInt& b, BigInt& modulus){
+    BigInt result;
+    uint64_t temp = 0;
+    bool carry = false;
+    BigInt a = *this;
+    if(a < b){
+        a = a + modulus;
+    }
+
+    for(int i = BigInt::capacity - 1; i >= 0; i--) {
+        result.bytes[i] = uint_sub_helper(a.bytes[i], b.bytes[i], carry);
+    } 
+    
+    a = a % modulus;
+    return result;
+}
+
+BigInt operator+(BigInt &a, BigInt& b) {
     BigInt result;
     uint64_t temp = 0;
     bool carry = false;
@@ -355,6 +442,20 @@ BigInt operator+(BigInt &a, const BigInt& b) {
     return result;
 }
 
+BigInt BigInt::add_with_mod(BigInt& b, BigInt& modulus) {
+    BigInt result;
+    uint64_t temp = 0;
+    bool carry = false;
+    //lianke: we only use the lower half. the higher half is for storing larger multiplication results.
+    for(int i = BigInt::capacity - 1; i >= 0; i--) {
+        //cout << a.bytes[i] << " " << b.bytes[i] << " " <<temp << endl;
+        temp = (uint64_t)bytes[i] + b.bytes[i] + carry;
+        result.bytes[i] = (uint32_t)temp;
+        carry = (temp >> BigInt::bits_per_word != 0);
+    }
+    result = result % modulus;
+    return result;
+}
 
 
 BigInt &operator+=(BigInt & a, const BigInt & b){
@@ -374,132 +475,25 @@ BigInt FqModulusParameter("15324955408658888583583470271503091836187655104626688
 
 /* Returns this^exponent with long exponent */
 //TODO lianke : check its correctness
-BigInt pow(BigInt base, int exponent) {
+BigInt pow(BigInt base, int exponent, BigInt modulus) {
     BigInt value = base;
     BigInt result("1");
     int currentExponent = exponent;
     while (currentExponent > 0) {
         //cout << "currentExponent=" << currentExponent <<endl;
-        result = result.multiply_without_mod(value);
-
         // result.printBinary();
         // value.printBinary();
-        result %= FqModulusParameter;
-
-        // if (currentExponent % 2 == 1) {
-        //     result = result * value;
-
-        //     result %= FqModulusParameter;
-        // }
-        value  = value.multiply_without_mod(value);
-        value %= FqModulusParameter;
+        if (currentExponent % 2 == 1) {
+            result = result * value;
+            result %= modulus;
+        }
+        value  = value * value;
+        value %= modulus;
         currentExponent >>= 1;
     }
     return result;
 }
 
-
-//     /**
-//      * Compare the magnitude of two MutableBigIntegers. Returns -1, 0 or 1
-//      * as this MutableBigInteger is numerically less than, equal to, or
-//      * greater than <tt>b</tt>.
-//      */
-//     int compare(BigInt b) {
-//         int blen = b.len;
-//         if (len < blen) 
-//             return -1;
-//         if (len > blen)
-//            return 1;
-
-//         // Add Integer.MIN_VALUE to make the comparison act as unsigned integer
-//         // comparison.
-//         int bval[BigInt::capacity] = b.bytes;
-//         for (int i = BigInt::capacity - 1; i >=0; i--) {
-//             int b1 = value[i] + 0x80000000;
-//             int b2 = bval[i]  + 0x80000000;
-//             if (b1 < b2)
-//                 return -1;
-//             if (b1 > b2)
-//                 return 1;
-//         }
-//         return 0;
-//     }
-
-
-//     int numberOfTrailingZeros(int i) {
-//         // HD, Figure 5-14
-//         int y;
-//         if (i == 0) return 32;
-//         int n = 31;
-//         y = i <<16; if (y != 0) { n = n -16; i = y; }
-//         y = i << 8; if (y != 0) { n = n - 8; i = y; }
-//         y = i << 4; if (y != 0) { n = n - 4; i = y; }
-//         y = i << 2; if (y != 0) { n = n - 2; i = y; }
-//         return n - ((i << 1) >>> 31);
-//     }
-
-//    /**
-//      * Return the index of the lowest set bit in this MutableBigInteger. If the
-//      * magnitude of this MutableBigInteger is zero, -1 is returned.
-//      */
-//     int BigInt::getLowestSetBit() {
-//         if (len == 0)
-//             return -1;
-//         int j, b;
-//         for (j=BitInt::capacity-1; (j >= 0) && (bytes[j] == 0); j--)
-//             ;
-//         b = value[j];
-//         if (b == 0)
-//             return -1;
-//         return ((BigInt::capacity-1-j)<<5) + numberOfTrailingZeros(b);
-//     }
-
-
-//     BigInt divideKnuth(BigInt b, BigInt quotient, bool needRemainder) {
-
-//         // Dividend is zero
-//         if (intLen == 0) {
-//             quotient.intLen = quotient.offset = 0;
-//             return needRemainder ? new MutableBigInteger() : null;
-//         }
-
-//         int cmp = compare(b);
-//         // Dividend less than divisor
-//         if (cmp < 0) {
-//             quotient.intLen = quotient.offset = 0;
-//             return needRemainder ? BigInt(this): null;
-//         }
-
-
-//         quotient.clear();
-//         // Special case one word divisor
-//         if (b.intLen == 1) {
-//             int r = divideOneWord(b.value[b.offset], quotient);
-//             if(needRemainder) {
-//                 if (r == 0)
-//                     return new MutableBigInteger();
-//                 return new MutableBigInteger(r);
-//             } else {
-//                 return null;
-//             }
-//         }
-
-//         // Cancel common powers of two if we're above the KNUTH_POW2_* thresholds
-//         if (intLen >= KNUTH_POW2_THRESH_LEN) {
-//             int trailingZeroBits = Math.min(getLowestSetBit(), b.getLowestSetBit());
-//             if (trailingZeroBits >= KNUTH_POW2_THRESH_ZEROS*32) {
-//                 MutableBigInteger a = new MutableBigInteger(this);
-//                 b = new MutableBigInteger(b);
-//                 a.rightShift(trailingZeroBits);
-//                 b.rightShift(trailingZeroBits);
-//                 MutableBigInteger r = a.divideKnuth(b, quotient);
-//                 r.leftShift(trailingZeroBits);
-//                 return r;
-//             }
-//         }
-
-//         return divideMagnitude(b, quotient, needRemainder);
-//     }
 
 
 uint32_t uint_add_helper(uint32_t a, uint32_t b, bool& carry) {
@@ -508,7 +502,7 @@ uint32_t uint_add_helper(uint32_t a, uint32_t b, bool& carry) {
     return result;
 }
 
-BigInt BigInt::multiply_without_mod(BigInt& b){
+BigInt BigInt::multiply_with_mod(BigInt& b, BigInt& modulus) {
     BigInt result;
     BigInt carry;
     //cout << "start of a multiplication" << endl;
@@ -538,7 +532,7 @@ BigInt BigInt::multiply_without_mod(BigInt& b){
     }
 
     BigInt final_res = result + carry;
-
+    final_res = final_res % modulus;
     return final_res;
 }
 
@@ -581,10 +575,76 @@ BigInt operator*(BigInt &a, BigInt& b){
 
     BigInt final_res = result + carry;
 
-    final_res = final_res % FqModulusParameter;
 
     return final_res;
 }
+
+
+void BigInt::shiftRight(int num_of_bits){
+    //TODO lianke this shift is wrong
+    int offset = num_of_bits % BigInt::bits_per_word;
+    int num_of_words_shifted = num_of_bits / BigInt::bits_per_word;
+    int i = BigInt::capacity - 1;
+    if(offset !=0){
+        for(; i >=num_of_words_shifted + 1;i--){
+            bytes[i] = (bytes[ i - num_of_words_shifted] >> offset ) |
+                        (bytes[i - num_of_words_shifted - 1] << (BigInt::bits_per_word - offset));
+        }
+        bytes[i--] =bytes[ i - num_of_words_shifted] >> offset;
+        for(; i >=0; i--){
+            bytes[i] = 0;
+        }
+    }else{
+        for(; i >=num_of_words_shifted + 1;i--){
+            bytes[i] = bytes[ i - num_of_words_shifted];
+        }
+        bytes[i--] =bytes[ i - num_of_words_shifted];
+        for(; i >=0; i--){
+            bytes[i] = 0;
+        }
+    }
+
+
+}
+
+
+void BigInt::sbit_helper(int bit) {
+    int dat_byte = bit / BigInt::bits_per_word;
+    int dat_bit = bit % BigInt::bits_per_word;
+    bytes[dat_byte] |= 1<<dat_bit;
+}
+
+BigInt mod(BigInt &a, BigInt &b) {
+    BigInt div_result;
+    BigInt mod_result;
+    int msb_a = msb(a);
+    int msb_b = msb(b);
+    if (msb_a < msb_b) {
+        mod_result = a;
+    } else {
+        int xbit = msb_a - msb_b;
+        //cout << "msb diff = " << xbit << endl;
+        BigInt xobj = a;
+        BigInt xdiv = b;
+        xdiv.shiftLeft(xbit);
+        for (int i=0; i <= xbit; ++i) {
+            // cout << "xobj binary = ";
+            // xobj.printBinary();
+            // cout << "xdiv binary = ";
+            // xdiv.printBinary();
+            // cout << endl;
+            if (xobj > xdiv) {
+                div_result.sbit_helper(xbit - i);
+                xobj = xobj - xdiv;
+            }
+            xdiv.shiftRight(1);
+        }
+        mod_result = xobj;
+    }
+    return mod_result;
+}
+
+
 
 
 
@@ -645,6 +705,3 @@ BigInt::BigInt(string val, int radix) {
         destructiveMulAdd(bytes, superRadix, groupVal);
     }
 }
-
-
-

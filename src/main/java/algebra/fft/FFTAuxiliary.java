@@ -7,6 +7,8 @@ import common.Utils;
 import configuration.Configuration;
 import org.apache.spark.api.java.JavaPairRDD;
 import scala.Tuple2;
+import java.math.BigInteger;
+import java.util.Arrays;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,6 +36,32 @@ public class FFTAuxiliary {
         return builder.toString();
     }
 
+
+    public static byte[] bigIntegerToByteArrayHelper(BigInteger bigint){
+        byte[] temp = bigint.toByteArray();
+
+        byte[] res = new byte[temp.length / 4 * 4 + 4];
+        int size_diff = temp.length / 4 * 4 + 4 - temp.length;
+        int j = temp.length - 1;
+        for(; j >= 3; j-=4){
+            res[ size_diff+ j] = temp[j-3];
+            res[size_diff+ j-1] = temp[j-2];
+            res[ size_diff+j-2] = temp[j-1];
+            res[ size_diff+j-3] = temp[j];
+        }
+        if(j == 2){
+            res[2] = temp[j-2];
+            res[1] = temp[j-1];
+            res[0] = temp[j];
+        }else if(j == 1){
+            res[1] = temp[j-1];
+            res[0] = temp[j];
+        }else if(j == 0){
+            res[0] = temp[j];
+        }
+        return res;
+
+    }
     static native <FieldT extends AbstractFieldElementExpanded<FieldT>> byte[] serialRadix2FFTNativeHelper(
         final List<byte[]> input,
         final byte[] omega);
@@ -53,38 +81,99 @@ public class FFTAuxiliary {
 
         assert (n == (1 << logn));
 
-        //long start = System.currentTimeMillis();
-        /* swapping in place (from Storer's book) */
-        for (int k = 0; k < n; ++k) {
-            final int rk = MathUtils.bitreverse(k, logn);
-            //System.out.println("logn=" + logn + " k=" + k + " rk=" + rk);
-            if (k < rk) {
-                Collections.swap(input, k, rk);
-            }
+        //--------------------------------------Java Native code--------------------------------
+
+        ArrayList<byte[]> inputByteArray = new ArrayList<byte[]>();
+        for(FieldT f : input){
+            inputByteArray.add(bigIntegerToByteArrayHelper(f.toBigInteger()));
         }
-        //long end = System.currentTimeMillis();
-        //long elapsedTime = end - start;
-        //System.out.println("raidx-2 FFT swapping Elapsed time: " + elapsedTime/1000.0 + " seconds");
+        byte[] omegaBytes = bigIntegerToByteArrayHelper(omega.toBigInteger());
+        byte[] resultByteArray = FFTAuxiliary.serialRadix2FFTNativeHelper(inputByteArray, omegaBytes);
 
-        int m = 1; // invariant: m = 2^{s-1}
+        int size_of_bigint_cpp_side = 64;
+        for(int i = 0; i < input.size(); i++){
+            byte[] slice = Arrays.copyOfRange(resultByteArray, i*size_of_bigint_cpp_side, (i+1)*size_of_bigint_cpp_side);//in cpp side, BigInt is 32 bytes.
 
+            byte[] converted_back = new byte[64];
+            for(int j = 63; j >= 3; j-=4){
+                converted_back[j] = slice[j - 3];
+                converted_back[j-1] = slice[j - 2];
+                converted_back[j-2] = slice[j - 1];
+                converted_back[j-3] = slice[j ];
+            }
 
-        //TODO LIANKE i think this part is the key overhead in serialFFT, we should CUDA it.
-        for (int s = 1; s <= logn; ++s) {
+            BigInteger bi = new BigInteger(converted_back);
+            FieldT temp = input.get(0).zero();
+            temp.setBigInteger(bi);
+            input.set(i, temp);
+        }
+
+        //--------------------------------------Java Native code--------------------------------
+
+        //below original code is used for correctness check
+        // /* swapping in place (from Storer's book) */
+        // for (int k = 0; k < n; ++k) {
+        //     final int rk = MathUtils.bitreverse(k, logn);
+        //     //System.out.println("logn=" + logn + " k=" + k + " rk=" + rk);
+        //     if (k < rk) {
+        //         Collections.swap(input, k, rk);
+        //     }
+        // }
+        int m = 512; // invariant: m = 2^{s-1}
+        // for(FieldT f : input){
+        //     System.out.println("on java side intermediate=" + byteToString(f.toBigInteger().toByteArray()));
+        // }
+        for (int s = 10; s <= logn; ++s) {
             // w_m is 2^s-th root of unity now
             final FieldT w_m = omega.pow(n / (2 * m));
-            //System.out.println("s=" + s + " w_m=" + byteToString(w_m.toBigInteger().toByteArray()));
+            //System.out.println("java side s=" + s +" exp="+n / (2 * m) + " w_m=" + byteToString(w_m.toBigInteger().toByteArray()));
             for (int k = 0; k < n; k += 2 * m) {
                 FieldT w = omega.one();
                 for (int j = 0; j < m; ++j) {
                     final FieldT t = w.mul(input.get(k + j + m));
+                    // if(s==2){
+                    //     System.out.println("k="+k+"j="+j);
+                    //     System.out.println("java side w="+byteToString(w.toBigInteger().toByteArray()));
+                    //     System.out.println("java side t="+byteToString(t.toBigInteger().toByteArray()));    
+                    // }
+
+                    // System.out.println("input = " + input.get(k + j).toBigInteger());
+                    //System.out.println("java side t=" + byteToString( t.toBigInteger().toByteArray()));
+                    //System.out.println("java result sub=" + byteToString(input.get(k + j).sub(t).toBigInteger().toByteArray()));
+                    //System.out.println("before sub input[k+j]=" + input.get(k + j));
                     input.set(k + j + m, input.get(k + j).sub(t));
+                    // if(s==2){
+                    //     System.out.println("java side  input="+byteToString(input.get(k+j).toBigInteger().toByteArray()));
+                    //     System.out.println("java side t="+byteToString(t.toBigInteger().toByteArray()));  
+                    //     System.out.println("java side t="+t.toBigInteger());  
+
+                    //     System.out.println("java side  input[k+j+m]="+byteToString(input.get(k+j+m).toBigInteger().toByteArray()));
+
+                    // }
+                    // if(s == 2){
+                    //     System.out.println("java side before input[k+j]=" + byteToString(input.get(k+j).toBigInteger().toByteArray()));
+                    // }
                     input.set(k + j, input.get(k + j).add(t));
+                    // if(s == 2){
+                    //     System.out.println("java side after input[k+j]=" + byteToString(input.get(k+j).toBigInteger().toByteArray()));
+                    // }
+                    // if(s == 2){
+                    //     System.out.println("java side before w=" + byteToString(w.toBigInteger().toByteArray()));
+                    // }
                     w = w.mul(w_m);
+                    // if(s == 2){
+                    //     System.out.println("java side after w=" + byteToString(w.toBigInteger().toByteArray()));
+                    // }
                 }
             }
+            // if(s == 2){
+            //     for(FieldT f : input){
+            //         System.out.println("on java side intermediate=" + byteToString(f.toBigInteger().toByteArray()));
+            //     }
+            // }
             m *= 2;
         }
+
 
 
 

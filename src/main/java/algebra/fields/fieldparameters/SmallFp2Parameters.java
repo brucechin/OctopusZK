@@ -37,17 +37,13 @@ public class SmallFp2Parameters extends AbstractFp2Parameters implements Seriali
     }
 
     public Fp2 ZERO() {
-        if (ZERO == null) {
             ZERO = new Fp2(BigInteger.ZERO, BigInteger.ZERO, this);
-        }
 
         return ZERO;
     }
 
     public Fp2 ONE() {
-        if (ONE == null) {
             ONE = new Fp2(BigInteger.ONE, BigInteger.ZERO, this);
-        }
 
         return ONE;
     }

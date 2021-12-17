@@ -44,17 +44,13 @@ public class SmallFp12_2Over3Over2_Parameters extends AbstractFp12_2Over3Over2_P
     }
 
     public Fp12_2Over3Over2 ZERO() {
-        if (ZERO == null) {
             ZERO = new Fp12_2Over3Over2(Fp6Parameters.ZERO(), Fp6Parameters.ZERO(), this);
-        }
 
         return ZERO;
     }
 
     public Fp12_2Over3Over2 ONE() {
-        if (ONE == null) {
             ONE = new Fp12_2Over3Over2(Fp6Parameters.ONE(), Fp6Parameters.ZERO(), this);
-        }
 
         return ONE;
     }

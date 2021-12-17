@@ -26,6 +26,24 @@ public class SerialFFT<FieldT extends AbstractFieldElementExpanded<FieldT>> impl
         domainSize = (int) MathUtils.lowestPowerOfTwo(_domainSize);
         omega = fieldFactory.rootOfUnity(domainSize);
     }
+    public static String byteToString(byte[] b) {
+        byte[] masks = { -128, 64, 32, 16, 8, 4, 2, 1 };
+        StringBuilder builder = new StringBuilder();
+        builder.append('|');
+        for( byte bb : b){
+            for (byte m : masks) {
+                if ((bb & m) == m) {
+                    builder.append('1');
+                } else {
+                    builder.append('0');
+                }
+            }
+            builder.append('|');
+        }
+
+        return builder.toString();
+    }
+
     public static byte[] bigIntegerToByteArrayHelper(BigInteger bigint){
         byte[] temp = bigint.toByteArray();
 
@@ -56,39 +74,10 @@ public class SerialFFT<FieldT extends AbstractFieldElementExpanded<FieldT>> impl
      */
     public void radix2FFT(final List<FieldT> input) {
         assert (input.size() == domainSize);
-        ArrayList<byte[]> inputByteArray = new ArrayList<byte[]>();
-        for(FieldT f : input){
-            inputByteArray.add(bigIntegerToByteArrayHelper(f.toBigInteger()));
-        }
-        byte[] omegaBytes = bigIntegerToByteArrayHelper(omega.toBigInteger());
-        System.out.println("FFT input type : " + input.get(0).getClass().getName());
 
         FFTAuxiliary.serialRadix2FFT(input, omega);
 
-
-
-        // System.out.println("radix2FFT java side is about to launch");
-        // byte[] resultByteArray = FFTAuxiliary.serialRadix2FFTNativeHelper(inputByteArray, omegaBytes);
-        // int size_of_bigint_cpp_side = 64;
-        // BigInteger modulus = new BigInteger("1532495540865888858358347027150309183618765510462668801");
-        // for(int i = 0; i < input.size(); i++){
-        //     byte[] slice = Arrays.copyOfRange(resultByteArray, i*size_of_bigint_cpp_side, (i+1)*size_of_bigint_cpp_side);//in cpp side, BigInt is 32 bytes.
-
-        //     byte[] converted_back = new byte[64];
-        //     for(int j = 63; j >= 3; j-=4){
-        //         converted_back[j] = slice[j - 3];
-        //         converted_back[j-1] = slice[j - 2];
-        //         converted_back[j-2] = slice[j - 1];
-        //         converted_back[j-3] = slice[j ];
-        //     }
-
-        //     BigInteger bi = new BigInteger(converted_back);
-        //     BigInteger output = bi.mod(modulus);
-        //     FieldT temp = input.get(0).zero();
-        //     temp.setBigInteger(output);
-        //     input.set(i, temp);
-
-        // }
+        
     }
 
     /**
