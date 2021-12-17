@@ -120,9 +120,9 @@ public class FFTAuxiliary {
         //     }
         // }
         // int m = 1; // invariant: m = 2^{s-1}
-        // // for(FieldT f : input){
-        // //     System.out.println("on java side intermediate=" + byteToString(f.toBigInteger().toByteArray()));
-        // // }
+        // // // for(FieldT f : input){
+        // // //     System.out.println("on java side intermediate=" + byteToString(f.toBigInteger().toByteArray()));
+        // // // }
         // for (int s = 1; s <= logn; ++s) {
         //     // w_m is 2^s-th root of unity now
         //     final FieldT w_m = omega.pow(n / (2 * m));

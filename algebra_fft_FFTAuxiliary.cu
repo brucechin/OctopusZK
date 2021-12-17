@@ -136,8 +136,12 @@ void best_fft (std::vector<Scalar> &a, const Scalar &omg)
     CUDA_CALL( cudaMalloc(&out, sizeof(Scalar) * a.size()); )
     const size_t length = a.size();
     const size_t log_m = log2(length); 
+    //auto start = std::chrono::steady_clock::now();
     cuda_fft <<<blocks,threads>>>(out, in, length, log_m);
-        
+    // auto end = std::chrono::steady_clock::now();
+    // std::chrono::duration<double> elapsed_seconds = end-start;
+    // std::cout << "CUDA FFT elapsed time: " << elapsed_seconds.count() << "s\n";
+
     cudaError_t error = cudaGetLastError();
     if(error != cudaSuccess)
     {

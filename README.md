@@ -1,5 +1,6 @@
 How to run this GPU-DIZK repo:
 ```$xslt
+sh setup.sh
 mvn compile
 sh jni_compile.sh 
 #test the correctness
