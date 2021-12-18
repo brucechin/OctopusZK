@@ -74,7 +74,6 @@ public class SerialFFT<FieldT extends AbstractFieldElementExpanded<FieldT>> impl
      */
     public void radix2FFT(final List<FieldT> input) {
         assert (input.size() == domainSize);
-
         FFTAuxiliary.serialRadix2FFT(input, omega);
 
         

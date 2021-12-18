@@ -34,11 +34,15 @@ __constant__
 
 
     //_mod for inverted representation
-const uint32_t _mod[SIZE] = {0,0,0,
-                            0,0,0,0,
-                            0,0,1048576,
-                            0,0,0,6144,1};
-
+    //TODO Lianke we need to check its endian correctness
+// const uint32_t _mod[SIZE] = {0,0,0,0, 
+//                             0,0,0,0,
+//                             0, 0,1048576,0,
+//                             0,0,6144,1};
+const uint32_t _mod[SIZE] = {1,6144,0,0, 
+                            0,1048576,0,0,
+                            0, 0,0,0,
+                            0,0,0,0};
 struct Scalar
 {
     cu_fun void add(Scalar &fld1, const Scalar &fld2) const;
@@ -130,6 +134,7 @@ struct Scalar
         Scalar s;
         for (size_t i = 0; i < SIZE; i++)
             s.im_rep[i] = this->im_rep[i];
+        //TODO lianke fix this pow
         pow(s, rhs);
         return s;
     }
@@ -350,11 +355,12 @@ cu_fun void Scalar::subtract(Scalar &fld1, const Scalar &fld2) const
     _subtract(fld1.im_rep, SIZE, carry, fld2.im_rep, SIZE);
 }
 
+
 //Multiply two elements
 cu_fun void Scalar::mul(Scalar &fld1, const Scalar &fld2, const uint32_t *mod) const
 {
-    uint32_t tmp[SIZE + 2] = {0};
 
+    uint32_t tmp[SIZE + 2] = {0};
     ciosMontgomeryMultiply(tmp, fld1.im_rep, SIZE, fld2.im_rep, mod);
     for (size_t i = 0; i < SIZE; i++)
         fld1.im_rep[i] = tmp[i];
