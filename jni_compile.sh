@@ -5,7 +5,7 @@ sudo rm lib*.so
 
 g++ -o3 -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -shared -fPIC  algebra_msm_FixedBaseMSM.cc -o libAlgebraMSMFixedBaseMSM.so 
 g++ -o3 -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -shared -fPIC  algebra_msm_VariableBaseMSM.cc -o libAlgebraMSMVariableBaseMSM.so 
-nvcc -Xcompiler -fPIC -shared -I $JAVA_HOME/include -I $JAVA_HOME/include/linux   algebra_fft_FFTAuxiliary.cu -o libAlgebraFFTAuxiliary.so
+nvcc -Xcompiler -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=sm_75 algebra_fft_FFTAuxiliary.cu -o libAlgebraFFTAuxiliary.so
 
 sudo cp lib*.so /usr/lib/
 javac  -cp ./dependency/org-apache-commons-codec.jar:./dependency/scala-library-2.10.6.jar:./dependency/spark-core_2.10-2.2.2.jar:./target/classes/  src/main/java/algebra/msm/FixedBaseMSM.java 

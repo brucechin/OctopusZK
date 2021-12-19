@@ -94,7 +94,7 @@ public class SerialzkSNARKTest implements Serializable {
     @Test
     public void SerialFakeProofSystemTest() {
         final int numInputs = 123;
-        final int numConstraints = 1000000;
+        final int numConstraints = 10000;
 
         FakeInitialize.init();
         final Fp fieldFactory = new FakeFqParameters().ONE();
