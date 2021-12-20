@@ -1,4 +1,6 @@
 JAVA_HOME='/usr/lib/jvm/java-8-openjdk-amd64'
+GMP_HOME=/home/lianke/gmp-6.2.1
+
 NVCC_FLAGS :=-O3 -I include
 
 sudo rm lib*.so

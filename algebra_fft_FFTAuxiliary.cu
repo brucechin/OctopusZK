@@ -19,8 +19,6 @@
 
 using namespace std;
 
-#define LOG_NUM_THREADS 10
-#define NUM_THREADS (1 << LOG_NUM_THREADS)
 
 
 #define CUDA_CALL( call )               \
@@ -39,7 +37,7 @@ class fft_params_t {
     static const bool     CONSTANT_TIME=false;       // constant time implementations aren't available yet
     
     // parameters used locally in the application
-    static const uint32_t TPI=3;                   // threads per instance
+    static const uint32_t TPI=4;                   // threads per instance
     static const uint32_t BITS=512;                 // instance size
     static const uint32_t num_of_bytes=64;                 // instance size
 
@@ -48,8 +46,9 @@ class fft_params_t {
 typedef cgbn_mem_t<fft_params_t::BITS> Scalar;
 typedef cgbn_context_t<fft_params_t::TPI>   context_t;
 typedef cgbn_env_t<context_t, fft_params_t::BITS>   env_t;
-typedef typename env_t::cgbn_t                bn_t;
+typedef typename env_t::cgbn_t                 bn_t;
 typedef typename env_t::cgbn_local_t          bn_local_t;
+
 
 
 int reverseBits(int n, int range) {
@@ -70,16 +69,20 @@ size_t bitreverse(size_t n, const size_t l)
 
 
 __global__ void cuda_fft_first_step( Scalar *input_field, Scalar omega, const size_t length, const size_t log_m) {
+    // size_t threads_per_block = 128;
+    // size_t instance_per_block = (threads_per_block / fft_params_t::TPI);//TPI threads per instance, each block has threads.
+    // size_t blocks = (a.size() + instance_per_block - 1) / instance_per_block;
     const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/fft_params_t::TPI;
     //printf("blockIdx=%d, blockDim.x=%d, threadIdx.x=%d, idx=%d\n",blockIdx.x, blockDim.x, threadIdx.x, idx);
-    const size_t block_length =( 1ul <<  LOG_NUM_THREADS) / fft_params_t::TPI; //TODO lianke when log_m is smaller than log_num_threads,  there is a bug.
-    const size_t startidx = idx * block_length;
+    //const size_t block_length =( 1ul <<  LOG_NUM_THREADS) / fft_params_t::TPI;
+    const size_t block_length = 1;
+    const size_t startidx = idx;
     if(startidx > length)
         return;
     context_t _context;
     env_t    _env(_context);
     //printf("CGBN with idx=%d, block_length=%d, startidx=%d\n", idx, block_length, startidx);
-    env_t::cgbn_t  a, b; 
+    bn_t  a, b; 
     /* swapping in place (from Storer's book) */
     for (size_t k = 0; k < block_length; ++k)
     {
@@ -89,15 +92,14 @@ __global__ void cuda_fft_first_step( Scalar *input_field, Scalar omega, const si
         {
             cgbn_load(_env,a, &(input_field[global_k]));
             cgbn_load(_env,b, &(input_field[rk]));
-            cgbn_store(_env,( &(input_field[global_k])), b);
-            cgbn_store(_env,( &(input_field[rk])), a);
-            //cgbn_swap(bn_env, &input_field[global_k], &input_field[rk]);
+            cgbn_store(_env, &(input_field[global_k]), b);
+            cgbn_store(_env, &(input_field[rk]), a);
             // Scalar tmp = input_field[global_k];
             // input_field[global_k] = input_field[rk];
             // input_field[rk] = tmp;
         }
     }
-    __syncthreads();
+    //__syncthreads();
     
 }
 /*
@@ -122,37 +124,63 @@ void cgbn_rem(cgbn_env_t env, cgbn_t &r, const cgbn_t &num, const cgbn_t &denom)
 Computes the remainder of num divided by denom and store the result into r, where 0 <= r < denom.
 */
 
-__global__ void cuda_fft_second_step(Scalar *input_field, Scalar omega, const size_t length, const size_t log_m) {
+__global__ void cuda_fft_second_step(Scalar *input_field, Scalar omega_binary, const size_t length, const size_t log_m, size_t s_index) {
     const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/fft_params_t::TPI;
-    //printf("blockIdx=%d, blockDim.x=%d, threadIdx.x=%d, idx=%d\n",blockIdx.x, blockDim.x, threadIdx.x, idx);
-    const size_t block_length =( 1ul <<  LOG_NUM_THREADS) / fft_params_t::TPI; //TODO lianke when log_m is smaller than log_num_threads,  there is a bug.
-    const size_t startidx = idx * block_length;
-    if(startidx < length){
-        size_t m = 1; // invariant: m = 2^{s-1}
-        for (size_t s = 1; s <= 1; ++s)
-        {
-            // w_m is 2^s-th root of unity now
-            //TODO lianke need to deal with the data layout difference between CGBN and java.biginteger.tobytearray()
-            //TODO lianke replace these arithmetic operators with CGBN.
-            const Scalar w_m = omega^(length/(2*m));
-            
-            for (size_t k = 0; k < block_length; k += 2*m)
-            {
-                size_t global_k = startidx + k;
-                Scalar w = Scalar::one();
-                for (size_t j = 0; j < m; ++j)
-                {
-                    Scalar t = w;
-                    t = w * input_field[global_k+j+m];
-                    input_field[global_k+j+m] = input_field[global_k+j] - t;
-                    input_field[global_k+j] = input_field[global_k+j] + t;
-                    w = w * w_m;
-                }
-            }
-            m = m * 2;
-        }
+
+    context_t _context;
+    env_t    _env(_context);
+
+    Scalar modulus_binary;
+    uint32_t modulus_raw[16] = {1,6144,0,0, 
+                                0,1048576,0,0,
+                                0, 0,0,0,
+                                0,0,0,0};
+    memcpy(modulus_binary._limbs, modulus_raw, fft_params_t::num_of_bytes);
+    bn_t modulus;
+    cgbn_load(_env, modulus, &modulus_binary);
+    bn_t omega;
+    cgbn_load(_env, omega, &omega_binary);
+
+    size_t m = 1 << (s_index - 1); // invariant: m = 2^{s-1}
+    Scalar exponential_binary;
+    exponential_binary._limbs[0] = (uint32_t)length/(2*m);
+    bn_t exponential, w_m;
+    cgbn_load(_env, exponential, &exponential_binary);
+    cgbn_modular_power(_env, w_m, omega, exponential, modulus);
+    // w_m is 2^s-th root of unity now
+
+    size_t global_k = (idx / m) * m * 2 + idx %  m;
+    if(global_k < length){
+        //printf("global_k=%d\n", global_k);
+        bn_t w, w_exp;
+        size_t w_exp_int = idx % m;
+        Scalar w_exp_binary;
+        w_exp_binary._limbs[0] = w_exp_int;
+        cgbn_load(_env, w_exp, &w_exp_binary);
+        cgbn_modular_power(_env, w, w_m, w_exp, modulus);
+
+        bn_t t;
+        bn_t input_kjm, input_kj;
+        cgbn_load(_env, input_kjm, &input_field[global_k +m]);
+        cgbn_load(_env, input_kj, &input_field[global_k]);
+        cgbn_mul(_env, t, w, input_kjm);
+        cgbn_rem(_env, t, t, modulus);
+
+        cgbn_add(_env, input_kj, input_kj, modulus);
+        cgbn_sub(_env, input_kj, input_kj, t);
+        //after subtraction, the result could be negative. so i need to add modulus to make it a positive number 
+        cgbn_rem(_env, input_kj, input_kj, modulus);
+
+        cgbn_store(_env, &input_field[global_k + m], input_kj);
+        cgbn_load(_env, input_kj, &input_field[global_k]);
+        cgbn_add(_env, input_kj, input_kj, t);
+        cgbn_rem(_env, input_kj, input_kj, modulus);
+
+        cgbn_store(_env, &input_field[global_k], input_kj);
+        cgbn_mul(_env, w, w, w_m);
+        cgbn_rem(_env, w, w, modulus);
     }
-    __syncthreads();
+    //__syncthreads();
 
 }
 
@@ -166,26 +194,28 @@ void best_fft (std::vector<Scalar> &a, const Scalar &omg)
 
     printf("CUDA Devices: %d, input_field size: %lu, input_field count: %lu\n", cnt, sizeof(Scalar), a.size());
 
-    size_t threads = NUM_THREADS > 128 ? 128 : NUM_THREADS;
-    size_t instance_per_block = (threads / fft_params_t::TPI);//TPI threads per instance, each block has threads.
+    size_t threads_per_block = 128;
+    size_t instance_per_block = (threads_per_block / fft_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (a.size() + instance_per_block - 1) / instance_per_block;
 
-    printf("NUM_THREADS %u, blocks %lu, threads %lu \n",NUM_THREADS, blocks, threads);
+    printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
     CUDA_CALL(cudaSetDevice(0));
     Scalar *in; 
     CUDA_CALL( cudaMalloc((void**)&in, sizeof(Scalar) * a.size()); )
     CUDA_CALL( cudaMemcpy(in, (void**)&a[0], sizeof(Scalar) * a.size(), cudaMemcpyHostToDevice); )
-    // create a cgbn_error_report for CGBN to report back errors
 
     const size_t length = a.size();
     const size_t log_m = log2(length); 
     //auto start = std::chrono::steady_clock::now();
-    printf("launch block = %d thread = %d\n", blocks, threads);
-    cuda_fft_first_step <<<blocks,threads>>>( in, omg, length, log_m);
-    CUDA_CALL(cudaDeviceSynchronize());
-    cuda_fft_second_step <<<blocks,threads>>>( in, omg, length, log_m);
+    printf("launch block = %d thread = %d\n", blocks, threads_per_block);
+    cuda_fft_first_step <<<blocks,threads_per_block>>>( in, omg, length, log_m);
     CUDA_CALL(cudaDeviceSynchronize());
 
+    size_t s = 1;
+    for(; s <= log_m; s++){
+        cuda_fft_second_step <<<blocks,threads_per_block>>>( in, omg, length, log_m, s);
+        CUDA_CALL(cudaDeviceSynchronize());
+    }
     // auto end = std::chrono::steady_clock::now();
     // std::chrono::duration<double> elapsed_seconds = end-start;
     // std::cout << "CUDA FFT elapsed time: " << elapsed_seconds.count() << "s\n";

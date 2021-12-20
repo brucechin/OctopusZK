@@ -28,6 +28,8 @@ bug fixed:
 (2). fix a bug when (smaller - bigger) mod modulus.
 (3). fix a bug when shift offset is 32: for example: 11 >> 32 = 11, instead of 0. however, 11 >> 31 = 0;
 
+# 2021.12.19 
 
+Because the GPUSnark repo is not correct with the DIZK computation results, and my naive lightweight cpp bigint library has some corner bugs. I decided to migrate my code to the second version of CGBN developed by NVIDIA. I spend some time figuring out how to divide the tasks to threads in GPU and finished the FFT in CUDA. next step is to implement for FixedbaseMSM and VariablebaseMSM.
 
 
