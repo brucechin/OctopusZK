@@ -34,6 +34,7 @@ public class BN254aG1 extends BNG1<BN254aFr, BN254aFq, BN254aG1, BN254aG1Paramet
     }
 
     public BigInteger toBigInteger() {
+        //TODO do not call this function
         return BigInteger.ZERO;
     }
 
@@ -47,6 +48,7 @@ public class BN254aG1 extends BNG1<BN254aFr, BN254aFq, BN254aG1, BN254aG1Paramet
 
     public void setBigInteger(BigInteger bigInteger) {
         //do not use it
+        //TODO lianke implement this 
     }
 
 

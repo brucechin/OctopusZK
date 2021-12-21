@@ -39,13 +39,13 @@ public abstract class BNG1<
         assert (that != null);
 
         // Handle special cases having to do with O
-        if (isZero()) {
-            return that;
-        }
+        // if (isZero()) {
+        //     return that;
+        // }
 
-        if (that.isZero()) {
-            return this.self();
-        }
+        // if (that.isZero()) {
+        //     return this.self();
+        // }
 
         // No need to handle points of order 2,4
         // (they cannot exist in a modulus-order subgroup)
@@ -73,10 +73,10 @@ public abstract class BNG1<
         final BNFqT S1 = this.Y.mul(Z2_cubed);      // S1 = Y1 * Z2 * Z2Z2
         final BNFqT S2 = that.Y.mul(Z1_cubed);      // S2 = Y2 * Z1 * Z1Z1
 
-        if (U1.equals(U2) && S1.equals(S2)) {
-            // Double case; nothing above can be reused.
-            return twice();
-        }
+        // if (U1.equals(U2) && S1.equals(S2)) {
+        //     // Double case; nothing above can be reused.
+        //     return twice();
+        // }
 
         // Rest of the add case.
         final BNFqT H = U2.sub(U1);                                   // H = U2-U1

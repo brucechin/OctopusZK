@@ -47,14 +47,14 @@ public class BN254aFields {
         }
 
         public BN254aFr zero() {
-            return ZERO;
+            return new BN254aFr(FrParameters.ZERO());
         }
         public void setBigInteger(BigInteger bigInteger) {
-            //this.number = bigInteger;
+            this.element = new Fp(bigInteger, FrParameters);
         }
     
         public BN254aFr one() {
-            return ONE;
+            return new BN254aFr(FrParameters.ONE());
         }
 
         public BN254aFr multiplicativeGenerator() {
@@ -113,11 +113,11 @@ public class BN254aFields {
         }
 
         public BN254aFq zero() {
-            return ZERO;
+            return new BN254aFq(FqParameters.ZERO());
         }
 
         public BN254aFq one() {
-            return ONE;
+            return  new BN254aFq(FqParameters.ONE());
         }
 
         public BN254aFq multiplicativeGenerator() {
@@ -175,11 +175,11 @@ public class BN254aFields {
         }
 
         public BN254aFq2 zero() {
-            return ZERO;
+            return new BN254aFq2(Fq2Parameters.ZERO());
         }
 
         public BN254aFq2 one() {
-            return ONE;
+            return new BN254aFq2(Fq2Parameters.ONE());
         }
 
         public BN254aFq2 construct(final Fp2 element) {

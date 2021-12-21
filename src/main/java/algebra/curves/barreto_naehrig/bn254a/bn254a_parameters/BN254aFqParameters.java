@@ -87,10 +87,10 @@ public class BN254aFqParameters extends AbstractBNFqParameters implements Serial
     }
 
     public Fp ZERO() {
-        return ZERO;
+        return new Fp(BigInteger.ZERO, this);
     }
 
     public Fp ONE() {
-        return ONE;
+        return new Fp(BigInteger.ONE, this);
     }
 }

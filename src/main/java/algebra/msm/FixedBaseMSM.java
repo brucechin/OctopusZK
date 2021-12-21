@@ -206,8 +206,7 @@ public class FixedBaseMSM {
         System.out.println("multiplesOfBase type : " + multiplesOfBase.get(0).get(0).getClass().getName());
         System.out.println("scalars type : " + scalars.get(0).getClass().getName());
         
-       // if(multiplesOfBase.get(0).get(0).getClass().getName().equals("algebra.curves.barreto_naehrig.bn254a.BN254aG1")){
-        if(false){
+       if(multiplesOfBase.get(0).get(0).getClass().getName().equals("algebra.curves.barreto_naehrig.bn254a.BN254aG1")){
         ArrayList<ArrayList<byte[]>> byteArrayX = new ArrayList<ArrayList<byte[]>>();
             ArrayList<ArrayList<byte[]>> byteArrayY = new ArrayList<ArrayList<byte[]>>();
             ArrayList<ArrayList<byte[]>> byteArrayZ = new ArrayList<ArrayList<byte[]>>();
@@ -222,6 +221,7 @@ public class FixedBaseMSM {
                 ArrayList<byte[]> tmpZ = new ArrayList<byte[]>();
                 for(int j = 0; j< in_size; j++){
                     ArrayList<BigInteger> three_values = multiplesOfBase.get(i).get(j).BN254G1ToBigInteger();
+                    //System.out.println("three_values:" +three_values.get(0) + " " + three_values.get(1) + " " + three_values.get(2));
                     tmpX.add(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
                     tmpY.add(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
                     tmpZ.add(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
@@ -234,7 +234,7 @@ public class FixedBaseMSM {
             final int outerc = (scalarSize + windowSize - 1) / windowSize;
             ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
             for (FieldT scalar : scalars) {
-                bigScalars.add(bigIntegerToByteArrayHelper(scalar.toBigInteger()));    
+                bigScalars.add(bigIntegerToByteArrayHelperCGBN(scalar.toBigInteger()));    
             }
             long finish = System.currentTimeMillis();
             long timeElapsed = finish - start;

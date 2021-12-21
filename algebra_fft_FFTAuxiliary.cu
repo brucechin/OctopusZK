@@ -102,10 +102,18 @@ __global__ void cuda_fft_second_step(Scalar *input_field, Scalar omega_binary, c
     env_t    _env(_context);
 
     Scalar modulus_binary;
-    uint32_t modulus_raw[16] = {1,6144,0,0, 
-                                0,1048576,0,0,
+    //Fr modulus is : |811880050|3778125865|3092268470|2172737629|674490440|2042196113|1138881939|4026531841|
+    uint32_t modulus_raw[16] = {4026531841,1138881939,2042196113,674490440, 
+                                2172737629,3092268470,3778125865,811880050,
                                 0, 0,0,0,
                                 0,0,0,0};
+    
+    
+//lianke: below is the modulus for FakeProofTest
+// {1,6144,0,0, 
+//                                 0,1048576,0,0,
+//                                 0, 0,0,0,
+//                                 0,0,0,0};
     memcpy(modulus_binary._limbs, modulus_raw, fft_params_t::num_of_bytes);
     bn_t modulus;
     cgbn_load(_env, modulus, &modulus_binary);
@@ -181,13 +189,14 @@ void best_fft (std::vector<Scalar> &a, const Scalar &omg)
     printf("launch block = %d thread = %d\n", blocks, threads_per_block);
     cuda_fft_first_step <<<blocks,threads_per_block>>>( in, omg, length, log_m);
     CUDA_CALL(cudaDeviceSynchronize());
-    cout << "finish first round" <<endl;
+    //cout << "finish first round" <<endl;
     size_t s = 1;
     for(; s <= log_m; s++){
         cuda_fft_second_step <<<blocks,threads_per_block>>>( in, omg, length, log_m, s);
         CUDA_CALL(cudaDeviceSynchronize());
-        cout <<"finish round " << s  <<endl;
+        //cout <<"finish round " << s  <<endl;
     }
+
     // auto end = std::chrono::steady_clock::now();
     // std::chrono::duration<double> elapsed_seconds = end-start;
     // std::cout << "CUDA FFT elapsed time: " << elapsed_seconds.count() << "s\n";

@@ -130,6 +130,7 @@ public class FFTAuxiliary {
             FieldT temp = input.get(0).zero();
             temp.setBigInteger(bi);
             input.set(i, temp);
+
         }
 
         //--------------------------------------Java Native code--------------------------------
@@ -156,15 +157,20 @@ public class FFTAuxiliary {
         //             input.set(k + j + m, input.get(k + j).sub(t));
 
         //             input.set(k + j, input.get(k + j).add(t));
+        //             System.out.println("before mul fr w=" + w.toBigInteger());
+        //             System.out.println("before mul fr w_m=" + w_m.toBigInteger());
 
         //             w = w.mul(w_m);
-
+        //             System.out.println("after mul fr w=" + w.toBigInteger() +"\n\n\n");
+                    
         //         }
         //     }
         //     m *= 2;
         // }
 
-
+        // for(FieldT fr : input) {
+        //     System.out.println("fr=" + fr.toBigInteger());
+        // }
 
 
     }

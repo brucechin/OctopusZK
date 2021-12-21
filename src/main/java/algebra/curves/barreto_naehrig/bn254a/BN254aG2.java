@@ -39,5 +39,7 @@ public class BN254aG2 extends BNG2<BN254aFr, BN254aFq, BN254aFq2, BN254aG2, BN25
 
     public void setBigInteger(BigInteger bigInteger) {
         //do not use it
+                //TODO lianke implement this 
+
     }
 }

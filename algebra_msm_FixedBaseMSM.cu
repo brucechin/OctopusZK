@@ -80,9 +80,14 @@ bool testBit(Scalar input, int n)
     return CHECK_BIT(input._limbs[byte_index], byte_offset);
 }
 
+
+
 __device__ __forceinline__
 BN254G1 add(BN254G1 a, BN254G1 b) {
     // // Handle special cases having to do with O
+
+    
+    //TODO Lianke implement this
     // if (a.isZero()) {
     //     return b;
     // }
@@ -127,6 +132,7 @@ BN254G1 add(BN254G1 a, BN254G1 b) {
   cgbn_mul(_env, Z2_cubed, b_z, Z2Z2);
   cgbn_rem(_env, Z2_cubed, Z2_cubed, modulus);
 
+  //TODO Lianke implement this
   // if (U1.equals(U2) && S1.equals(S2)) {
   //     // Double case; nothing above can be reused.
   //     return twice();
@@ -225,6 +231,7 @@ __global__ void MSM_unit_processing(Scalar* inputScalarArray, BN254G1* inputBase
                 inner |= 1 << i;
             }
         }
+        printf("outer=%d, inner=%d\n", outer, inner);
         res = add(res, inputBaseArray[tableInnerSize * outer + inner]);
     }
 
@@ -233,7 +240,7 @@ __global__ void MSM_unit_processing(Scalar* inputScalarArray, BN254G1* inputBase
 }
 
 
-void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<std::vector<BN254G1>> &multiplesOfBasePtrArray, BN254G1* outputArray,int outerc, int windowSize)
+void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> &multiplesOfBasePtrArray, BN254G1* outputArray,int outerc, int windowSize, int out_len, int inner_len)
 {
 	int cnt;
     cudaGetDeviceCount(&cnt);
@@ -243,8 +250,6 @@ void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<std::vec
     size_t threads_per_block = 128;
     size_t instance_per_block = (threads_per_block / MSM_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
-    size_t out_len = multiplesOfBasePtrArray.size();
-    size_t inner_len = multiplesOfBasePtrArray[0].size();
     printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
     CUDA_CALL(cudaSetDevice(0));
     Scalar *inputScalarArrayGPU; 
@@ -252,8 +257,8 @@ void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<std::vec
     CUDA_CALL( cudaMemcpy(inputScalarArrayGPU, (void**)&bigScalarArray[0], sizeof(Scalar) * batch_size, cudaMemcpyHostToDevice); )
     
     BN254G1 *inputBaseArrayGPU; 
-    CUDA_CALL( cudaMalloc((void**)&inputBaseArrayGPU, sizeof(BN254G1) * batch_size); )
-    CUDA_CALL( cudaMemcpy(inputBaseArrayGPU, (void**)&multiplesOfBasePtrArray[0][0], sizeof(BN254G1) * batch_size, cudaMemcpyHostToDevice); )
+    CUDA_CALL( cudaMalloc((void**)&inputBaseArrayGPU, sizeof(BN254G1) * out_len * inner_len); )
+    CUDA_CALL( cudaMemcpy(inputBaseArrayGPU, (void**)&multiplesOfBasePtrArray[0], sizeof(BN254G1) * out_len * inner_len, cudaMemcpyHostToDevice); )
     
     BN254G1* outputBN254ArrayGPU;
     CUDA_CALL( cudaMalloc((void**)&outputBN254ArrayGPU, sizeof(BN254G1) * batch_size); )
@@ -301,7 +306,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   jint batch_size = env->CallIntMethod(bigScalars, java_util_ArrayList_size);
 
   vector<Scalar> bigScalarArray = vector<Scalar>(batch_size, Scalar());
-  vector<vector<BN254G1>> multiplesOfBasePtrArray = vector<vector<BN254G1>>(out_len, vector<BN254G1>(inner_len, BN254G1()));
+  vector<BN254G1> multiplesOfBasePtrArray = vector<BN254G1>(out_len * inner_len, BN254G1());
 
 
 
@@ -318,7 +323,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
       jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBaseX, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
       char* bytes = (char*)env->GetByteArrayElements(element, NULL);
       int len = env->GetArrayLength(element);
-      char* tmp = (char*)multiplesOfBasePtrArray[i][j].X._limbs;
+      char* tmp = (char*)multiplesOfBasePtrArray[i * inner_len + j].X._limbs;
       memcpy(tmp, bytes,len);
     }
   }
@@ -328,7 +333,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
       jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBaseY, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
       char* bytes = (char*)env->GetByteArrayElements(element, NULL);
       int len = env->GetArrayLength(element);
-      char* tmp = (char*)multiplesOfBasePtrArray[i][j].Y._limbs;
+      char* tmp = (char*)multiplesOfBasePtrArray[i * inner_len + j].Y._limbs;
       memcpy(tmp, bytes,len);
     }
   }
@@ -338,7 +343,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
       jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBaseZ, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
       char* bytes = (char*)env->GetByteArrayElements(element, NULL);
       int len = env->GetArrayLength(element);
-      char* tmp = (char*)multiplesOfBasePtrArray[i][j].Z._limbs;
+      char* tmp = (char*)multiplesOfBasePtrArray[i * inner_len + j].Z._limbs;
       memcpy(tmp, bytes,len);
     }
   }
@@ -346,7 +351,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   jbyteArray resultByteArray = env->NewByteArray(sizeof(BN254G1) * batch_size);
   BN254G1* outputBN254ArrayCPU = new BN254G1[batch_size];
 
-  fixed_batch_MSM(bigScalarArray, multiplesOfBasePtrArray, outputBN254ArrayCPU, outerc, windowSize);
+  fixed_batch_MSM(bigScalarArray, multiplesOfBasePtrArray, outputBN254ArrayCPU, outerc, windowSize, out_len, inner_len);
 
   for(int i = 0; i < batch_size; i++){
     env->SetByteArrayRegion(resultByteArray, i * sizeof(BN254G1) , sizeof(BN254G1) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU));
