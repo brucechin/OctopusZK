@@ -122,7 +122,7 @@ public class SerialzkSNARKTest implements Serializable {
     @Test
     public void SerialBN254aProofSystemTest() {
         final int numInputs = 12;
-        final int numConstraints = 20;
+        final int numConstraints = 2000;
         final BN254aFr fieldFactory = BN254aFr.ONE;
         final BN254aG1 g1Factory = BN254aG1Parameters.ONE;
         final BN254aG2 g2Factory = BN254aG2Parameters.ONE;

@@ -5,7 +5,7 @@ sudo apt install nvidia-driver-470 nvidia-cuda-toolkit
 #install GMP
 wget https://gmplib.org/download/gmp/gmp-6.2.1.tar.lz
 lzip -d  gmp-6.2.1.tar.lz
-tar --lzip -xvf gmp-6.2.1.tar
+tar  -xvf gmp-6.2.1.tar
 cd gmp-6.2.1/
 export GMP_HOME=/home/lianke/gmp-6.2.1
 ./configure --prefix=$GMP_HOME

@@ -4,9 +4,9 @@ GMP_HOME='/home/lianke/gmp-6.2.1'
 
 sudo rm lib*.so
 
-nvcc -O3 -Xcompiler  -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include algebra_msm_FixedBaseMSM.cu -o libAlgebraMSMFixedBaseMSM.so 
+nvcc -O3 -Xcompiler  -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=sm_30 algebra_msm_FixedBaseMSM.cu -o libAlgebraMSMFixedBaseMSM.so 
 g++ -O3 -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -shared -fPIC  algebra_msm_VariableBaseMSM.cc -o libAlgebraMSMVariableBaseMSM.so 
-nvcc -O3 -Xcompiler  -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=sm_75 algebra_fft_FFTAuxiliary.cu -o libAlgebraFFTAuxiliary.so
+nvcc -O3 -Xcompiler  -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=sm_30 algebra_fft_FFTAuxiliary.cu -o libAlgebraFFTAuxiliary.so
 
 sudo cp lib*.so /usr/lib/
 javac  -cp ./dependency/org-apache-commons-codec.jar:./dependency/scala-library-2.10.6.jar:./dependency/spark-core_2.10-2.2.2.jar:./target/classes/  src/main/java/algebra/msm/FixedBaseMSM.java 

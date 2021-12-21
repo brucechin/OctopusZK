@@ -206,8 +206,9 @@ public class FixedBaseMSM {
         System.out.println("multiplesOfBase type : " + multiplesOfBase.get(0).get(0).getClass().getName());
         System.out.println("scalars type : " + scalars.get(0).getClass().getName());
         
-        if(multiplesOfBase.get(0).get(0).getClass().getName().equals("algebra.curves.barreto_naehrig.bn254a.BN254aG1")){
-            ArrayList<ArrayList<byte[]>> byteArrayX = new ArrayList<ArrayList<byte[]>>();
+       // if(multiplesOfBase.get(0).get(0).getClass().getName().equals("algebra.curves.barreto_naehrig.bn254a.BN254aG1")){
+        if(false){
+        ArrayList<ArrayList<byte[]>> byteArrayX = new ArrayList<ArrayList<byte[]>>();
             ArrayList<ArrayList<byte[]>> byteArrayY = new ArrayList<ArrayList<byte[]>>();
             ArrayList<ArrayList<byte[]>> byteArrayZ = new ArrayList<ArrayList<byte[]>>();
     
