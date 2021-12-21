@@ -39,13 +39,13 @@ public abstract class BNG1<
         assert (that != null);
 
         // Handle special cases having to do with O
-        // if (isZero()) {
-        //     return that;
-        // }
+        if (isZero()) {
+            return that;
+        }
 
-        // if (that.isZero()) {
-        //     return this.self();
-        // }
+        if (that.isZero()) {
+            return this.self();
+        }
 
         // No need to handle points of order 2,4
         // (they cannot exist in a modulus-order subgroup)

@@ -81,20 +81,27 @@ bool testBit(Scalar input, int n)
 }
 
 
+__device__ __forceinline__
+bool isZero(BN254G1 input)
+{
+    uint32_t zero[MSM_params_t::BITS / 32];
+    memset(zero, 0, MSM_params_t::BITS / 8); 
+    return memcmp(input.Z._limbs, zero, MSM_params_t::BITS / 8) == 0;
+}
+
 
 __device__ __forceinline__
 BN254G1 add(BN254G1 a, BN254G1 b) {
     // // Handle special cases having to do with O
 
     
-    //TODO Lianke implement this
-    // if (a.isZero()) {
-    //     return b;
-    // }
+  if (isZero(a)) {
+      return b;
+  }
 
-    // if (b.isZero()) {
-    //     return a;
-    // }
+  if (isZero(b)) {
+      return a;
+  }
   context_t _context;
   env_t    _env(_context);
 
