@@ -6,6 +6,7 @@
  *****************************************************************************/
 
 package algebra.curves;
+import java.math.BigInteger;
 
 import algebra.groups.AbstractGroup;
 
@@ -14,5 +15,6 @@ public abstract class AbstractG1<G1T extends AbstractG1<G1T>> extends AbstractGr
     public abstract boolean isSpecial();
 
     public abstract int bitSize();
+    
 
 }

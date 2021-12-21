@@ -77,8 +77,10 @@ public abstract class AbstractGroup<GroupT extends AbstractGroup<GroupT>> implem
     public abstract ArrayList<Integer> fixedBaseWindowTable();
 
     public abstract BigInteger toBigInteger();
+    public abstract ArrayList<BigInteger> BN254G1ToBigInteger();
 
     public abstract void setBigInteger(final BigInteger bigInteger);
+    public abstract void setBigIntegerBN254G1(BigInteger x, BigInteger y, BigInteger z);
 
     /**
      * If secureSeed is provided, returns cryptographically secure random group element using byte[].

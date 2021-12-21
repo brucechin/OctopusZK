@@ -13,7 +13,6 @@
 #include <assert.h>
 #include <vector>
 #include <iostream>
-//#include "device_field.h"
 #include <gmp.h>
 #include "cgbn/cgbn.h"
 
@@ -69,60 +68,32 @@ size_t bitreverse(size_t n, const size_t l)
 
 
 __global__ void cuda_fft_first_step( Scalar *input_field, Scalar omega, const size_t length, const size_t log_m) {
-    // size_t threads_per_block = 128;
-    // size_t instance_per_block = (threads_per_block / fft_params_t::TPI);//TPI threads per instance, each block has threads.
-    // size_t blocks = (a.size() + instance_per_block - 1) / instance_per_block;
+
     const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/fft_params_t::TPI;
     //printf("blockIdx=%d, blockDim.x=%d, threadIdx.x=%d, idx=%d\n",blockIdx.x, blockDim.x, threadIdx.x, idx);
     //const size_t block_length =( 1ul <<  LOG_NUM_THREADS) / fft_params_t::TPI;
-    const size_t block_length = 1;
-    const size_t startidx = idx;
-    if(startidx > length)
+    if(idx > length)
         return;
     context_t _context;
     env_t    _env(_context);
+
     //printf("CGBN with idx=%d, block_length=%d, startidx=%d\n", idx, block_length, startidx);
     bn_t  a, b; 
     /* swapping in place (from Storer's book) */
-    for (size_t k = 0; k < block_length; ++k)
+    size_t global_k = idx;
+    size_t rk = bitreverse(global_k, log_m);
+    if (global_k < rk  && rk < length)
     {
-        size_t global_k = startidx + k;
-        size_t rk = bitreverse(global_k, log_m);
-                if (global_k < rk  && rk < length)
-        {
-            cgbn_load(_env,a, &(input_field[global_k]));
-            cgbn_load(_env,b, &(input_field[rk]));
-            cgbn_store(_env, &(input_field[global_k]), b);
-            cgbn_store(_env, &(input_field[rk]), a);
-            // Scalar tmp = input_field[global_k];
-            // input_field[global_k] = input_field[rk];
-            // input_field[rk] = tmp;
-        }
+        cgbn_load(_env,a, &(input_field[global_k]));
+        cgbn_load(_env,b, &(input_field[rk]));
+        cgbn_store(_env, &(input_field[global_k]), b);
+        cgbn_store(_env, &(input_field[rk]), a);
     }
-    //__syncthreads();
+    
+   // __syncthreads();
     
 }
-/*
-CGBN API referece. 
 
-
-void cgbn_modular_power(cgbn_env_t env, cgbn_t &r, const cgbn_t &x, const cgbn_t &e, const cgbn_t &m)
-Computes r = x^e modulo the modulus, m. Requires that x < m.
-
-
-int32_t cgbn_add(cgbn_env_t env, cgbn_t &r, const cgbn_t &a, const cgbn_t &b)
-Computes a + b and stores the result in r.   If the sum resulted in a carry out, then 1 is returned to all threads in the group, otherwise return 0.
-
-int32_t cgbn_sub(cgbn_env_t env, cgbn_t &r, const cgbn_t &a, const cgbn_t &b)
-Computes a - b and stores the result in r.   If b>a then -1 is returned to all threads, otherwise return 0.
-
-
-void cgbn_mul(cgbn_env_t env, cgbn_t &r, const cgbn_t &a, const cgbn_t &b)
-Computes the low half of the product of a * b, the upper half of the product is discarded.   This is the CGBN equivalent of unsigned multiplication in C.
-
-void cgbn_rem(cgbn_env_t env, cgbn_t &r, const cgbn_t &num, const cgbn_t &denom)
-Computes the remainder of num divided by denom and store the result into r, where 0 <= r < denom.
-*/
 
 __global__ void cuda_fft_second_step(Scalar *input_field, Scalar omega_binary, const size_t length, const size_t log_m, size_t s_index) {
     const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/fft_params_t::TPI;
@@ -180,7 +151,7 @@ __global__ void cuda_fft_second_step(Scalar *input_field, Scalar omega_binary, c
         cgbn_mul(_env, w, w, w_m);
         cgbn_rem(_env, w, w, modulus);
     }
-    //__syncthreads();
+   // __syncthreads();
 
 }
 
@@ -210,11 +181,12 @@ void best_fft (std::vector<Scalar> &a, const Scalar &omg)
     printf("launch block = %d thread = %d\n", blocks, threads_per_block);
     cuda_fft_first_step <<<blocks,threads_per_block>>>( in, omg, length, log_m);
     CUDA_CALL(cudaDeviceSynchronize());
-
+    cout << "finish first round" <<endl;
     size_t s = 1;
     for(; s <= log_m; s++){
         cuda_fft_second_step <<<blocks,threads_per_block>>>( in, omg, length, log_m, s);
         CUDA_CALL(cudaDeviceSynchronize());
+        cout <<"finish round " << s  <<endl;
     }
     // auto end = std::chrono::steady_clock::now();
     // std::chrono::duration<double> elapsed_seconds = end-start;
@@ -253,9 +225,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_fft_FFTAuxiliary_serialRadix2FFTNative
         int len = env->GetArrayLength(element);
         char* tmp = (char*)&inputArray[i]._limbs;
 
-        memcpy(tmp, 
-                bytes,
-                len);
+        memcpy(tmp, bytes, len);
     }
 
 

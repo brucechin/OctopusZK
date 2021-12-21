@@ -10,18 +10,10 @@ extern "C" {
 /*
  * Class:     algebra_msm_FixedBaseMSM
  * Method:    batchMSMNativeHelper
- * Signature: (IILjava/util/ArrayList;Ljava/util/ArrayList;)[B
+ * Signature: (IILjava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;I)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
-  (JNIEnv *, jclass, jint, jint, jobject, jobject);
-
-/*
- * Class:     algebra_msm_FixedBaseMSM
- * Method:    batchMSMNativeHelperGPU
- * Signature: (IILjava/util/ArrayList;Ljava/util/ArrayList;)[B
- */
-JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelperGPU
-  (JNIEnv *, jclass, jint, jint, jobject, jobject);
+  (JNIEnv *, jclass, jint, jint, jobject, jobject, jobject, jobject, jint);
 
 /*
  * Class:     algebra_msm_FixedBaseMSM

@@ -22,10 +22,10 @@ public abstract class BNG2<
         BNG2T extends BNG2<BNFrT, BNFqT, BNFq2T, BNG2T, BNG2ParametersT>,
         BNG2ParametersT extends AbstractBNG2Parameters<BNFrT, BNFqT, BNFq2T, BNG2T, BNG2ParametersT>>
         extends AbstractG2<BNG2T> {
-    protected final BNG2ParametersT G2Parameters;
-    protected BNFq2T X;
-    protected BNFq2T Y;
-    protected BNFq2T Z;
+    public final BNG2ParametersT G2Parameters;
+    public BNFq2T X;
+    public BNFq2T Y;
+    public BNFq2T Z;
 
     public BNG2(
             final BNFq2T X,

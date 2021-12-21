@@ -11,6 +11,7 @@ import algebra.curves.AbstractG1;
 import algebra.curves.barreto_naehrig.BNFields.BNFq;
 import algebra.curves.barreto_naehrig.BNFields.BNFr;
 import algebra.curves.barreto_naehrig.abstract_bn_parameters.AbstractBNG1Parameters;
+import java.math.BigInteger;
 
 import java.util.ArrayList;
 
@@ -21,8 +22,8 @@ public abstract class BNG1<
         BNG1ParametersT extends AbstractBNG1Parameters<BNFrT, BNFqT, BNG1T, BNG1ParametersT>>
         extends AbstractG1<BNG1T> {
     public final BNG1ParametersT G1Parameters;
-    protected final BNFqT X;
-    protected final BNFqT Y;
+    public final BNFqT X;
+    public final BNFqT Y;
     public final BNFqT Z;
 
     public BNG1(final BNFqT X, final BNFqT Y, final BNFqT Z, final BNG1ParametersT G1Parameters) {
@@ -57,6 +58,8 @@ public abstract class BNG1<
         // X1/Z1^2 == X2/Z2^2 and Y1/Z1^3 == Y2/Z2^3
         // iff
         // X1 * Z2^2 == X2 * Z1^2 and Y1 * Z2^3 == Y2 * Z1^3
+        
+        //System.out.println("BNFqT type is " +this.Z.getClass().getName());
 
         final BNFqT Z1Z1 = this.Z.square();
         final BNFqT Z2Z2 = that.Z.square();
@@ -181,6 +184,7 @@ public abstract class BNG1<
 
         return this.X.toString() + ", " + this.Y.toString() + ", " + this.Z.toString();
     }
+
 
     public boolean equals(final BNG1T that) {
         if (isZero()) {

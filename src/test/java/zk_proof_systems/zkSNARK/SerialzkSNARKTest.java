@@ -85,51 +85,51 @@ public class SerialzkSNARKTest implements Serializable {
         final Proof<BNG1T, BNG2T> proof =
                 SerialProver.prove(CRS.provingKey(), primary, fullAssignment, fieldFactory, config);
 
-        // final boolean isValid = Verifier.verify(CRS.verificationKey(), primary, proof, pairing, config);
-
-        // System.out.println(isValid);
-        // assertTrue(isValid);
-    }
-
-    @Test
-    public void SerialFakeProofSystemTest() {
-        final int numInputs = 1023;
-        final int numConstraints = 5000000;
-
-        FakeInitialize.init();
-        final Fp fieldFactory = new FakeFqParameters().ONE();
-        final FakeG1 fakeG1Factory = new FakeG1Parameters().ONE();
-        final FakeG2 fakeG2Factory = new FakeG2Parameters().ONE();
-        final FakePairing fakePairing = new FakePairing();
-
-        final Tuple3<R1CSRelation<Fp>, Assignment<Fp>, Assignment<Fp>> construction = R1CSConstruction
-                .serialConstruct(numConstraints, numInputs, fieldFactory, config);
-        final R1CSRelation<Fp> r1cs = construction._1();
-        final Assignment<Fp> primary = construction._2();
-        final Assignment<Fp> auxiliary = construction._3();
-
-        final CRS<Fp, FakeG1, FakeG2, FakeGT> CRS = SerialSetup
-                .generate(r1cs, fieldFactory, fakeG1Factory, fakeG2Factory, fakePairing, config);
-        final Proof<FakeG1, FakeG2> proof = SerialProver
-                .prove(CRS.provingKey(), primary, auxiliary, fieldFactory, config);
-        final boolean isValid = Verifier
-                .verify(CRS.verificationKey(), primary, proof, fakePairing, config);
+        final boolean isValid = Verifier.verify(CRS.verificationKey(), primary, proof, pairing, config);
 
         System.out.println(isValid);
         assertTrue(isValid);
     }
 
 //     @Test
-//     public void SerialBN254aProofSystemTest() {
+//     public void SerialFakeProofSystemTest() {
 //         final int numInputs = 1023;
-//         final int numConstraints = 1024;
-//         final BN254aFr fieldFactory = BN254aFr.ONE;
-//         final BN254aG1 g1Factory = BN254aG1Parameters.ONE;
-//         final BN254aG2 g2Factory = BN254aG2Parameters.ONE;
-//         final BN254aPairing pairing = new BN254aPairing();
+//         final int numConstraints = 5000000;
 
-//         SerialBNProofSystemTest(numInputs, numConstraints, fieldFactory, g1Factory, g2Factory, pairing);
+//         FakeInitialize.init();
+//         final Fp fieldFactory = new FakeFqParameters().ONE();
+//         final FakeG1 fakeG1Factory = new FakeG1Parameters().ONE();
+//         final FakeG2 fakeG2Factory = new FakeG2Parameters().ONE();
+//         final FakePairing fakePairing = new FakePairing();
+
+//         final Tuple3<R1CSRelation<Fp>, Assignment<Fp>, Assignment<Fp>> construction = R1CSConstruction
+//                 .serialConstruct(numConstraints, numInputs, fieldFactory, config);
+//         final R1CSRelation<Fp> r1cs = construction._1();
+//         final Assignment<Fp> primary = construction._2();
+//         final Assignment<Fp> auxiliary = construction._3();
+
+//         final CRS<Fp, FakeG1, FakeG2, FakeGT> CRS = SerialSetup
+//                 .generate(r1cs, fieldFactory, fakeG1Factory, fakeG2Factory, fakePairing, config);
+//         final Proof<FakeG1, FakeG2> proof = SerialProver
+//                 .prove(CRS.provingKey(), primary, auxiliary, fieldFactory, config);
+//         final boolean isValid = Verifier
+//                 .verify(CRS.verificationKey(), primary, proof, fakePairing, config);
+
+//         System.out.println(isValid);
+//         assertTrue(isValid);
 //     }
+
+    @Test
+    public void SerialBN254aProofSystemTest() {
+        final int numInputs = 12;
+        final int numConstraints = 20;
+        final BN254aFr fieldFactory = BN254aFr.ONE;
+        final BN254aG1 g1Factory = BN254aG1Parameters.ONE;
+        final BN254aG2 g2Factory = BN254aG2Parameters.ONE;
+        final BN254aPairing pairing = new BN254aPairing();
+
+        SerialBNProofSystemTest(numInputs, numConstraints, fieldFactory, g1Factory, g2Factory, pairing);
+    }
 
 //     @Test
 //     public void SerialBN254bProofSystemTest() {
