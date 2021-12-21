@@ -57,6 +57,11 @@ __device__   uint32_t modulus_raw_G1[16] = {3632069959,1008765974,1752287885,254
                                 2172737629,3092268470,3778125865,811880050,
                                 0, 0,0,0,
                                 0,0,0,0};
+                                
+__device__   uint32_t zero_raw[16] = {0,0,0,0, 
+                                      0,0,0,0,
+                                      0, 0,0,0,
+                                      0,0,0,0};
 // Declare the instance type
 typedef struct {
   cgbn_mem_t<MSM_params_t::BITS> X;
@@ -84,9 +89,12 @@ bool testBit(Scalar input, int n)
 __device__ __forceinline__
 bool isZero(BN254G1 input)
 {
-    uint32_t zero[MSM_params_t::BITS / 32];
-    memset(zero, 0, MSM_params_t::BITS / 8); 
-    return memcmp(input.Z._limbs, zero, MSM_params_t::BITS / 8) == 0;
+    bn_t zero, z;
+    Scalar zero_binary;
+    zero_binary._limbs = zero_raw;
+    cgbn_load(_env, zero, &zero_binary);
+    cgbn_load(_env, z, &input.Z);
+    return cgbn_equals(_env, zero, z);
 }
 
 
