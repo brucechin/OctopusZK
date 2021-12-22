@@ -64,7 +64,7 @@ const char *cgbn_error_string(cgbn_error_report_t *report);
 
 #include "cgbn.cu"
 
-#if defined(__CUDA_ARCH__)
+// #if defined(__CUDA_ARCH__)
   #if !defined(XMP_IMAD) && !defined(XMP_XMAD) && !defined(XMP_WMAD)
      #if __CUDA_ARCH__<500
        #define XMP_IMAD
@@ -75,11 +75,11 @@ const char *cgbn_error_string(cgbn_error_report_t *report);
      #endif
   #endif
   #include "cgbn_cuda.h"
-#elif defined(__GMP_H__)
-  #include "cgbn_mpz.h"
-#else
-  #include "cgbn_cpu.h"
-#endif
+// #elif defined(__GMP_H__)
+//   #include "cgbn_mpz.h"
+// #else
+//   #include "cgbn_cpu.h"
+// #endif
 
 
 template<class env_t, class source_cgbn_t>

@@ -263,7 +263,7 @@ class dispatch_resolver_t {
       x[index]=addc_cc(x[index], c);
     c=addc(0, c);
   
-    lor=mplor<limbs>(x);
+    uint32_t lor=mplor<LIMBS>(x);
     g=__ballot_sync(sync, c==0xFFFFFFFF);
     p=__ballot_sync(sync, lor==0);
   
@@ -272,7 +272,7 @@ class dispatch_resolver_t {
     c=(c==0) ? 0 : 0xFFFFFFFF;
     x[0]=add_cc(x[0], c);
     #pragma unroll
-    for(int32_t index=1;index<limbs;index++) 
+    for(int32_t index=1;index<LIMBS;index++) 
       x[index]=addc_cc(x[index], c);
     
     result=__shfl_sync(sync, x[PAD_LIMB], PAD_THREAD, tpi);

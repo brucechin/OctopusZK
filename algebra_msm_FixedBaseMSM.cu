@@ -296,7 +296,7 @@ void print_bn_t(bn_t &number, int instance_id_) {
     atomicAdd(&vote[instance_id], 1);
     while (vote[instance_id] < TPI) ;
     if (is_represent) {
-      printf("instance %d is ", global_instance_id);
+      //printf("instance %d is ", global_instance_id);
       for (int i = 0; i < __env_t::BITS/32; i++) {
         printf(" %u |", n[instance_id][i]);
       }
@@ -344,110 +344,116 @@ BN254G1 add(BN254G1 a, BN254G1 b) {
   
   
   //TODO lianke: print out these values in GPU for debugging
+  //print_bn_t(a_z, 1);
   cgbn_mul(_env, Z1Z1, a_z, a_z);
+  //print_bn_t(Z1Z1, 1);
   cgbn_rem(_env, Z1Z1, Z1Z1, modulus);
+  //print_bn_t(Z1Z1, 1);
 
-  // cgbn_mul(_env, Z2Z2, b_z, b_z);
-  // cgbn_rem(_env, Z2Z2, Z2Z2, modulus);
+  cgbn_mul(_env, Z2Z2, b_z, b_z);
+  cgbn_rem(_env, Z2Z2, Z2Z2, modulus);
 
-  // cgbn_mul(_env, U1, a_x, Z2Z2); 
-  // cgbn_rem(_env, U1, U1, modulus);
+  cgbn_mul(_env, U1, a_x, Z2Z2); 
+  cgbn_rem(_env, U1, U1, modulus);
 
-  // cgbn_mul(_env, U2, b_x, Z1Z1);
-  // cgbn_rem(_env, U2, U2, modulus);
+  cgbn_mul(_env, U2, b_x, Z1Z1);
+  cgbn_rem(_env, U2, U2, modulus);
 
-  // cgbn_mul(_env, Z1_cubed, a_z, Z1Z1);
-  // cgbn_rem(_env, Z1_cubed, Z1_cubed, modulus);
+  cgbn_mul(_env, Z1_cubed, a_z, Z1Z1);
+  cgbn_rem(_env, Z1_cubed, Z1_cubed, modulus);
 
-  // cgbn_mul(_env, Z2_cubed, b_z, Z2Z2);
-  // cgbn_rem(_env, Z2_cubed, Z2_cubed, modulus);
+  cgbn_mul(_env, Z2_cubed, b_z, Z2Z2);
+  cgbn_rem(_env, Z2_cubed, Z2_cubed, modulus);
 
-  // cgbn_mul(_env, S1, a_y, Z2_cubed);
-  // cgbn_rem(_env, S1, S1, modulus);
+  cgbn_mul(_env, S1, a_y, Z2_cubed);
+  cgbn_rem(_env, S1, S1, modulus);
 
-  // cgbn_mul(_env, S2, b_y, Z1_cubed);
-  // cgbn_rem(_env, S2, S2, modulus);
+  cgbn_mul(_env, S2, b_y, Z1_cubed);
+  cgbn_rem(_env, S2, S2, modulus);
 
 
-  // if (cgbn_equals(_env, U1, U2) && cgbn_equals(_env, S1, S2)) {
-  //     // Double case; nothing above can be reused.
-  //     return twice(a);
-  // }
+  if (cgbn_equals(_env, U1, U2) && cgbn_equals(_env, S1, S2)) {
+      // Double case; nothing above can be reused.
+      return twice(a);
+  }
 
-  // bn_t H, S2_minus_S1, I, J, r, V, X3, S1_J, Y3, Z3;
+  bn_t H, S2_minus_S1, I, J, r, V, X3, S1_J, Y3, Z3;
   
-  // // H = U2-U1
-  // cgbn_add(_env, H, U2, modulus);
-  // cgbn_sub(_env, H, H, U1);
-  // cgbn_rem(_env, H, H, modulus);
+  // H = U2-U1
+  cgbn_add(_env, H, U2, modulus);
+  cgbn_sub(_env, H, H, U1);
+  cgbn_rem(_env, H, H, modulus);
 
-  // cgbn_add(_env, S2_minus_S1, S2, modulus);
-  // cgbn_sub(_env, S2_minus_S1, S2_minus_S1, S1);
-  // cgbn_rem(_env, S2_minus_S1, S2_minus_S1, modulus);
-
-
-  // // I = (2 * H)^2
-  // cgbn_add(_env, I, H, H);
-  // cgbn_rem(_env, I, I, modulus);
-  // cgbn_mul(_env, I, I, I);
-  // cgbn_rem(_env, I, I, modulus);
-
-  // // J = H * I
-  // cgbn_mul(_env, J, H, I);
-  // cgbn_rem(_env, J, J, modulus);
-
-  // // r = 2 * (S2-S1)
-  // cgbn_add(_env, r, S2_minus_S1, S2_minus_S1);
-  // cgbn_rem(_env, r, r, modulus);
-
-  // // V = U1 * I
-  // cgbn_mul(_env, V, U1, I);
-  // cgbn_rem(_env, V, V, modulus);
-
-  // // X3 = r^2 - J - 2 * V
-  // cgbn_mul(_env, X3, r, r);
-  // cgbn_rem(_env, X3, X3, modulus);
-  // cgbn_add(_env, X3, X3, modulus);
-  // cgbn_add(_env, X3, X3, modulus);
-  // cgbn_add(_env, X3, X3, modulus);
-  // cgbn_sub(_env, X3, X3, J);
-  // cgbn_sub(_env, X3, X3, V);
-  // cgbn_sub(_env, X3, X3, V);
-  // cgbn_rem(_env, X3, X3, modulus);
+  cgbn_add(_env, S2_minus_S1, S2, modulus);
+  cgbn_sub(_env, S2_minus_S1, S2_minus_S1, S1);
+  cgbn_rem(_env, S2_minus_S1, S2_minus_S1, modulus);
 
 
-  // // Y3 = r * (V-X3)-2 * S1_J
-  // cgbn_mul(_env, S1_J, S1, J);
-  // cgbn_rem(_env, S1_J, S1_J, modulus);
-  // cgbn_add(_env, Y3, V, modulus);
-  // cgbn_sub(_env, Y3, Y3, X3);
-  // cgbn_rem(_env, Y3, Y3, modulus);
-  // cgbn_mul(_env, Y3, Y3, r);
-  // cgbn_rem(_env, Y3, Y3, modulus);
-  // cgbn_add(_env, Y3, Y3, modulus);
-  // cgbn_add(_env, Y3, Y3, modulus);
-  // cgbn_sub(_env, Y3, Y3, S1_J);
-  // cgbn_sub(_env, Y3, Y3, S1_J);
-  // cgbn_rem(_env, Y3, Y3, modulus);
+  // I = (2 * H)^2
+  cgbn_add(_env, I, H, H);
+  cgbn_rem(_env, I, I, modulus);
+  cgbn_mul(_env, I, I, I);
+  cgbn_rem(_env, I, I, modulus);
+
+  // J = H * I
+  cgbn_mul(_env, J, H, I);
+  cgbn_rem(_env, J, J, modulus);
+
+  // r = 2 * (S2-S1)
+  cgbn_add(_env, r, S2_minus_S1, S2_minus_S1);
+  cgbn_rem(_env, r, r, modulus);
+
+  // V = U1 * I
+  cgbn_mul(_env, V, U1, I);
+  cgbn_rem(_env, V, V, modulus);
+
+  // X3 = r^2 - J - 2 * V
+  cgbn_mul(_env, X3, r, r);
+  cgbn_rem(_env, X3, X3, modulus);
+  cgbn_add(_env, X3, X3, modulus);
+  cgbn_add(_env, X3, X3, modulus);
+  cgbn_add(_env, X3, X3, modulus);
+  cgbn_sub(_env, X3, X3, J);
+  cgbn_sub(_env, X3, X3, V);
+  cgbn_sub(_env, X3, X3, V);
+  cgbn_rem(_env, X3, X3, modulus);
+
+
+  // Y3 = r * (V-X3)-2 * S1_J
+  cgbn_mul(_env, S1_J, S1, J);
+  cgbn_rem(_env, S1_J, S1_J, modulus);
+  cgbn_add(_env, Y3, V, modulus);
+  cgbn_sub(_env, Y3, Y3, X3);
+  cgbn_rem(_env, Y3, Y3, modulus);
+  cgbn_mul(_env, Y3, Y3, r);
+  cgbn_rem(_env, Y3, Y3, modulus);
+  cgbn_add(_env, Y3, Y3, modulus);
+  cgbn_add(_env, Y3, Y3, modulus);
+  cgbn_sub(_env, Y3, Y3, S1_J);
+  cgbn_sub(_env, Y3, Y3, S1_J);
+  cgbn_rem(_env, Y3, Y3, modulus);
 
 
 
-  // cgbn_add(_env, Z3, a_z, b_z);
-  // cgbn_rem(_env, Z3, Z3, modulus);
-  // cgbn_mul(_env, Z3, Z3, Z3);
-  // cgbn_rem(_env, Z3, Z3, modulus);
-  // cgbn_add(_env, Z3, Z3, modulus);
-  // cgbn_add(_env, Z3, Z3, modulus);
-  // cgbn_sub(_env, Z3, Z3, Z1Z1);
-  // cgbn_sub(_env, Z3, Z3, Z2Z2);
-  // cgbn_rem(_env, Z3, Z3, modulus);
-  // cgbn_mul(_env, Z3, Z3, H);
-  // cgbn_rem(_env, Z3, Z3, modulus);
+  cgbn_add(_env, Z3, a_z, b_z);
+  cgbn_rem(_env, Z3, Z3, modulus);
+  cgbn_mul(_env, Z3, Z3, Z3);
+  cgbn_rem(_env, Z3, Z3, modulus);
+  cgbn_add(_env, Z3, Z3, modulus);
+  cgbn_add(_env, Z3, Z3, modulus);
+  cgbn_sub(_env, Z3, Z3, Z1Z1);
+  cgbn_sub(_env, Z3, Z3, Z2Z2);
+  cgbn_rem(_env, Z3, Z3, modulus);
+  cgbn_mul(_env, Z3, Z3, H);
+  cgbn_rem(_env, Z3, Z3, modulus);
 
+  // print_bn_t(X3, 1);
+  // print_bn_t(Y3, 1);
+  // print_bn_t(Z3, 1);
 
-  // cgbn_store(_env, &result.X, X3);
-  // cgbn_store(_env, &result.Y, Y3);
-  // cgbn_store(_env, &result.Z, Z3);
+  cgbn_store(_env, &result.X, X3);
+  cgbn_store(_env, &result.Y, Y3);
+  cgbn_store(_env, &result.Z, Z3);
 
   return result;
 
@@ -461,7 +467,7 @@ __global__ void MSM_unit_processing(Scalar* inputScalarArray, BN254G1* inputBase
       return;
     }
     //TODO lianke: this for loop is commented to reduce number of execution during debugging. remeber to uncomment it.
-    // for (int outer = 0; outer < outerc; ++outer) {
+    for (int outer = 0; outer < outerc; ++outer) {
       int outer = 0;
         int inner = 0;
         for (int i = 0; i < windowSize; ++i) {
@@ -472,8 +478,22 @@ __global__ void MSM_unit_processing(Scalar* inputScalarArray, BN254G1* inputBase
         }
         res = add(res, inputBaseArray[tableInnerSize * outer + inner]);
 
-    // }
-    outputBN254Array[idx] = res;
+    }
+    // context_t _context;
+    // env_t    _env(_context);
+    // bn_t x,y,z;
+    // cgbn_load(_env, x, &res.X);
+    // cgbn_load(_env, y, &res.Y);
+    // cgbn_load(_env, z, &res.Z);
+    // print_bn_t(x, 1);
+    // print_bn_t(y, 1);
+    // print_bn_t(z, 1);
+    //TODO lianke: res is calculated as 254-bit BN254G1, but the output in CPU side is only 4 uint32_t structure, which is wierd.
+    memcpy(&outputBN254Array[idx].X, &res.X, sizeof(Scalar));
+    memcpy(&outputBN254Array[idx].Y, &res.Y, sizeof(Scalar));
+    memcpy(&outputBN254Array[idx].Z, &res.Z, sizeof(Scalar));
+
+    //outputBN254Array[idx] = res;
     return;
 }
 
@@ -596,9 +616,9 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
 
   fixed_batch_MSM(bigScalarArray, multiplesOfBasePtrArray, outputBN254ArrayCPU, outerc, windowSize, out_len, inner_len);
   for(int i = 0; i < batch_size; i++){
-    cout << "CUDA i=" << i << " Z^2=";
+    cout << "CUDA i=" << i << " X=";
     printMem(outputBN254ArrayCPU[i].X);
-    cout << "Z after mod=";
+    cout << "Y=";
     printMem(outputBN254ArrayCPU[i].Y);
     cout << "Z=";
     printMem(outputBN254ArrayCPU[i].Z);

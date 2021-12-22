@@ -90,7 +90,7 @@ __device__ __forceinline__ uint32_t core_t<env>::ctzt(const uint32_t a[LIMBS]) {
   if(TPI<warpSize)
     bottomctz=bottomctz>>(warp_thread^group_thread);
   bottomctz=uctz(bottomctz);
-  return umin(topctz, TPI);
+  return umin(bottomctz, TPI);
 }
 
 } /* namespace cgbn */
