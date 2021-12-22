@@ -29,27 +29,27 @@ public class SerialFixedBaseMSMTest implements Serializable {
         GroupParameters = new LargeAdditiveIntegerGroupParameters();
     }
 
-    @Test
-    public void NaiveMSMTest() {
-        final AdditiveIntegerGroup base = new AdditiveIntegerGroup(7, GroupParameters);
-        ArrayList<BigInteger> scalars = new ArrayList<>(4);
-        scalars.add(new BigInteger("3"));
-        scalars.add(new BigInteger("11"));
-        scalars.add(new BigInteger("2"));
-        scalars.add(new BigInteger("8"));
+    // @Test
+    // public void NaiveMSMTest() {
+    //     final AdditiveIntegerGroup base = new AdditiveIntegerGroup(7, GroupParameters);
+    //     ArrayList<BigInteger> scalars = new ArrayList<>(4);
+    //     scalars.add(new BigInteger("3"));
+    //     scalars.add(new BigInteger("11"));
+    //     scalars.add(new BigInteger("2"));
+    //     scalars.add(new BigInteger("8"));
 
-        ArrayList<AdditiveIntegerGroup> result = NaiveMSM.fixedBaseMSM(scalars, base);
-        ArrayList<AdditiveIntegerGroup> answers = new ArrayList<>(4);
-        answers.add(new AdditiveIntegerGroup(21, GroupParameters));
-        answers.add(new AdditiveIntegerGroup(77, GroupParameters));
-        answers.add(new AdditiveIntegerGroup(14, GroupParameters));
-        answers.add(new AdditiveIntegerGroup(56, GroupParameters));
+    //     ArrayList<AdditiveIntegerGroup> result = NaiveMSM.fixedBaseMSM(scalars, base);
+    //     ArrayList<AdditiveIntegerGroup> answers = new ArrayList<>(4);
+    //     answers.add(new AdditiveIntegerGroup(21, GroupParameters));
+    //     answers.add(new AdditiveIntegerGroup(77, GroupParameters));
+    //     answers.add(new AdditiveIntegerGroup(14, GroupParameters));
+    //     answers.add(new AdditiveIntegerGroup(56, GroupParameters));
 
-        for (int i = 0; i < answers.size(); i++) {
-            System.out.println(result.get(i).toString() + " == " + answers.get(i).toString());
-            assertTrue(result.get(i).equals(answers.get(i)));
-        }
-    }
+    //     for (int i = 0; i < answers.size(); i++) {
+    //         System.out.println(result.get(i).toString() + " == " + answers.get(i).toString());
+    //         assertTrue(result.get(i).equals(answers.get(i)));
+    //     }
+    // }
 
     @Test
     public void SerialMSMTest() {

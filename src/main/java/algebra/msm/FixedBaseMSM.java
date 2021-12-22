@@ -164,7 +164,6 @@ public class FixedBaseMSM {
         final BigInteger bigScalar = scalar.toBigInteger();
 
         T res = multiplesOfBase.get(0).get(0);
-
         for (int outer = 0; outer < outerc; ++outer) {
             int inner = 0;
             for (int i = 0; i < windowSize; ++i) {
@@ -174,8 +173,9 @@ public class FixedBaseMSM {
             }
             //System.out.println("JAVA outer=" + outer + " inner=" +inner);
             res = res.add(multiplesOfBase.get(outer).get(inner));
-
+            //System.out.println("target for add is=" + multiplesOfBase.get(outer).get(inner).toString());
         }
+        //System.out.println("\n\n\n");
 
         return res;
     }
@@ -233,7 +233,7 @@ public class FixedBaseMSM {
         System.out.println("scalars type : " + scalars.get(0).getClass().getName());
         
        if(multiplesOfBase.get(0).get(0).getClass().getName().equals("algebra.curves.barreto_naehrig.bn254a.BN254aG1")){
-        ArrayList<ArrayList<byte[]>> byteArrayX = new ArrayList<ArrayList<byte[]>>();
+            ArrayList<ArrayList<byte[]>> byteArrayX = new ArrayList<ArrayList<byte[]>>();
             ArrayList<ArrayList<byte[]>> byteArrayY = new ArrayList<ArrayList<byte[]>>();
             ArrayList<ArrayList<byte[]>> byteArrayZ = new ArrayList<ArrayList<byte[]>>();
     
@@ -247,7 +247,7 @@ public class FixedBaseMSM {
                 ArrayList<byte[]> tmpZ = new ArrayList<byte[]>();
                 for(int j = 0; j< in_size; j++){
                     ArrayList<BigInteger> three_values = multiplesOfBase.get(i).get(j).BN254G1ToBigInteger();
-                    //System.out.println("X=" + byteToString(three_values.get(0).toByteArray()));
+                    //System.out.println("out=" + i +" in=" + j + " X=" + byteToString(three_values.get(0).toByteArray()));
                     //System.out.println("three_values:" +three_values.get(0) + " " + three_values.get(1) + " " + three_values.get(2));
                     tmpX.add(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
                     tmpY.add(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
@@ -268,46 +268,46 @@ public class FixedBaseMSM {
             System.out.println("data transfer preparation time elapsed: " + timeElapsed + " ms");
             byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, byteArrayX, byteArrayY, byteArrayZ, bigScalars, 1);
 
-            start = System.currentTimeMillis();
-            int size_of_bigint_cpp_side = 64;
-            final List<T> jni_res = new ArrayList<>(scalars.size());
-            BigInteger G1_modulus = new BigInteger("21888242871839275222246405745257275088696311157297823662689037894645226208583");
+            // start = System.currentTimeMillis();
+            // int size_of_bigint_cpp_side = 64;
+            // final List<T> jni_res = new ArrayList<>(scalars.size());
+            // BigInteger G1_modulus = new BigInteger("21888242871839275222246405745257275088696311157297823662689037894645226208583");
             
 
-            for(int i = 0; i < scalars.size(); i++){
-                byte[] slice = Arrays.copyOfRange(resultByteArray, 3*i*size_of_bigint_cpp_side, 3*(i+1)*size_of_bigint_cpp_side);
+            // for(int i = 0; i < scalars.size(); i++){
+            //     byte[] slice = Arrays.copyOfRange(resultByteArray, 3*i*size_of_bigint_cpp_side, 3*(i+1)*size_of_bigint_cpp_side);
 
-                byte[] converted_back_X = new byte[64];
-                byte[] converted_back_Y = new byte[64];
-                byte[] converted_back_Z = new byte[64];
+            //     byte[] converted_back_X = new byte[64];
+            //     byte[] converted_back_Y = new byte[64];
+            //     byte[] converted_back_Z = new byte[64];
 
-                for(int j =0; j < size_of_bigint_cpp_side; j++){
-                    converted_back_X[j] = slice[size_of_bigint_cpp_side - j - 1];
-                }
-                for(int j =0; j < size_of_bigint_cpp_side; j++){
-                    converted_back_Y[j] = slice[2*size_of_bigint_cpp_side - j - 1];
-                }
-                for(int j =0; j < size_of_bigint_cpp_side; j++){
-                    converted_back_Z[j] = slice[3*size_of_bigint_cpp_side - j - 1];
-                }
+            //     for(int j =0; j < size_of_bigint_cpp_side; j++){
+            //         converted_back_X[j] = slice[size_of_bigint_cpp_side - j - 1];
+            //     }
+            //     for(int j =0; j < size_of_bigint_cpp_side; j++){
+            //         converted_back_Y[j] = slice[2*size_of_bigint_cpp_side - j - 1];
+            //     }
+            //     for(int j =0; j < size_of_bigint_cpp_side; j++){
+            //         converted_back_Z[j] = slice[3*size_of_bigint_cpp_side - j - 1];
+            //     }
 
-                BigInteger bi_X = new BigInteger(converted_back_X);
-                BigInteger bi_Y = new BigInteger(converted_back_Y);
-                BigInteger bi_Z = new BigInteger(converted_back_Z);
-                // bi_X = bi_X.mod(G1_modulus);
-                // bi_Y = bi_Y.mod(G1_modulus);
-                // bi_Z = bi_Z.mod(G1_modulus);
+            //     BigInteger bi_X = new BigInteger(converted_back_X);
+            //     BigInteger bi_Y = new BigInteger(converted_back_Y);
+            //     BigInteger bi_Z = new BigInteger(converted_back_Z);
+            //     // bi_X = bi_X.mod(G1_modulus);
+            //     // bi_Y = bi_Y.mod(G1_modulus);
+            //     // bi_Z = bi_Z.mod(G1_modulus);
 
-                T temp = multiplesOfBase.get(0).get(0).zero();
-                temp.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
-                jni_res.add(temp);
-                //TODO lianke wierd, the CUDA MSM output is all the same and wrong.
-                System.out.println("CUDA FixedBaseMSM output=" +temp.toString());
-            }
+            //     T temp = multiplesOfBase.get(0).get(0).zero();
+            //     temp.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
+            //     jni_res.add(temp);
+            //     //TODO lianke wierd, the CUDA MSM output is all the same and wrong.
+            //     System.out.println("CUDA FixedBaseMSM output=" +temp.toString());
+            // }
 
-            finish = System.currentTimeMillis();
-            timeElapsed = finish - start;
-            System.out.println("data receive transformation time elapsed: " + timeElapsed + " ms");
+            // finish = System.currentTimeMillis();
+            // timeElapsed = finish - start;
+            // System.out.println("data receive transformation time elapsed: " + timeElapsed + " ms");
             //return jni_res;
         }
 
@@ -315,7 +315,7 @@ public class FixedBaseMSM {
         for (FieldT scalar : scalars) {
             T temp = serialMSMTest(scalarSize, windowSize, multiplesOfBase, scalar);
             res.add(temp);
-            System.out.println("JAVA FixedBaseMSM output=" + temp.toString());
+            //System.out.println("JAVA FixedBaseMSM output=" + temp.toString());
         }
         //For BN254G2 we have not implemented it yet.
         return res;

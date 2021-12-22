@@ -6,6 +6,7 @@
  *****************************************************************************/
 
 package zk_proof_systems.zkSNARK;
+import algebra.fields.fieldparameters.LargeFpParameters;
 
 import algebra.curves.barreto_naehrig.*;
 import algebra.curves.barreto_naehrig.abstract_bn_parameters.AbstractBNG1Parameters;
@@ -119,15 +120,35 @@ public class SerialzkSNARKTest implements Serializable {
     //     assertTrue(isValid);
     // }
 
+    public static String byteToString(byte[] b) {
+        byte[] masks = { -128, 64, 32, 16, 8, 4, 2, 1 };
+        StringBuilder builder = new StringBuilder();
+        builder.append('|');
+        for( byte bb : b){
+            for (byte m : masks) {
+                if ((bb & m) == m) {
+                    builder.append('1');
+                } else {
+                    builder.append('0');
+                }
+            }
+            builder.append('|');
+        }
+
+        return builder.toString();
+    }
+
     @Test
     public void SerialBN254aProofSystemTest() {
         final int numInputs = 1;
-        final int numConstraints = 2;
+        final int numConstraints = 1;
         final BN254aFr fieldFactory = BN254aFr.ONE;
         final BN254aG1 g1Factory = BN254aG1Parameters.ONE;
         final BN254aG2 g2Factory = BN254aG2Parameters.ONE;
         final BN254aPairing pairing = new BN254aPairing();
-
+        LargeFpParameters FpParameters = new LargeFpParameters();
+        // final Fp FieldFactory = new Fp(259, FpParameters);
+        // System.out.println("fp=" + byteToString(FieldFactory.toBigInteger().toByteArray()));
         SerialBNProofSystemTest(numInputs, numConstraints, fieldFactory, g1Factory, g2Factory, pairing);
     }
 

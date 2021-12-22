@@ -20,17 +20,20 @@ public class ProvingKey<FieldT extends AbstractFieldElementExpanded<FieldT>, G1T
         AbstractG1<G1T>, G2T extends AbstractG2<G2T>> implements
         Serializable {
 
-    private final G1T alphaG1;
-    private final G1T betaG1;
-    private final G2T betaG2;
-    private final G1T deltaG1;
-    private final G2T deltaG2;
-    private final List<G1T> deltaABCG1;
-    private final List<G1T> queryA;
-    private final List<Tuple2<G1T, G2T>> queryB;
-    private final List<G1T> queryH;
-    private final R1CSRelation<FieldT> r1cs;
+    private  G1T alphaG1;
+    private  G1T betaG1;
+    private  G2T betaG2;
+    private  G1T deltaG1;
+    private  G2T deltaG2;
+    private  List<G1T> deltaABCG1;
+    private  List<G1T> queryA;
+    private  List<Tuple2<G1T, G2T>> queryB;
+    private  List<G1T> queryH;
+    private  R1CSRelation<FieldT> r1cs;
+    
+    public ProvingKey(){
 
+    }
     public ProvingKey(
             final G1T _alphaG1,
             final G1T _betaG1,

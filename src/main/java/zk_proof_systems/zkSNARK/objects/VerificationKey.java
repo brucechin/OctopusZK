@@ -16,10 +16,14 @@ import java.util.List;
 public class VerificationKey<G1T extends AbstractG1<G1T>, G2T extends AbstractG2<G2T>, GTT
         extends AbstractGT<GTT>> {
 
-    private final GTT alphaG1betaG2;
-    private final G2T gammaG2;
-    private final G2T deltaG2;
-    private final List<G1T> gammaABC;
+    private  GTT alphaG1betaG2;
+    private  G2T gammaG2;
+    private  G2T deltaG2;
+    private  List<G1T> gammaABC;
+
+    public VerificationKey(){
+
+    }
 
     public VerificationKey(
             final GTT _alphaG1betaG2,
