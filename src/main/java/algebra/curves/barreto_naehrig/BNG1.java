@@ -60,8 +60,10 @@ public abstract class BNG1<
         // X1 * Z2^2 == X2 * Z1^2 and Y1 * Z2^3 == Y2 * Z1^3
         
         //System.out.println("BNFqT type is " +this.Z.getClass().getName());
-
+        //System.out.println("Z=" + this.Z.toBigInteger());
         final BNFqT Z1Z1 = this.Z.square();
+        //System.out.println("Z1Z1=" + Z1Z1.toBigInteger() + "\n");
+
         final BNFqT Z2Z2 = that.Z.square();
 
         final BNFqT U1 = this.X.mul(Z2Z2);
@@ -73,10 +75,10 @@ public abstract class BNG1<
         final BNFqT S1 = this.Y.mul(Z2_cubed);      // S1 = Y1 * Z2 * Z2Z2
         final BNFqT S2 = that.Y.mul(Z1_cubed);      // S2 = Y2 * Z1 * Z1Z1
 
-        // if (U1.equals(U2) && S1.equals(S2)) {
-        //     // Double case; nothing above can be reused.
-        //     return twice();
-        // }
+        if (U1.equals(U2) && S1.equals(S2)) {
+            // Double case; nothing above can be reused.
+            return twice();
+        }
 
         // Rest of the add case.
         final BNFqT H = U2.sub(U1);                                   // H = U2-U1

@@ -153,6 +153,33 @@ public class FixedBaseMSM {
         return res;
     }
 
+    public static <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
+    T serialMSMTest(
+            final int scalarSize,
+            final int windowSize,
+            final List<List<T>> multiplesOfBase,
+            final FieldT scalar) {
+
+        final int outerc = (scalarSize + windowSize - 1) / windowSize;
+        final BigInteger bigScalar = scalar.toBigInteger();
+
+        T res = multiplesOfBase.get(0).get(0);
+
+        for (int outer = 0; outer < outerc; ++outer) {
+            int inner = 0;
+            for (int i = 0; i < windowSize; ++i) {
+                if (bigScalar.testBit(outer * windowSize + i)) {         
+                    inner |= 1 << i;
+                }
+            }
+            //System.out.println("JAVA outer=" + outer + " inner=" +inner);
+            res = res.add(multiplesOfBase.get(outer).get(inner));
+
+        }
+
+        return res;
+    }
+
     public static byte[] bigIntegerToByteArrayHelper(BigInteger bigint){
         byte[] temp = bigint.toByteArray();
 
@@ -183,7 +210,6 @@ public class FixedBaseMSM {
         byte[] temp = bigint.toByteArray();
 
         byte[] res = new byte[(temp.length + 3)/ 4 * 4];
-        int new_len = (temp.length + 3) / 4 * 4;
         for(int i = 0; i < temp.length; i++){
             res[temp.length - i - 1] = temp[i];
         }
@@ -221,6 +247,7 @@ public class FixedBaseMSM {
                 ArrayList<byte[]> tmpZ = new ArrayList<byte[]>();
                 for(int j = 0; j< in_size; j++){
                     ArrayList<BigInteger> three_values = multiplesOfBase.get(i).get(j).BN254G1ToBigInteger();
+                    //System.out.println("X=" + byteToString(three_values.get(0).toByteArray()));
                     //System.out.println("three_values:" +three_values.get(0) + " " + three_values.get(1) + " " + three_values.get(2));
                     tmpX.add(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
                     tmpY.add(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
@@ -244,6 +271,8 @@ public class FixedBaseMSM {
             start = System.currentTimeMillis();
             int size_of_bigint_cpp_side = 64;
             final List<T> jni_res = new ArrayList<>(scalars.size());
+            BigInteger G1_modulus = new BigInteger("21888242871839275222246405745257275088696311157297823662689037894645226208583");
+            
 
             for(int i = 0; i < scalars.size(); i++){
                 byte[] slice = Arrays.copyOfRange(resultByteArray, 3*i*size_of_bigint_cpp_side, 3*(i+1)*size_of_bigint_cpp_side);
@@ -265,25 +294,32 @@ public class FixedBaseMSM {
                 BigInteger bi_X = new BigInteger(converted_back_X);
                 BigInteger bi_Y = new BigInteger(converted_back_Y);
                 BigInteger bi_Z = new BigInteger(converted_back_Z);
+                bi_X = bi_X.mod(G1_modulus);
+                bi_Y = bi_Y.mod(G1_modulus);
+                bi_Z = bi_Z.mod(G1_modulus);
 
                 T temp = multiplesOfBase.get(0).get(0).zero();
                 temp.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
                 jni_res.add(temp);
-            
+                //TODO lianke wierd, the CUDA MSM output is all the same and wrong.
+                System.out.println("CUDA FixedBaseMSM output=" +temp.toString());
             }
 
             finish = System.currentTimeMillis();
             timeElapsed = finish - start;
             System.out.println("data receive transformation time elapsed: " + timeElapsed + " ms");
-            return jni_res;
-        }else{
-            System.out.println("for BN254G2, we use the old way.");
-            for (FieldT scalar : scalars) {
-                res.add(serialMSM(scalarSize, windowSize, multiplesOfBase, scalar));
-            }
-            //For BN254G2 we have not implemented it yet.
-            return res;
+            //return jni_res;
         }
+
+        System.out.println("for BN254G2, we use the old way.");
+        for (FieldT scalar : scalars) {
+            T temp = serialMSMTest(scalarSize, windowSize, multiplesOfBase, scalar);
+            res.add(temp);
+            System.out.println("JAVA FixedBaseMSM output=" + temp.toString());
+        }
+        //For BN254G2 we have not implemented it yet.
+        return res;
+        
         
 
 

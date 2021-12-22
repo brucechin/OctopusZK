@@ -103,7 +103,7 @@ __global__ void cuda_fft_second_step(Scalar *input_field, Scalar omega_binary, c
 
     Scalar modulus_binary;
     //Fr modulus is : |811880050|3778125865|3092268470|2172737629|674490440|2042196113|1138881939|4026531841|
-    uint32_t modulus_raw[16] = {4026531841,1138881939,2042196113,674490440, 
+    uint32_t Fr_modulus_raw[16] = {4026531841,1138881939,2042196113,674490440, 
                                 2172737629,3092268470,3778125865,811880050,
                                 0, 0,0,0,
                                 0,0,0,0};
@@ -114,7 +114,7 @@ __global__ void cuda_fft_second_step(Scalar *input_field, Scalar omega_binary, c
 //                                 0,1048576,0,0,
 //                                 0, 0,0,0,
 //                                 0,0,0,0};
-    memcpy(modulus_binary._limbs, modulus_raw, fft_params_t::num_of_bytes);
+    memcpy(modulus_binary._limbs, Fr_modulus_raw, fft_params_t::num_of_bytes);
     bn_t modulus;
     cgbn_load(_env, modulus, &modulus_binary);
     bn_t omega;

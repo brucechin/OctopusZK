@@ -50,11 +50,13 @@ public class BN254aG1Parameters
     );
 
     public BN254aG1 ZERO() {
-        return new BN254aG1(BN254aFq.ZERO, BN254aFq.ONE, BN254aFq.ZERO);
+        BN254aFq a = new BN254aFq(1);
+        return new BN254aG1(a.zero(), a.one(), a.zero());
     }
 
     public BN254aG1 ONE() {
-        return new BN254aG1(BN254aFq.ONE, new BN254aFq(2), BN254aFq.ONE);
+        BN254aFq a = new BN254aFq(1);
+        return new BN254aG1(a.one(), new BN254aFq(2), a.one());
     }
 
     public BN254aFr zeroFr() {

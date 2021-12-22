@@ -16,6 +16,7 @@
 #include <iostream>
 #include <gmp.h>
 #include "cgbn/cgbn.h"
+#include <bitset>
 
 //TODO lianke: G1 and G2 MSM window table generation can be moved to cpp side too.
 using namespace std;
@@ -89,13 +90,191 @@ bool testBit(Scalar input, int n)
 __device__ __forceinline__
 bool isZero(BN254G1 input)
 {
+    context_t _context;
+    env_t    _env(_context);
     bn_t zero, z;
     Scalar zero_binary;
-    zero_binary._limbs = zero_raw;
+    memcpy(zero_binary._limbs, zero_raw, MSM_params_t::num_of_bytes);
     cgbn_load(_env, zero, &zero_binary);
     cgbn_load(_env, z, &input.Z);
+    
+    //printf("input last uint=%d, isZero=%d\n", input.Z._limbs[0], cgbn_equals(_env, zero, z));
     return cgbn_equals(_env, zero, z);
 }
+
+__device__ __forceinline__
+BN254G1 twice(BN254G1 a)
+{
+  context_t _context;
+  env_t    _env(_context);
+
+
+  Scalar modulus_binary;
+  memcpy(modulus_binary._limbs, modulus_raw_G1, MSM_params_t::num_of_bytes);
+  bn_t modulus;
+  cgbn_load(_env, modulus, &modulus_binary);
+
+  BN254G1 result;
+  bn_t a_x, a_y, a_z;
+  cgbn_load(_env, a_x, &a.X);
+  cgbn_load(_env, a_y, &a.Y);
+  cgbn_load(_env, a_z, &a.Z);
+
+  bn_t A,B,C,D,E,F,X3,Y3,Y1Z1,Z3, eightC;
+
+
+  cgbn_mul(_env, A, a_x, a_x);
+  cgbn_rem(_env, A, A, modulus);
+
+  cgbn_mul(_env, B, a_y, a_y);
+  cgbn_rem(_env, B, B, modulus);
+
+
+  cgbn_mul(_env, C, B, B);
+  cgbn_rem(_env, C, C, modulus);
+
+
+ // D = 2 * ((X1 + B)^2 - A - C)
+  cgbn_add(_env, D, a_x, B);
+  cgbn_rem(_env, D, D, modulus);
+  cgbn_mul(_env, D, D, D);
+  cgbn_rem(_env, D, D, modulus);
+  cgbn_add(_env, D, D, modulus);
+  cgbn_add(_env, D, D, modulus);
+  cgbn_sub(_env, D, D, A);
+  cgbn_sub(_env, D, D, C);
+  cgbn_add(_env, D, D, D);
+  cgbn_rem(_env, D, D, modulus);
+
+  // E = 3 * A
+  cgbn_add(_env, E, A, A);
+  cgbn_add(_env, E, A, A);
+  cgbn_rem(_env, E, E, modulus);
+
+  // F = E^2
+  cgbn_mul(_env, F, E, E);
+  cgbn_rem(_env, F, F, modulus);
+
+
+
+   // X3 = F - 2 D
+  cgbn_add(_env, X3, F, modulus);
+  cgbn_add(_env, X3, F, modulus);
+  cgbn_sub(_env, X3, X3, D);
+  cgbn_sub(_env, X3, X3, D);
+  cgbn_rem(_env, X3, X3, modulus);
+
+
+
+
+  cgbn_add(_env, eightC, C, C);
+  cgbn_add(_env, eightC, eightC, eightC);
+  cgbn_add(_env, eightC, eightC, eightC);
+  cgbn_rem(_env, eightC, eightC, modulus);
+
+
+  // Y3 = E * (D - X3) - 8 * C
+  cgbn_add(_env, Y3, D, modulus);
+  cgbn_sub(_env, Y3, Y3, X3);
+  cgbn_rem(_env, Y3, Y3, modulus);
+  cgbn_mul(_env, Y3, Y3, E);
+  cgbn_rem(_env, Y3, Y3, modulus);
+  cgbn_add(_env, Y3, Y3, modulus);
+  cgbn_sub(_env, Y3, Y3, eightC);
+  cgbn_rem(_env, Y3, Y3, modulus);
+
+
+  // Z3 = 2 * Y1 * Z1
+  cgbn_mul(_env, Y1Z1, a_y, a_z);
+  cgbn_rem(_env, Y1Z1, Y1Z1, modulus);
+  cgbn_add(_env, Z3, Y1Z1, Y1Z1);
+  cgbn_rem(_env, Z3, Z3, modulus);
+
+  cgbn_store(_env, &result.X, X3);
+  cgbn_store(_env, &result.Y, Y3);
+  cgbn_store(_env, &result.Z, Z3);
+
+  return result;
+
+}
+
+
+__device__ __forceinline__
+bool equals(BN254G1 a, BN254G1 b)
+{
+  if(isZero(a)){
+    return isZero(b);
+  }
+
+  if(isZero(b)){
+    return false;
+  }
+
+  context_t _context;
+  env_t    _env(_context);
+
+  Scalar modulus_binary;
+  memcpy(modulus_binary._limbs, modulus_raw_G1, MSM_params_t::num_of_bytes);
+  bn_t modulus;
+  cgbn_load(_env, modulus, &modulus_binary);
+
+  bn_t a_x, a_y, a_z, b_x, b_y, b_z;
+  cgbn_load(_env, a_x, &a.X);
+  cgbn_load(_env, a_y, &a.Y);
+  cgbn_load(_env, a_z, &a.Z);
+  cgbn_load(_env, b_x, &b.X);
+  cgbn_load(_env, b_y, &b.Y);
+  cgbn_load(_env, b_z, &b.Z);   
+
+
+  bn_t Z1_squared, Z2_squared, XZ1_squared, XZ2_squared, Z1_cubed, Z2_cubed;
+  cgbn_mul(_env, Z1_squared, a_z, a_z);
+  cgbn_rem(_env, Z1_squared, Z1_squared, modulus);
+
+  cgbn_mul(_env, Z2_squared, b_z, b_z);
+  cgbn_rem(_env, Z2_squared, Z2_squared, modulus);
+
+  cgbn_mul(_env, XZ1_squared, Z1_squared, b_x);
+  cgbn_rem(_env, XZ1_squared, XZ1_squared, modulus);
+
+  cgbn_mul(_env, XZ2_squared, Z2_squared, a_x);
+  cgbn_rem(_env, XZ2_squared, XZ2_squared, modulus);
+
+
+  if(cgbn_equals(_env, XZ1_squared, XZ2_squared)){
+    return false;
+  }
+
+  cgbn_mul(_env, Z1_cubed, Z1_squared, a_z);
+  cgbn_rem(_env, Z1_cubed, Z1_cubed, modulus);
+
+  cgbn_mul(_env, Z2_cubed, Z2_squared, b_z);
+  cgbn_rem(_env, Z2_cubed, Z2_cubed, modulus);
+
+
+  bn_t YZ2_cubed, YZ1_cubed;
+  cgbn_mul(_env, YZ1_cubed, Z1_cubed, b_y);
+  cgbn_rem(_env, YZ1_cubed, YZ1_cubed, modulus);
+
+  cgbn_mul(_env, YZ2_cubed, Z2_cubed, a_y);
+  cgbn_rem(_env, YZ2_cubed, YZ2_cubed, modulus);
+
+  if(cgbn_equals(_env, YZ1_cubed, YZ2_cubed)){
+    return false;
+  }
+
+  return true;
+}
+
+__device__ __forceinline__
+void printMem(Scalar input)
+{
+    for(int i = 0; i < MSM_params_t::BITS/32; i++){
+      printf("%lu|", input._limbs[i]);
+    }
+    printf("finished\n");
+}
+
 
 
 __device__ __forceinline__
@@ -129,8 +308,24 @@ BN254G1 add(BN254G1 a, BN254G1 b) {
   cgbn_load(_env, b_z, &b.Z);
 
   bn_t Z1Z1, Z2Z2, U1, U2, Z1_cubed, Z2_cubed, S1, S2;
+  
+  
+  //Scalar tmp;
+  //cgbn_store(_env, &tmp, a_z);
+  //printf("z=");
+  //printMem(tmp);
   cgbn_mul(_env, Z1Z1, a_z, a_z);
+  //cgbn_store(_env, &tmp, Z1Z1);
+  //printf("Z1Z1=");
+  //printMem(tmp);
   cgbn_rem(_env, Z1Z1, Z1Z1, modulus);
+  //cgbn_store(_env, &tmp, Z1Z1);
+  //printf("Z1Z1 mod=");
+  //printMem(tmp);
+  // printf("\n\n");
+  // printf("\n\n");
+  // printf("\n\n");
+
 
   cgbn_mul(_env, Z2Z2, b_z, b_z);
   cgbn_rem(_env, Z2Z2, Z2Z2, modulus);
@@ -147,11 +342,17 @@ BN254G1 add(BN254G1 a, BN254G1 b) {
   cgbn_mul(_env, Z2_cubed, b_z, Z2Z2);
   cgbn_rem(_env, Z2_cubed, Z2_cubed, modulus);
 
-  //TODO Lianke implement this
-  // if (U1.equals(U2) && S1.equals(S2)) {
-  //     // Double case; nothing above can be reused.
-  //     return twice();
-  // }
+  cgbn_mul(_env, S1, a_y, Z2_cubed);
+  cgbn_rem(_env, S1, S1, modulus);
+
+  cgbn_mul(_env, S2, b_y, Z1_cubed);
+  cgbn_rem(_env, S2, S2, modulus);
+
+
+  if (cgbn_equals(_env, U1, U2) && cgbn_equals(_env, S1, S2)) {
+      // Double case; nothing above can be reused.
+      return twice(a);
+  }
 
   bn_t H, S2_minus_S1, I, J, r, V, X3, S1_J, Y3, Z3;
   
@@ -233,23 +434,23 @@ BN254G1 add(BN254G1 a, BN254G1 b) {
 
 __global__ void MSM_unit_processing(Scalar* inputScalarArray, BN254G1* inputBaseArray, BN254G1* outputBN254Array, int outerc, int windowSize, int tableInnerSize, int batch_size){
     const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
-
     BN254G1 res = inputBaseArray[0];
     if(idx >= batch_size){
+      //printf("found large idx=%d\n", idx);
       return;
     }
     for (int outer = 0; outer < outerc; ++outer) {
         int inner = 0;
         for (int i = 0; i < windowSize; ++i) {
-          //TODO check its correctness
+            //testBit is correct
             if (testBit(inputScalarArray[idx], outer * windowSize + i)) {
                 inner |= 1 << i;
             }
         }
-        printf("outer=%d, inner=%d\n", outer, inner);
+        //printf("CUDA outer=%d, inner=%d\n", outer, inner);
+        //TODO add is wrong
         res = add(res, inputBaseArray[tableInnerSize * outer + inner]);
     }
-
     outputBN254Array[idx] = res;
 
 }
@@ -297,7 +498,7 @@ void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1>
     CUDA_CALL(cudaDeviceSynchronize());
     CUDA_CALL(cudaFree(inputScalarArrayGPU));
     CUDA_CALL(cudaFree(inputBaseArrayGPU));
-
+    CUDA_CALL(cudaFree(outputBN254ArrayGPU));
 
 
 }
@@ -367,13 +568,12 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   BN254G1* outputBN254ArrayCPU = new BN254G1[batch_size];
 
   fixed_batch_MSM(bigScalarArray, multiplesOfBasePtrArray, outputBN254ArrayCPU, outerc, windowSize, out_len, inner_len);
-
   for(int i = 0; i < batch_size; i++){
-    env->SetByteArrayRegion(resultByteArray, i * sizeof(BN254G1) , sizeof(BN254G1) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU));
-
+    //printMem(outputBN254ArrayCPU[i].X);
+    env->SetByteArrayRegion(resultByteArray, 3 * i * sizeof(Scalar) , sizeof(Scalar) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[i].X._limbs));
+    env->SetByteArrayRegion(resultByteArray, (3 * i +1) * sizeof(Scalar) , sizeof(Scalar) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[i].Y._limbs));
+    env->SetByteArrayRegion(resultByteArray, (3 * i +2)* sizeof(Scalar) , sizeof(Scalar) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[i].Z._limbs));
   }
-
-
 
   return resultByteArray;
 }
