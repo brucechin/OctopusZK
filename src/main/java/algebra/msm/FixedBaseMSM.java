@@ -294,9 +294,9 @@ public class FixedBaseMSM {
                 BigInteger bi_X = new BigInteger(converted_back_X);
                 BigInteger bi_Y = new BigInteger(converted_back_Y);
                 BigInteger bi_Z = new BigInteger(converted_back_Z);
-                bi_X = bi_X.mod(G1_modulus);
-                bi_Y = bi_Y.mod(G1_modulus);
-                bi_Z = bi_Z.mod(G1_modulus);
+                // bi_X = bi_X.mod(G1_modulus);
+                // bi_Y = bi_Y.mod(G1_modulus);
+                // bi_Z = bi_Z.mod(G1_modulus);
 
                 T temp = multiplesOfBase.get(0).get(0).zero();
                 temp.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
