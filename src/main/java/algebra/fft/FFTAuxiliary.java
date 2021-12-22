@@ -120,7 +120,7 @@ public class FFTAuxiliary {
 
         int size_of_bigint_cpp_side = 64;
         for(int i = 0; i < input.size(); i++){
-            byte[] slice = Arrays.copyOfRange(resultByteArray, i*size_of_bigint_cpp_side, (i+1)*size_of_bigint_cpp_side);//in cpp side, BigInt is 32 bytes.
+            byte[] slice = Arrays.copyOfRange(resultByteArray, i*size_of_bigint_cpp_side, (i+1)*size_of_bigint_cpp_side);
             byte[] converted_back = new byte[64];
             for(int j =0; j < size_of_bigint_cpp_side; j++){
                 converted_back[j] = slice[size_of_bigint_cpp_side - j - 1];

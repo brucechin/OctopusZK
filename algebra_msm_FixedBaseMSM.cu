@@ -570,9 +570,9 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   fixed_batch_MSM(bigScalarArray, multiplesOfBasePtrArray, outputBN254ArrayCPU, outerc, windowSize, out_len, inner_len);
   for(int i = 0; i < batch_size; i++){
     //printMem(outputBN254ArrayCPU[i].X);
-    env->SetByteArrayRegion(resultByteArray, 3 * i * sizeof(Scalar) , sizeof(Scalar) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[i].X._limbs));
-    env->SetByteArrayRegion(resultByteArray, (3 * i +1) * sizeof(Scalar) , sizeof(Scalar) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[i].Y._limbs));
-    env->SetByteArrayRegion(resultByteArray, (3 * i +2)* sizeof(Scalar) , sizeof(Scalar) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[i].Z._limbs));
+    env->SetByteArrayRegion(resultByteArray, i * sizeof(BN254G1) , sizeof(BN254G1) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[i]));
+    // env->SetByteArrayRegion(resultByteArray, (3 * i +1) * sizeof(Scalar) , sizeof(Scalar) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[i].Y._limbs));
+    // env->SetByteArrayRegion(resultByteArray, (3 * i +2)* sizeof(Scalar) , sizeof(Scalar) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[i].Z._limbs));
   }
 
   return resultByteArray;
