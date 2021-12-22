@@ -276,6 +276,28 @@ void printMem(Scalar input)
 }
 
 
+__device__ __forceinline__
+void print_bn_t(bn_t &number) {
+  using __env_t = bn_t::parent_env_t;
+  const int IPB = blockDim.x/__env_t::TPI
+  __shared__ uint32_t n[IPB][(__env_t::BITS/32)] ;
+  __shared__ uint32_t vote[IPB];
+  bool is_represent = (threadIdx.x % TPI) == 0;
+  bool instance_id  = threadIdx.x / TPI;
+  bool tid_in_instance = threadIdx.x % TPI;
+  if (is_represent) vote[instance_id] = 0;
+  for (int i = 0; i < __env_t::LIMBS; i++)
+    n[instance_id][tid_in_instance * __env_t::LIMBS + i] = number._limbs[i];
+  atomicAdd(&vote[instance_id], 1);
+  while (vote[instance_id] < TPI) ;
+  if (is_represent) {
+    printf("instance %d is ", (threadIdx.x + blockIdx.x * blockDim.x)/TPI );
+    for (int i = 0; i < __env_t::BITS/32; i++) {
+      printf(" %X |", n[instance_id][i]);
+    }
+    printf("\n");
+  }
+}
 
 __device__ __forceinline__
 BN254G1 add(BN254G1 a, BN254G1 b) {
