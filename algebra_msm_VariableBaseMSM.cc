@@ -18,7 +18,6 @@
  * Method:    variableBaseSerialMSMNativeHelper
  * Signature: (Ljava/util/ArrayList;Ljava/util/ArrayList;)Lalgebra/groups/AbstractGroup;
  */
-//TODO lianke: I plan to pass the modulus through the JNI func parameter to reduce the overhead.
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerialMSMNativeHelper
   (JNIEnv * env, jclass obj, jobject bases, jobject scalars){
     jclass java_util_ArrayList      = static_cast<jclass>(env->NewGlobalRef(env->FindClass("java/util/ArrayList")));
@@ -66,7 +65,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
         continue;
       }
 
-      BigInt base = baseArray[i];//TODO lianke this base does not contain modulus yet.
+      BigInt base = baseArray[i];
       if(scalar.isOne()){
         acc = (acc + base);
         acc  %= FqModulusParameter;
@@ -93,9 +92,9 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
       int c = log2Length - (log2Length / 3);
       int numBuckets = 1 << c;
       int numGroups = (numBits + c - 1)/c;
-      BigInt zero("0"); //TODO lianke modulus should be std::get<1>(filteredInput[0]) they are fakeG1 or fakeG2.
+      BigInt zero("0"); 
       vector<BigInt> bucketsModel = vector<BigInt>(numBuckets, zero);
-      BigInt result("0"); //TODO lianke this result should be FakeG1 or FakeG2
+      BigInt result("0"); 
       //cout << "cpp side length " << length << " log2 length " << log2Length <<" c "  << c <<" numGroups " << numGroups << " numBuckets " << numBuckets << endl;
       for(int k = numGroups - 1; k >=0; k--){
         if (k < numGroups - 1) {

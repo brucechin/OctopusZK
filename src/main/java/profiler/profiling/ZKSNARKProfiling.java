@@ -70,7 +70,6 @@ public class ZKSNARKProfiling {
 
         config.beginLog(config.context());
         config.beginRuntime("Verifier");
-        //TODO lianke print results
         final boolean isValid = Verifier.verify(CRS.verificationKey(), primary, proof, pairing, config);
         config.beginRuntimeMetadata("isValid", isValid ? 1L : 0L);
         config.endLog(config.context());

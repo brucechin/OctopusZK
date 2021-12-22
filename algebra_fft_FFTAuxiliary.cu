@@ -227,7 +227,6 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_fft_FFTAuxiliary_serialRadix2FFTNative
 
 
     vector<Scalar> inputArray = vector<Scalar>(input_len, Scalar());
-    //TODO lianke update copy from java
     for(int i =0; i < input_len; i++){
         jbyteArray element = (jbyteArray)env->CallObjectMethod(inputs, java_util_ArrayList_get, i);
         char* bytes = (char*)env->GetByteArrayElements(element, NULL);

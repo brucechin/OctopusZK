@@ -33,3 +33,6 @@ bug fixed:
 Because the GPUSnark repo is not correct with the DIZK computation results, and my naive lightweight cpp bigint library has some corner bugs. I decided to migrate my code to the second version of CGBN developed by NVIDIA. I spend some time figuring out how to divide the tasks to threads in GPU and finished the FFT in CUDA. next step is to implement for FixedbaseMSM and VariablebaseMSM.
 
 
+# 2021.12.22 
+
+meet some difficult issues when implementing MSM using the NVIDIA CGBN library. each cgbn_t is operated by TPI threads, so when i tried to write back the computation results back to CPU memory, i can only write a partial component with each thread. need to carefully operate on global variables and local variables in order to obtain the correct CGBN computation results and memcpy them back to CPU.

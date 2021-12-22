@@ -68,10 +68,8 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_fft_FFTAuxiliary_serialRadix2FFTNative
 
     int m = 1;
      // invariant: m = 2^{s-1}
-     //TODO lianke profile the time consumption
-    cout << "logn = " << logn <<endl;
+    //cout << "logn = " << logn <<endl;
     for (int s = 1; s <= 9; ++s) {
-        //TODO lianke when s == 9, this loop has wrong computation
         BigInt w_m = pow(omega, (int)input_len / (2 * m), FqModulusParameter);
 ;
         for (int k = 0; k < input_len; k += 2 * m) {

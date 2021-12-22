@@ -84,7 +84,6 @@ public class SerialFFT<FieldT extends AbstractFieldElementExpanded<FieldT>> impl
      * input.
      */
     public  void radix2InverseFFT(final List<FieldT> input) {
-        //TODO lianke implement JNI code for it
         assert (input.size() == domainSize);
         System.out.println("radix2InverseFFT input side " + input.size());
         FFTAuxiliary.serialRadix2FFT(input, omega.inverse());
@@ -101,7 +100,6 @@ public class SerialFFT<FieldT extends AbstractFieldElementExpanded<FieldT>> impl
     public void radix2CosetFFT(final List<FieldT> input, final FieldT g) {
         System.out.println("radix2CosetFFT input side " + input.size());
 
-        //TODO lianke implement JNI code for it
         FFTAuxiliary.multiplyByCoset(input, g);
         this.radix2FFT(input);
     }
@@ -111,7 +109,6 @@ public class SerialFFT<FieldT extends AbstractFieldElementExpanded<FieldT>> impl
      * input.
      */
     public void radix2CosetInverseFFT(final List<FieldT> input, final FieldT g) {
-        //TODO lianke implement JNI code for it
         System.out.println("radix2CosetInverseFFT input side " + input.size());
         this.radix2InverseFFT(input);
         FFTAuxiliary.multiplyByCoset(input, g.inverse());

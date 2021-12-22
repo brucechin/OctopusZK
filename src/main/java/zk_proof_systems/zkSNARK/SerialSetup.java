@@ -94,97 +94,92 @@ public class SerialSetup {
                 .getWindowTable(generatorG1, scalarSizeG1, windowSizeG1);
         config.endLog("Generating G1 MSM Window Table");
 
-        // config.beginLog("Generating G2 MSM Window Table");
-        // final G2T generatorG2 = g2Factory.random(config.seed(), config.secureSeed());
-        // final int scalarCountG2 = nonZeroBt;
-        // final int scalarSizeG2 = generatorG2.bitSize();
-        // final int windowSizeG2 = FixedBaseMSM.getWindowSize(scalarCountG2, generatorG2);
-        // final List<List<G2T>> windowTableG2 = FixedBaseMSM
-        //         .getWindowTable(generatorG2, scalarSizeG2, windowSizeG2);
-        // config.endLog("Generating G2 MSM Window Table");
+        config.beginLog("Generating G2 MSM Window Table");
+        final G2T generatorG2 = g2Factory.random(config.seed(), config.secureSeed());
+        final int scalarCountG2 = nonZeroBt;
+        final int scalarSizeG2 = generatorG2.bitSize();
+        final int windowSizeG2 = FixedBaseMSM.getWindowSize(scalarCountG2, generatorG2);
+        final List<List<G2T>> windowTableG2 = FixedBaseMSM
+                .getWindowTable(generatorG2, scalarSizeG2, windowSizeG2);
+        config.endLog("Generating G2 MSM Window Table");
 
         config.beginLog("Generating R1CS proving key");
-        // config.beginRuntime("Proving Key");
+        config.beginRuntime("Proving Key");
 
-        // final G1T alphaG1 = generatorG1.mul(alpha);
-        // final G1T betaG1 = generatorG1.mul(beta);
-        // final G2T betaG2 = generatorG2.mul(beta);
-        // final G1T deltaG1 = generatorG1.mul(delta);
-        // final G2T deltaG2 = generatorG2.mul(delta);
+        final G1T alphaG1 = generatorG1.mul(alpha);
+        final G1T betaG1 = generatorG1.mul(beta);
+        final G2T betaG2 = generatorG2.mul(beta);
+        final G1T deltaG1 = generatorG1.mul(delta);
+        final G2T deltaG2 = generatorG2.mul(delta);
 
-        // config.beginLog("Encode deltaABC for R1CS proving key", false);
-        // final List<G1T> deltaABCG1 = FixedBaseMSM
-        //         .batchMSM(scalarSizeG1, windowSizeG1, windowTableG1, deltaABC);
-        // config.endLog("Encode deltaABC for R1CS proving key", false);
+        config.beginLog("Encode deltaABC for R1CS proving key", false);
+        final List<G1T> deltaABCG1 = FixedBaseMSM
+                .batchMSM(scalarSizeG1, windowSizeG1, windowTableG1, deltaABC);
+        config.endLog("Encode deltaABC for R1CS proving key", false);
 
         config.beginLog("Computing query A", false);
         final List<G1T> queryA = FixedBaseMSM
                 .batchMSM(scalarSizeG1, windowSizeG1, windowTableG1, qap.At());
         config.endLog("Computing query A", false);
 
-        // config.beginLog("Computing query B", false);
-        // final List<Tuple2<G1T, G2T>> queryB = FixedBaseMSM.doubleBatchMSM(
-        //         scalarSizeG1,
-        //         windowSizeG1,
-        //         windowTableG1,
-        //         scalarSizeG2,
-        //         windowSizeG2,
-        //         windowTableG2,
-        //         qap.Bt());
-        // config.endLog("Computing query B", false);
+        config.beginLog("Computing query B", false);
+        final List<Tuple2<G1T, G2T>> queryB = FixedBaseMSM.doubleBatchMSM(
+                scalarSizeG1,
+                windowSizeG1,
+                windowTableG1,
+                scalarSizeG2,
+                windowSizeG2,
+                windowTableG2,
+                qap.Bt());
+        config.endLog("Computing query B", false);
 
-        // config.beginLog("Computing query H", false);
-        // final FieldT inverseDeltaZt = qap.Zt().mul(delta.inverse());
-        // for (int i = 0; i < qap.Ht().size(); i++) {
-        //     qap.Ht().set(i, qap.Ht().get(i).mul(inverseDeltaZt));
-        // }
-        // final List<G1T> queryH = FixedBaseMSM
-        //         .batchMSM(scalarSizeG1, windowSizeG1, windowTableG1, qap.Ht());
-        // config.endLog("Computing query H", false);
-        // //TODO Lianke : batchMSM computing A,B,H takes up 10% of (setup+prove)
-        // config.endLog("Generating R1CS proving key");
-        // config.endRuntime("Proving Key");
+        config.beginLog("Computing query H", false);
+        final FieldT inverseDeltaZt = qap.Zt().mul(delta.inverse());
+        for (int i = 0; i < qap.Ht().size(); i++) {
+            qap.Ht().set(i, qap.Ht().get(i).mul(inverseDeltaZt));
+        }
+        final List<G1T> queryH = FixedBaseMSM
+                .batchMSM(scalarSizeG1, windowSizeG1, windowTableG1, qap.Ht());
+        config.endLog("Computing query H", false);
+        //TODO Lianke : batchMSM computing A,B,H takes up 10% of (setup+prove)
+        config.endLog("Generating R1CS proving key");
+        config.endRuntime("Proving Key");
 
-        // config.beginLog("Generating R1CS verification key");
-        // config.beginRuntime("Verification Key");
+        config.beginLog("Generating R1CS verification key");
+        config.beginRuntime("Verification Key");
 
-        // final GTT alphaG1betaG2 = pairing.reducedPairing(alphaG1, betaG2);
-        // final G2T gammaG2 = generatorG2.mul(gamma);
+        final GTT alphaG1betaG2 = pairing.reducedPairing(alphaG1, betaG2);
+        final G2T gammaG2 = generatorG2.mul(gamma);
 
-        // config.beginLog("Encoding gammaABC for R1CS verification key");
-        // final List<G1T> gammaABCG1 = FixedBaseMSM
-        //         .batchMSM(scalarSizeG1, windowSizeG1, windowTableG1, gammaABC);
-        // config.endLog("Encoding gammaABC for R1CS verification key");
+        config.beginLog("Encoding gammaABC for R1CS verification key");
+        final List<G1T> gammaABCG1 = FixedBaseMSM
+                .batchMSM(scalarSizeG1, windowSizeG1, windowTableG1, gammaABC);
+        config.endLog("Encoding gammaABC for R1CS verification key");
 
-        // config.endLog("Generating R1CS verification key");
-        // config.endRuntime("Verification Key");
-
-        // // Construct the proving key.
-        // final ProvingKey<FieldT, G1T, G2T> provingKey = new ProvingKey<>(
-        //         alphaG1,
-        //         betaG1,
-        //         betaG2,
-        //         deltaG1,
-        //         deltaG2,
-        //         deltaABCG1,
-        //         queryA,
-        //         queryB,
-        //         queryH,
-        //         r1cs);
-
-        // // Construct the verification key.
-        // final VerificationKey<G1T, G2T, GTT> verificationKey = new VerificationKey<>(
-        //         alphaG1betaG2,
-        //         gammaG2,
-        //         deltaG2,
-        //         gammaABCG1);
-
+        config.endLog("Generating R1CS verification key");
+        config.endRuntime("Verification Key");
 
         // Construct the proving key.
-        final ProvingKey<FieldT, G1T, G2T> provingKey = new ProvingKey<>();
+        final ProvingKey<FieldT, G1T, G2T> provingKey = new ProvingKey<>(
+                alphaG1,
+                betaG1,
+                betaG2,
+                deltaG1,
+                deltaG2,
+                deltaABCG1,
+                queryA,
+                queryB,
+                queryH,
+                r1cs);
 
         // Construct the verification key.
-        final VerificationKey<G1T, G2T, GTT> verificationKey = new VerificationKey<>();
+        final VerificationKey<G1T, G2T, GTT> verificationKey = new VerificationKey<>(
+                alphaG1betaG2,
+                gammaG2,
+                deltaG2,
+                gammaABCG1);
+
+
         return new CRS<>(provingKey, verificationKey);
     }
 }

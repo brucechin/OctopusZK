@@ -69,7 +69,13 @@ typedef struct {
   cgbn_mem_t<MSM_params_t::BITS> X;
   cgbn_mem_t<MSM_params_t::BITS> Y;
   cgbn_mem_t<MSM_params_t::BITS> Z;
-} BN254G1;
+} BN254G1;//this is raw memory struct.
+
+typedef struct {
+  bn_t X;
+  bn_t Y;
+  bn_t Z;
+} BN254G1Compute;
 
 // typedef struct {
 //   cgbn_mem_t<BITS> X;
@@ -89,22 +95,21 @@ bool testBit(Scalar input, int n)
 
 
 __device__ __forceinline__
-bool isZero(BN254G1 input)
+bool isZero(BN254G1Compute input)
 {
     context_t _context;
     env_t    _env(_context);
-    bn_t zero, z;
+    bn_t zero;
     Scalar zero_binary;
     memcpy(zero_binary._limbs, zero_raw, MSM_params_t::num_of_bytes);
     cgbn_load(_env, zero, &zero_binary);
-    cgbn_load(_env, z, &input.Z);
     
     //printf("input last uint=%d, isZero=%d\n", input.Z._limbs[0], cgbn_equals(_env, zero, z));
-    return cgbn_equals(_env, zero, z);
+    return cgbn_equals(_env, zero, input.Z);
 }
 
 __device__ __forceinline__
-BN254G1 twice(BN254G1 a)
+BN254G1Compute twice(BN254G1Compute a)
 {
   context_t _context;
   env_t    _env(_context);
@@ -115,11 +120,17 @@ BN254G1 twice(BN254G1 a)
   bn_t modulus;
   cgbn_load(_env, modulus, &modulus_binary);
 
-  BN254G1 result;
+  BN254G1Compute result;
+  memset(result.X._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.Y._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.Z._limbs, 0, MSM_params_t::num_of_bytes);
   bn_t a_x, a_y, a_z;
-  cgbn_load(_env, a_x, &a.X);
-  cgbn_load(_env, a_y, &a.Y);
-  cgbn_load(_env, a_z, &a.Z);
+  a_x = a.X;
+  a_y = a.Y;
+  a_z = a.Z;
+  // cgbn_load(_env, a_x, &a.X);
+  // cgbn_load(_env, a_y, &a.Y);
+  // cgbn_load(_env, a_z, &a.Z);
 
   bn_t A,B,C,D,E,F,X3,Y3,Y1Z1,Z3, eightC;
 
@@ -191,9 +202,12 @@ BN254G1 twice(BN254G1 a)
   cgbn_add(_env, Z3, Y1Z1, Y1Z1);
   cgbn_rem(_env, Z3, Z3, modulus);
 
-  cgbn_store(_env, &result.X, X3);
-  cgbn_store(_env, &result.Y, Y3);
-  cgbn_store(_env, &result.Z, Z3);
+  // cgbn_store(_env, &result.X, X3);
+  // cgbn_store(_env, &result.Y, Y3);
+  // cgbn_store(_env, &result.Z, Z3);
+  result.X = X3;
+  result.Y = Y3;
+  result.Z = Z3;
 
   return result;
 
@@ -306,10 +320,10 @@ void print_bn_t(bn_t &number, int instance_id_) {
 }
 
 __device__ __forceinline__
-BN254G1 add(BN254G1 a, BN254G1 b) {
+BN254G1Compute add(BN254G1Compute a, BN254G1Compute b) {
     // // Handle special cases having to do with O
 
-    
+  // printf("11111");
   if (isZero(a)) {
       return b;
   }
@@ -317,6 +331,7 @@ BN254G1 add(BN254G1 a, BN254G1 b) {
   if (isZero(b)) {
       return a;
   }
+  // printf("22222");
 
   context_t _context;
   env_t    _env(_context);
@@ -327,18 +342,24 @@ BN254G1 add(BN254G1 a, BN254G1 b) {
   bn_t modulus;
   cgbn_load(_env, modulus, &modulus_binary);
 
-  BN254G1 result;
-  memset(result.X._limbs, 0, 64);
-  memset(result.Y._limbs, 0, 64);
-  memset(result.Z._limbs, 0, 64);
+  BN254G1Compute result;
+  memset(result.X._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.Y._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.Z._limbs, 0, MSM_params_t::num_of_bytes);
 
   bn_t a_x, a_y, a_z, b_x, b_y, b_z;
-  cgbn_load(_env, a_x, &a.X);
-  cgbn_load(_env, a_y, &a.Y);
-  cgbn_load(_env, a_z, &a.Z);
-  cgbn_load(_env, b_x, &b.X);
-  cgbn_load(_env, b_y, &b.Y);
-  cgbn_load(_env, b_z, &b.Z);
+  a_x = a.X; 
+  a_y = a.Y; 
+  a_z = a.Z;
+  b_x = b.X;
+  b_y = b.Y;
+  b_z = b.Z;
+  // cgbn_load(_env, a_x, &a.X);
+  // cgbn_load(_env, a_y, &a.Y);
+  // cgbn_load(_env, a_z, &a.Z);
+  // cgbn_load(_env, b_x, &b.X);
+  // cgbn_load(_env, b_y, &b.Y);
+  // cgbn_load(_env, b_z, &b.Z);
 
   bn_t Z1Z1, Z2Z2, U1, U2, Z1_cubed, Z2_cubed, S1, S2;
   
@@ -370,12 +391,14 @@ BN254G1 add(BN254G1 a, BN254G1 b) {
 
   cgbn_mul(_env, S2, b_y, Z1_cubed);
   cgbn_rem(_env, S2, S2, modulus);
+  // printf("333333");
 
 
   if (cgbn_equals(_env, U1, U2) && cgbn_equals(_env, S1, S2)) {
       // Double case; nothing above can be reused.
       return twice(a);
   }
+  // printf("444444");
 
   bn_t H, S2_minus_S1, I, J, r, V, X3, S1_J, Y3, Z3;
   
@@ -446,14 +469,18 @@ BN254G1 add(BN254G1 a, BN254G1 b) {
   cgbn_rem(_env, Z3, Z3, modulus);
   cgbn_mul(_env, Z3, Z3, H);
   cgbn_rem(_env, Z3, Z3, modulus);
+  // printf("555555\n");
 
   // print_bn_t(X3, 1);
   // print_bn_t(Y3, 1);
   // print_bn_t(Z3, 1);
 
-  cgbn_store(_env, &result.X, X3);
-  cgbn_store(_env, &result.Y, Y3);
-  cgbn_store(_env, &result.Z, Z3);
+  // cgbn_store(_env, &result.X, X3);
+  // cgbn_store(_env, &result.Y, Y3);
+  // cgbn_store(_env, &result.Z, Z3);
+  result.X = X3;
+  result.Y = Y3;
+  result.Z = Z3;
 
   return result;
 
@@ -461,14 +488,19 @@ BN254G1 add(BN254G1 a, BN254G1 b) {
 
 __global__ void MSM_unit_processing(Scalar* inputScalarArray, BN254G1* inputBaseArray, BN254G1* outputBN254Array, int outerc, int windowSize, int tableInnerSize, int batch_size){
     const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
-    BN254G1 res = inputBaseArray[0];
+    context_t _context;
+    env_t    _env(_context);
+    BN254G1Compute res;
+    cgbn_load(_env, res.X, &inputBaseArray[0].X);
+    cgbn_load(_env, res.Y, &inputBaseArray[0].Y);
+    cgbn_load(_env, res.Z, &inputBaseArray[0].Z);
+
     if(idx >= batch_size){
       //printf("found large idx=%d\n", idx);
       return;
     }
     //TODO lianke: this for loop is commented to reduce number of execution during debugging. remeber to uncomment it.
     for (int outer = 0; outer < outerc; ++outer) {
-      int outer = 0;
         int inner = 0;
         for (int i = 0; i < windowSize; ++i) {
             //testBit is correct
@@ -476,11 +508,14 @@ __global__ void MSM_unit_processing(Scalar* inputScalarArray, BN254G1* inputBase
                 inner |= 1 << i;
             }
         }
-        res = add(res, inputBaseArray[tableInnerSize * outer + inner]);
-
+        //printf("idx=%d, outer=%d, inner=%d\n", idx, outer, inner);
+        BN254G1Compute to_added;
+        cgbn_load(_env, to_added.X, &inputBaseArray[tableInnerSize * outer + inner].X);
+        cgbn_load(_env, to_added.Y, &inputBaseArray[tableInnerSize * outer + inner].Y);
+        cgbn_load(_env, to_added.Z, &inputBaseArray[tableInnerSize * outer + inner].Z);
+        res = add(res, to_added);
     }
-    // context_t _context;
-    // env_t    _env(_context);
+
     // bn_t x,y,z;
     // cgbn_load(_env, x, &res.X);
     // cgbn_load(_env, y, &res.Y);
@@ -489,11 +524,10 @@ __global__ void MSM_unit_processing(Scalar* inputScalarArray, BN254G1* inputBase
     // print_bn_t(y, 1);
     // print_bn_t(z, 1);
     //TODO lianke: res is calculated as 254-bit BN254G1, but the output in CPU side is only 4 uint32_t structure, which is wierd.
-    memcpy(&outputBN254Array[idx].X, &res.X, sizeof(Scalar));
-    memcpy(&outputBN254Array[idx].Y, &res.Y, sizeof(Scalar));
-    memcpy(&outputBN254Array[idx].Z, &res.Z, sizeof(Scalar));
+    cgbn_store(_env, &outputBN254Array[idx].X, res.X);
+    cgbn_store(_env, &outputBN254Array[idx].Y, res.Y);
+    cgbn_store(_env, &outputBN254Array[idx].Z, res.Z);
 
-    //outputBN254Array[idx] = res;
     return;
 }
 
@@ -539,6 +573,16 @@ void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1>
 
     CUDA_CALL(cudaMemcpy((void**)outputArray, outputBN254ArrayGPU, sizeof(BN254G1) * batch_size, cudaMemcpyDeviceToHost); )
     CUDA_CALL(cudaDeviceSynchronize());
+
+
+  // for(int i = 0; i < batch_size; i++){
+  //   cout << "CUDA i=" << i << " X=";
+  //   printMem(outputArray[i].X);
+  //   cout << "Y=";
+  //   printMem(outputArray[i].Y);
+  //   cout << "Z=";
+  //   printMem(outputArray[i].Z);
+  // }
     CUDA_CALL(cudaFree(inputScalarArrayGPU));
     CUDA_CALL(cudaFree(inputBaseArrayGPU));
     CUDA_CALL(cudaFree(outputBN254ArrayGPU));
@@ -568,6 +612,10 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   vector<BN254G1> multiplesOfBasePtrArray = vector<BN254G1>(out_len * inner_len, BN254G1());
 
   cout << "CUDA side base out and inner len :" << out_len << " " << inner_len <<endl;
+
+  cout << "CUDA side base outerc and windowSize :" << outerc << " " << windowSize <<endl;
+
+
 
   for(int i =0; i < batch_size; i++){
       jbyteArray element = (jbyteArray)env->CallObjectMethod(bigScalars, java_util_ArrayList_get, i);
@@ -616,12 +664,12 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
 
   fixed_batch_MSM(bigScalarArray, multiplesOfBasePtrArray, outputBN254ArrayCPU, outerc, windowSize, out_len, inner_len);
   for(int i = 0; i < batch_size; i++){
-    cout << "CUDA i=" << i << " X=";
-    printMem(outputBN254ArrayCPU[i].X);
-    cout << "Y=";
-    printMem(outputBN254ArrayCPU[i].Y);
-    cout << "Z=";
-    printMem(outputBN254ArrayCPU[i].Z);
+    // cout << "CUDA i=" << i << " X=";
+    // printMem(outputBN254ArrayCPU[i].X);
+    // cout << "Y=";
+    // printMem(outputBN254ArrayCPU[i].Y);
+    // cout << "Z=";
+    // printMem(outputBN254ArrayCPU[i].Z);
 
     env->SetByteArrayRegion(resultByteArray, i * sizeof(BN254G1) , sizeof(BN254G1) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[i]));
     // env->SetByteArrayRegion(resultByteArray, (3 * i +1) * sizeof(Scalar) , sizeof(Scalar) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[i].Y._limbs));

@@ -162,7 +162,6 @@ BigInt::BigInt()
     memset(bytes, 0, num_of_bytes);
 }
 
-// TODO lianke implement modulus
 
 BigInt::BigInt(uint32_t val)
 {
@@ -649,7 +648,6 @@ BigInt operator*(BigInt &a, BigInt &b)
 
 void BigInt::shiftRight(int num_of_bits)
 {
-    // TODO lianke this shift is wrong
     int offset = num_of_bits % BigInt::bits_per_word;
     int num_of_words_shifted = num_of_bits / BigInt::bits_per_word;
     int i = BigInt::capacity - 1;

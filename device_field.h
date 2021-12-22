@@ -34,7 +34,6 @@ __constant__
 
 
     //_mod for inverted representation
-    //TODO Lianke we need to check its endian correctness
 // const uint32_t _mod[SIZE] = {0,0,0,0, 
 //                             0,0,0,0,
 //                             0, 0,1048576,0,
@@ -134,7 +133,6 @@ struct Scalar
         Scalar s;
         for (size_t i = 0; i < SIZE; i++)
             s.im_rep[i] = this->im_rep[i];
-        //TODO lianke fix this pow
         pow(s, rhs);
         return s;
     }

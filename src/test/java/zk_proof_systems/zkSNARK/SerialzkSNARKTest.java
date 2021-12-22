@@ -83,13 +83,13 @@ public class SerialzkSNARKTest implements Serializable {
                 SerialSetup.generate(r1cs, fieldFactory, g1Factory, g2Factory, pairing, config);
 
 
-        // final Proof<BNG1T, BNG2T> proof =
-        //         SerialProver.prove(CRS.provingKey(), primary, fullAssignment, fieldFactory, config);
+        final Proof<BNG1T, BNG2T> proof =
+                SerialProver.prove(CRS.provingKey(), primary, fullAssignment, fieldFactory, config);
 
-        // final boolean isValid = Verifier.verify(CRS.verificationKey(), primary, proof, pairing, config);
+        final boolean isValid = Verifier.verify(CRS.verificationKey(), primary, proof, pairing, config);
 
-        // System.out.println(isValid);
-        // assertTrue(isValid);
+        System.out.println(isValid);
+        assertTrue(isValid);
     }
 
     // @Test
@@ -140,8 +140,8 @@ public class SerialzkSNARKTest implements Serializable {
 
     @Test
     public void SerialBN254aProofSystemTest() {
-        final int numInputs = 1;
-        final int numConstraints = 1;
+        final int numInputs = 1023;
+        final int numConstraints = 1000000;
         final BN254aFr fieldFactory = BN254aFr.ONE;
         final BN254aG1 g1Factory = BN254aG1Parameters.ONE;
         final BN254aG2 g2Factory = BN254aG2Parameters.ONE;
