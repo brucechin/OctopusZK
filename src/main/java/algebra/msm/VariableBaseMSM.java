@@ -146,7 +146,7 @@ public class VariableBaseMSM {
         final int length = input.size();
         final int log2Length = Math.max(1, MathUtils.log2(length));
         final int c = log2Length - (log2Length / 3);
-        //System.out.println("on pippengerMSM, input class type is "+ input.get(0)._2.getClass().getName());
+        System.out.println("on pippengerMSM, input class type is "+ input.get(0)._2.getClass().getName());
 
         final int numBuckets = 1 << c;
         final int numGroups = (numBits + c - 1) / c;

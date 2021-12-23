@@ -192,6 +192,8 @@ public abstract class BNG2<
         return this.X.toString() + ", " + this.Y.toString() + ", " + this.Z.toString();
     }
 
+
+    
     public boolean equals(final BNG2T that) {
         if (isZero()) {
             return that.isZero();

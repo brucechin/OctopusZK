@@ -346,8 +346,15 @@ public class FixedBaseMSM {
             final int windowSize1,
             final int outerc2,
             final int windowSize2,
-            final ArrayList<ArrayList<byte[]>> multiplesOfBase1,
-            final ArrayList<ArrayList<byte[]>> multiplesOfBase2,
+            final ArrayList<ArrayList<byte[]>> multiplesOfBase1_X,
+            final ArrayList<ArrayList<byte[]>> multiplesOfBase1_Y,
+            final ArrayList<ArrayList<byte[]>> multiplesOfBase1_Z,
+            final ArrayList<ArrayList<byte[]>> multiplesOfBase2_Xa,
+            final ArrayList<ArrayList<byte[]>> multiplesOfBase2_Ya,
+            final ArrayList<ArrayList<byte[]>> multiplesOfBase2_Za,
+            final ArrayList<ArrayList<byte[]>> multiplesOfBase2_Xb,
+            final ArrayList<ArrayList<byte[]>> multiplesOfBase2_Yb,
+            final ArrayList<ArrayList<byte[]>> multiplesOfBase2_Zb,
             final ArrayList<byte[]> bigScalars);
 
     public static <G1T extends AbstractGroup<G1T>,
@@ -374,36 +381,66 @@ public class FixedBaseMSM {
         System.out.println("multiplesOfBase2 type : " + multiplesOfBase2.get(0).get(0).getClass().getName());
         System.out.println("scalars type : " + scalars.get(0).getClass().getName());
 
-        ArrayList<ArrayList<byte[]>> byteArray1 = new ArrayList<ArrayList<byte[]>>();
-        ArrayList<ArrayList<byte[]>> byteArray2 = new ArrayList<ArrayList<byte[]>>();
+        ArrayList<ArrayList<byte[]>> multiplesOfBase1_X = new ArrayList<ArrayList<byte[]>>();
+        ArrayList<ArrayList<byte[]>> multiplesOfBase1_Y = new ArrayList<ArrayList<byte[]>>();
+        ArrayList<ArrayList<byte[]>> multiplesOfBase1_Z = new ArrayList<ArrayList<byte[]>>();
+        ArrayList<ArrayList<byte[]>> multiplesOfBase2_Xa = new ArrayList<ArrayList<byte[]>>();
+        ArrayList<ArrayList<byte[]>> multiplesOfBase2_Ya = new ArrayList<ArrayList<byte[]>>();
+        ArrayList<ArrayList<byte[]>> multiplesOfBase2_Za = new ArrayList<ArrayList<byte[]>>();
+        ArrayList<ArrayList<byte[]>> multiplesOfBase2_Xb = new ArrayList<ArrayList<byte[]>>();
+        ArrayList<ArrayList<byte[]>> multiplesOfBase2_Yb = new ArrayList<ArrayList<byte[]>>();
+        ArrayList<ArrayList<byte[]>> multiplesOfBase2_Zb = new ArrayList<ArrayList<byte[]>>();
 
-        // int out_size1 = multiplesOfBase1.size();
-        // int in_size1 = multiplesOfBase1.get(0).size();
-        // int out_size2 = multiplesOfBase2.size();
-        // int in_size2 = multiplesOfBase2.get(0).size();
-        // //TODO lianke : parallelize it
-        // for(int i =0; i < out_size1; i++){
-        //     ArrayList<byte[]> tmp = new ArrayList<byte[]>();
-        //     for(int j = 0; j< in_size1; j++){
-        //         tmp.add(bigIntegerToByteArrayHelper(multiplesOfBase1.get(i).get(j).toBigInteger()));
-        //     }
-        //     byteArray1.add(tmp);
-        // }
-        // for(int i =0; i < out_size2; i++){
-        //     ArrayList<byte[]> tmp = new ArrayList<byte[]>();
-        //     for(int j = 0; j< in_size2; j++){
-        //         tmp.add(bigIntegerToByteArrayHelper(multiplesOfBase2.get(i).get(j).toBigInteger()));
-        //     }
-        //     byteArray2.add(tmp);
-        // }
+        int out_size1 = multiplesOfBase1.size();
+        int in_size1 = multiplesOfBase1.get(0).size();
+        int out_size2 = multiplesOfBase2.size();
+        int in_size2 = multiplesOfBase2.get(0).size();
+        for(int i =0; i < out_size1; i++){
+            ArrayList<byte[]> tmpX = new ArrayList<byte[]>();
+            ArrayList<byte[]> tmpY = new ArrayList<byte[]>();
+            ArrayList<byte[]> tmpZ = new ArrayList<byte[]>();            
+            for(int j = 0; j< in_size1; j++){
+                ArrayList<BigInteger> three_values = multiplesOfBase1.get(i).get(j).BN254G1ToBigInteger();
+                tmpX.add(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
+                tmpY.add(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
+                tmpZ.add(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
+            }
+            multiplesOfBase1_X.add(tmpX);
+            multiplesOfBase1_Y.add(tmpY);
+            multiplesOfBase1_Z.add(tmpZ);
+        }
+        for(int i =0; i < out_size2; i++){
+            ArrayList<byte[]> tmpXa = new ArrayList<byte[]>();
+            ArrayList<byte[]> tmpYa = new ArrayList<byte[]>();
+            ArrayList<byte[]> tmpZa = new ArrayList<byte[]>();     
+            ArrayList<byte[]> tmpXb = new ArrayList<byte[]>();
+            ArrayList<byte[]> tmpYb = new ArrayList<byte[]>();
+            ArrayList<byte[]> tmpZb = new ArrayList<byte[]>();     
+            for(int j = 0; j< in_size2; j++){
+                ArrayList<BigInteger> six_values = multiplesOfBase2.get(i).get(j).BN254G2ToBigInteger();
+                tmpXa.add(bigIntegerToByteArrayHelperCGBN(six_values.get(0)));
+                tmpXa.add(bigIntegerToByteArrayHelperCGBN(six_values.get(1)));
+                tmpYa.add(bigIntegerToByteArrayHelperCGBN(six_values.get(2)));
+                tmpYb.add(bigIntegerToByteArrayHelperCGBN(six_values.get(3)));
+                tmpZa.add(bigIntegerToByteArrayHelperCGBN(six_values.get(4)));
+                tmpZb.add(bigIntegerToByteArrayHelperCGBN(six_values.get(5)));
+            }
+            multiplesOfBase2_Xa.add(tmpXa);
+            multiplesOfBase2_Xb.add(tmpXb);
+            multiplesOfBase2_Ya.add(tmpYa);
+            multiplesOfBase2_Yb.add(tmpYb);
+            multiplesOfBase2_Za.add(tmpZa);
+            multiplesOfBase2_Zb.add(tmpZb);
 
-        // final int outerc1 = (scalarSize1 + windowSize1 - 1) / windowSize1;
-        // final int outerc2 = (scalarSize2 + windowSize2 - 1) / windowSize2;
+        }
 
-        // ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
-        // for (FieldT scalar : scalars) {
-        //     bigScalars.add(bigIntegerToByteArrayHelper(scalar.toBigInteger()));
-        // }
+        final int outerc1 = (scalarSize1 + windowSize1 - 1) / windowSize1;
+        final int outerc2 = (scalarSize2 + windowSize2 - 1) / windowSize2;
+
+        ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
+        for (FieldT scalar : scalars) {
+            bigScalars.add(bigIntegerToByteArrayHelperCGBN(scalar.toBigInteger()));
+        }
 
         //TODO lianke for verification purpose
         for (FieldT scalar : scalars) {
@@ -420,34 +457,68 @@ public class FixedBaseMSM {
 
         // long start = System.currentTimeMillis();
         // int size_of_bigint_cpp_side = 64;
-        // BigInteger modulus = new BigInteger("1532495540865888858358347027150309183618765510462668801");
-        
-        // for(int i = 0; i < scalars.size(); i++){
-        //     byte[] slice1 = Arrays.copyOfRange(resultByteArray, 2*i*size_of_bigint_cpp_side, (2*i+1)*size_of_bigint_cpp_side);
-        //     byte[] converted_back1 = new byte[64];
-        //     for(int j = 63; j >= 3; j-=4){
-        //         converted_back1[j] = slice1[j - 3];
-        //         converted_back1[j-1] = slice1[j - 2];
-        //         converted_back1[j-2] = slice1[j - 1];
-        //         converted_back1[j-3] = slice1[j ];
-        //     }
-        //     BigInteger bi1 = new BigInteger(converted_back1);
-        //     BigInteger output1 = bi1.mod(modulus);
-        //     G1T temp1 = multiplesOfBase1.get(0).get(0).zero();
-        //     temp1.setBigInteger(output1);
 
-        //     byte[] slice2 = Arrays.copyOfRange(resultByteArray, (2*i +1)*size_of_bigint_cpp_side, (2*i+2)*size_of_bigint_cpp_side);
-        //     byte[] converted_back2 = new byte[64];
-        //     for(int j = 63; j >= 3; j-=4){
-        //         converted_back2[j] = slice2[j - 3];
-        //         converted_back2[j-1] = slice2[j - 2];
-        //         converted_back2[j-2] = slice2[j - 1];
-        //         converted_back2[j-3] = slice2[j ];
+        // //because each G1 value takes up 3 BigIntegers, and each G2 takes up 6 BigIntegers.
+        // for(int i = 0; i < scalars.size(); i++){
+        //     byte[] slice1 = Arrays.copyOfRange(resultByteArray, 9*i*size_of_bigint_cpp_side, (9 * i + 3) * size_of_bigint_cpp_side);
+        //     byte[] converted_back_X = new byte[64];
+        //     byte[] converted_back_Y = new byte[64];
+        //     byte[] converted_back_Z = new byte[64];
+        //     for(int j =0; j < size_of_bigint_cpp_side; j++){
+        //         converted_back_X[j] = slice1[size_of_bigint_cpp_side - j - 1];
         //     }
-        //     BigInteger bi2 = new BigInteger(converted_back2);
-        //     BigInteger output2 = bi2.mod(modulus);
+        //     for(int j =0; j < size_of_bigint_cpp_side; j++){
+        //         converted_back_Y[j] = slice1[2*size_of_bigint_cpp_side - j - 1];
+        //     }
+        //     for(int j =0; j < size_of_bigint_cpp_side; j++){
+        //         converted_back_Z[j] = slice1[3*size_of_bigint_cpp_side - j - 1];
+        //     }
+
+        //     BigInteger bi_X = new BigInteger(converted_back_X);
+        //     BigInteger bi_Y = new BigInteger(converted_back_Y);
+        //     BigInteger bi_Z = new BigInteger(converted_back_Z);
+
+        //     G1T temp1 = multiplesOfBase1.get(0).get(0).zero();
+        //     temp1.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
+
+        //     byte[] slice2 = Arrays.copyOfRange(resultByteArray, (9*i +3)*size_of_bigint_cpp_side, (9*i+9)*size_of_bigint_cpp_side);
+        //     byte[] converted_back2 = new byte[64];
+ 
+        //     byte[] converted_back_Xa = new byte[64];
+        //     byte[] converted_back_Ya = new byte[64];
+        //     byte[] converted_back_Za = new byte[64];
+        //     byte[] converted_back_Xb = new byte[64];
+        //     byte[] converted_back_Yb = new byte[64];
+        //     byte[] converted_back_Zb = new byte[64];
+        //     for(int j =0; j < size_of_bigint_cpp_side; j++){
+        //         converted_back_Xa[j] = slice1[size_of_bigint_cpp_side - j - 1];
+        //     }
+        //     for(int j =0; j < size_of_bigint_cpp_side; j++){
+        //         converted_back_Xb[j] = slice1[2*size_of_bigint_cpp_side - j - 1];
+        //     }
+        //     for(int j =0; j < size_of_bigint_cpp_side; j++){
+        //         converted_back_Ya[j] = slice1[3*size_of_bigint_cpp_side - j - 1];
+        //     }
+        //     for(int j =0; j < size_of_bigint_cpp_side; j++){
+        //         converted_back_Yb[j] = slice1[4*size_of_bigint_cpp_side - j - 1];
+        //     }
+        //     for(int j =0; j < size_of_bigint_cpp_side; j++){
+        //         converted_back_Za[j] = slice1[5*size_of_bigint_cpp_side - j - 1];
+        //     }
+        //     for(int j =0; j < size_of_bigint_cpp_side; j++){
+        //         converted_back_Zb[j] = slice1[6*size_of_bigint_cpp_side - j - 1];
+        //     }
+
+
+        //     BigInteger bi_Xa = new BigInteger(converted_back_Xa);
+        //     BigInteger bi_Ya = new BigInteger(converted_back_Ya);
+        //     BigInteger bi_Za = new BigInteger(converted_back_Za);
+        //     BigInteger bi_Xb = new BigInteger(converted_back_Xb);
+        //     BigInteger bi_Yb = new BigInteger(converted_back_Yb);
+        //     BigInteger bi_Zb = new BigInteger(converted_back_Zb);
+
         //     G2T temp2 = multiplesOfBase2.get(0).get(0).zero();
-        //     temp2.setBigInteger(output2);
+        //     temp2.setBigIntegerBN254G2(bi_Xa, bi_Xb, bi_Ya, bi_Yb, bi_Za, bi_Zb);
         //     jni_res.add(new Tuple2<>(temp1, temp2));
         // }
 

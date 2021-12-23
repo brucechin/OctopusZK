@@ -34,7 +34,7 @@ public class BN254aG1 extends BNG1<BN254aFr, BN254aFq, BN254aG1, BN254aG1Paramet
     }
 
     public BigInteger toBigInteger() {
-        //TODO do not call this function
+        //WATNING do not call this function
         return BigInteger.ZERO;
     }
 
@@ -48,7 +48,6 @@ public class BN254aG1 extends BNG1<BN254aFr, BN254aFq, BN254aG1, BN254aG1Paramet
 
     public void setBigInteger(BigInteger bigInteger) {
         //do not use it
-        //TODO lianke implement this 
     }
 
 
@@ -56,5 +55,18 @@ public class BN254aG1 extends BNG1<BN254aFr, BN254aFq, BN254aG1, BN254aG1Paramet
         this.X.element().number = x;
         this.Y.element().number = y;
         this.Z.element().number = z;
+    }
+
+
+
+    public void setBigIntegerBN254G2(BigInteger x1, BigInteger x2, BigInteger y1, BigInteger y2, BigInteger z1, BigInteger z2) {
+        //WARNING: do not use this for BN254G1
+
+    }
+
+    public ArrayList<BigInteger> BN254G2ToBigInteger() {
+        ArrayList<BigInteger> result = new ArrayList<BigInteger>();
+        //WARNING: do not use this for BN254G1
+        return result;
     }
 }

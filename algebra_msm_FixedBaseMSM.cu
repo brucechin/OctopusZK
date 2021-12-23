@@ -49,6 +49,7 @@ class MSM_params_t {
 
 //BN254G1_modulus = "21888242871839275222246405745257275088696311157297823662689037894645226208583";
 // 811880050|3778125865|3092268470|2172737629|2541841041|1752287885|1008765974|3632069959|
+//Fp2Parameters.nonresidue() = "21888242871839275222246405745257275088696311157297823662689037894645226208582";
 typedef cgbn_mem_t<MSM_params_t::BITS> Scalar;
 typedef cgbn_context_t<MSM_params_t::TPI>   context_t;
 typedef cgbn_env_t<context_t, MSM_params_t::BITS>   env_t;
@@ -59,7 +60,12 @@ __device__   uint32_t modulus_raw_G1[16] = {3632069959,1008765974,1752287885,254
                                 2172737629,3092268470,3778125865,811880050,
                                 0, 0,0,0,
                                 0,0,0,0};
-                                
+
+__device__   uint32_t Fp2_nonresidue_raw[16] = {3632069958,1008765974,1752287885,2541841041, 
+                            2172737629,3092268470,3778125865,811880050,
+                            0, 0,0,0,
+                            0,0,0,0};   
+
 __device__   uint32_t zero_raw[16] = {0,0,0,0, 
                                       0,0,0,0,
                                       0, 0,0,0,
@@ -72,17 +78,132 @@ typedef struct {
 } BN254G1;//this is raw memory struct.
 
 typedef struct {
+  cgbn_mem_t<BITS> Xa;
+  cgbn_mem_t<BITS> Xb;
+  cgbn_mem_t<BITS> Ya;
+  cgbn_mem_t<BITS> Yb;
+  cgbn_mem_t<BITS> Za;
+  cgbn_mem_t<BITS> Zb;
+} BN254G2;
+
+typedef struct {
   bn_t X;
   bn_t Y;
   bn_t Z;
 } BN254G1Compute;
 
-// typedef struct {
-//   cgbn_mem_t<BITS> X;
-//   cgbn_mem_t<BITS> Y;
-//   cgbn_mem_t<BITS> Z;
-// } BN254G2;
+typedef struct {
+  bn_t a;
+  bn_t b;
+} Fp2;
 
+typedef struct {
+  Fp2 X;
+  Fp2 Y;
+  Fp2 Z;
+} BN254G2Compute;
+
+
+//TODO lianke implement mul, add, sub for Fp2.
+
+__device__ __forceinline__
+Fp2 add(Fp2 input1, Fp2 input2)
+{
+    context_t _context;
+    env_t    _env(_context);  
+    Fp2 result;
+
+    Scalar modulus_binary;
+    memcpy(modulus_binary._limbs, modulus_raw_G1, MSM_params_t::num_of_bytes);
+    bn_t modulus;
+    cgbn_load(_env, modulus, &modulus_binary);
+
+    memset(result.a._limbs, 0, MSM_params_t::num_of_bytes);
+    memset(result.b._limbs, 0, MSM_params_t::num_of_bytes);
+    cgbn_add(_env, result.a, input1.a, input2.a);
+    cgbn_rem(_env, result.a, result.a, modulus);
+
+    cgbn_add(_env, result.b, input1.b, input2.b);
+    cgbn_rem(_env, result.b, result.b, modulus);
+    return result;
+}
+
+__device__ __forceinline__
+Fp2 sub(Fp2 input1, Fp2 input2)
+{
+    context_t _context;
+    env_t    _env(_context);  
+    Fp2 result;
+
+    Scalar modulus_binary;
+    memcpy(modulus_binary._limbs, modulus_raw_G1, MSM_params_t::num_of_bytes);
+    bn_t modulus;
+    cgbn_load(_env, modulus, &modulus_binary);
+
+    memset(result.a._limbs, 0, MSM_params_t::num_of_bytes);
+    memset(result.b._limbs, 0, MSM_params_t::num_of_bytes);
+
+    cgbn_add(_env, result.a, input1.a, modulus);
+    cgbn_sub(_env, result.a, result.a, input2.a);
+    cgbn_rem(_env, result.a, result.a, modulus);
+
+    cgbn_add(_env, result.b, input1.b, modulus);
+    cgbn_add(_env, result.b, result.b, input2.b);
+    cgbn_rem(_env, result.b, result.b, modulus);
+    return result;
+}
+
+__device__ __forceinline__
+Fp2 mul(Fp2 input1, Fp2 input2)
+{
+    context_t _context;
+    env_t    _env(_context);  
+    Fp2 result;
+
+    Scalar modulus_binary;
+    memcpy(modulus_binary._limbs, modulus_raw_G1, MSM_params_t::num_of_bytes);
+    bn_t modulus;
+    cgbn_load(_env, modulus, &modulus_binary);
+
+    Scalar residue_binary;
+    memcpy(residue_binary._limbs, Fp2_nonresidue_raw, MSM_params_t::num_of_bytes);
+    bn_t residue;
+    cgbn_load(_env, residue, &residue_binary);
+
+    memset(result.a._limbs, 0, MSM_params_t::num_of_bytes);
+    memset(result.b._limbs, 0, MSM_params_t::num_of_bytes);
+
+
+    bn_t c0c0, c1c1, tmp1;
+
+    cgbn_mul(_env, c0c0, input1.a, input2.a);
+    cgbn_rem(_env, c0c0, c0c0, modulus);
+    cgbn_mul(_env, c1c1, input1.b, input2.b);
+    cgbn_rem(_env, c1c1, c1c1, modulus);
+
+
+    cgbn_mul(_env, tmp1, residue, c1c1);
+    cgbn_rem(_env, tmp1, tmp1, modulus);
+    cgbn_add(_env, tmp1, tmp1, c0c0);
+
+    bn_t tmp2, tmp3;
+
+    cgbn_add(_env, tmp2, input1.a, input1.b);
+    cgbn_rem(_env, tmp2, tmp2, modulus);
+    cgbn_add(_env, tmp3, input2.a, input2.b);
+    cgbn_rem(_env, tmp3, tmp3, modulus);
+    cgbn_mul(_env, tmp2, tmp2, tmp3);
+    cgbn_rem(_env, tmp2, tmp2, modulus);
+    cgbn_add(_env, tmp2, tmp2, modulus);
+    cgbn_add(_env, tmp2, tmp2, modulus);
+    cgbn_sub(_env, tmp2, tmp2, c0c0);
+    cgbn_sub(_env, tmp2, tmp2, c1c1);
+    cgbn_rem(_env, tmp2, tmp2, modulus);
+
+    result.a = tmp1;
+    result.b = tmp2;
+    return result;
+}
 
 
 __device__ __forceinline__
@@ -109,11 +230,27 @@ bool isZero(BN254G1Compute input)
 }
 
 __device__ __forceinline__
+bool isZero(BN254G2Compute input)
+{
+    context_t _context;
+    env_t    _env(_context);
+    bn_t zero;
+    Scalar zero_binary;
+    memcpy(zero_binary._limbs, zero_raw, MSM_params_t::num_of_bytes);
+    cgbn_load(_env, zero, &zero_binary);
+    
+    //printf("input last uint=%d, isZero=%d\n", input.Z._limbs[0], cgbn_equals(_env, zero, z));
+    return cgbn_equals(_env, zero, input.Z.a) && cgbn_equals(_env, zero, input.Z.b);
+}
+
+__device__ __forceinline__
 BN254G1Compute twice(BN254G1Compute a)
 {
   context_t _context;
   env_t    _env(_context);
-
+  if(isZero(a)){
+    return a;
+  }
 
   Scalar modulus_binary;
   memcpy(modulus_binary._limbs, modulus_raw_G1, MSM_params_t::num_of_bytes);
@@ -214,74 +351,100 @@ BN254G1Compute twice(BN254G1Compute a)
 }
 
 
-// __device__ __forceinline__
-// bool equals(BN254G1 a, BN254G1 b)
-// {
-//   if(isZero(a)){
-//     return isZero(b);
-//   }
+__device__ __forceinline__
+BN254G2Compute twice(BN254G2Compute a)
+{
+  if(isZero(a)){
+    return a;
+  }
 
-//   if(isZero(b)){
-//     return false;
-//   }
-
-//   context_t _context;
-//   env_t    _env(_context);
-
-//   Scalar modulus_binary;
-//   memcpy(modulus_binary._limbs, modulus_raw_G1, MSM_params_t::num_of_bytes);
-//   bn_t modulus;
-//   cgbn_load(_env, modulus, &modulus_binary);
-
-//   bn_t a_x, a_y, a_z, b_x, b_y, b_z;
-//   cgbn_load(_env, a_x, &a.X);
-//   cgbn_load(_env, a_y, &a.Y);
-//   cgbn_load(_env, a_z, &a.Z);
-//   cgbn_load(_env, b_x, &b.X);
-//   cgbn_load(_env, b_y, &b.Y);
-//   cgbn_load(_env, b_z, &b.Z);   
+  BN254G2Compute result;
+  memset(result.X._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.Y._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.Z._limbs, 0, MSM_params_t::num_of_bytes);
+  Fp2 a_x, a_y, a_z;
+  a_x = a.X;
+  a_y = a.Y;
+  a_z = a.Z;
 
 
-//   bn_t Z1_squared, Z2_squared, XZ1_squared, XZ2_squared, Z1_cubed, Z2_cubed;
-//   cgbn_mul(_env, Z1_squared, a_z, a_z);
-//   cgbn_rem(_env, Z1_squared, Z1_squared, modulus);
-
-//   cgbn_mul(_env, Z2_squared, b_z, b_z);
-//   cgbn_rem(_env, Z2_squared, Z2_squared, modulus);
-
-//   cgbn_mul(_env, XZ1_squared, Z1_squared, b_x);
-//   cgbn_rem(_env, XZ1_squared, XZ1_squared, modulus);
-
-//   cgbn_mul(_env, XZ2_squared, Z2_squared, a_x);
-//   cgbn_rem(_env, XZ2_squared, XZ2_squared, modulus);
+  Fp2 A,B,C,D,E,F,X3,Y3,Y1Z1,Z3, eightC;
 
 
-//   if(cgbn_equals(_env, XZ1_squared, XZ2_squared)){
-//     return false;
-//   }
+  A = mul(a_x, a_x);
 
-//   cgbn_mul(_env, Z1_cubed, Z1_squared, a_z);
-//   cgbn_rem(_env, Z1_cubed, Z1_cubed, modulus);
-
-//   cgbn_mul(_env, Z2_cubed, Z2_squared, b_z);
-//   cgbn_rem(_env, Z2_cubed, Z2_cubed, modulus);
+  B = mul(a_y, a_y);
 
 
-//   bn_t YZ2_cubed, YZ1_cubed;
-//   cgbn_mul(_env, YZ1_cubed, Z1_cubed, b_y);
-//   cgbn_rem(_env, YZ1_cubed, YZ1_cubed, modulus);
+  cgbn_mul(_env, C, B, B);
+  cgbn_rem(_env, C, C, modulus);
 
-//   cgbn_mul(_env, YZ2_cubed, Z2_cubed, a_y);
-//   cgbn_rem(_env, YZ2_cubed, YZ2_cubed, modulus);
 
-//   if(cgbn_equals(_env, YZ1_cubed, YZ2_cubed)){
-//     return false;
-//   }
+ // D = 2 * ((X1 + B)^2 - A - C)
+  cgbn_add(_env, D, a_x, B);
+  cgbn_rem(_env, D, D, modulus);
+  cgbn_mul(_env, D, D, D);
+  cgbn_rem(_env, D, D, modulus);
+  cgbn_add(_env, D, D, modulus);
+  cgbn_add(_env, D, D, modulus);
+  cgbn_sub(_env, D, D, A);
+  cgbn_sub(_env, D, D, C);
+  cgbn_add(_env, D, D, D);
+  cgbn_rem(_env, D, D, modulus);
 
-//   return true;
-// }
+  // E = 3 * A
+  cgbn_add(_env, E, A, A);
+  cgbn_add(_env, E, E, A);
+  cgbn_rem(_env, E, E, modulus);
 
-// __device__ __forceinline__
+  // F = E^2
+  cgbn_mul(_env, F, E, E);
+  cgbn_rem(_env, F, F, modulus);
+
+
+
+   // X3 = F - 2 D
+  cgbn_add(_env, X3, F, modulus);
+  cgbn_add(_env, X3, F, modulus);
+  cgbn_sub(_env, X3, X3, D);
+  cgbn_sub(_env, X3, X3, D);
+  cgbn_rem(_env, X3, X3, modulus);
+
+
+
+
+  cgbn_add(_env, eightC, C, C);
+  cgbn_add(_env, eightC, eightC, eightC);
+  cgbn_add(_env, eightC, eightC, eightC);
+  cgbn_rem(_env, eightC, eightC, modulus);
+
+
+  // Y3 = E * (D - X3) - 8 * C
+  cgbn_add(_env, Y3, D, modulus);
+  cgbn_sub(_env, Y3, Y3, X3);
+  cgbn_rem(_env, Y3, Y3, modulus);
+  cgbn_mul(_env, Y3, Y3, E);
+  cgbn_rem(_env, Y3, Y3, modulus);
+  cgbn_add(_env, Y3, Y3, modulus);
+  cgbn_sub(_env, Y3, Y3, eightC);
+  cgbn_rem(_env, Y3, Y3, modulus);
+
+
+  // Z3 = 2 * Y1 * Z1
+  cgbn_mul(_env, Y1Z1, a_y, a_z);
+  cgbn_rem(_env, Y1Z1, Y1Z1, modulus);
+  cgbn_add(_env, Z3, Y1Z1, Y1Z1);
+  cgbn_rem(_env, Z3, Z3, modulus);
+
+  result.X = X3;
+  result.Y = Y3;
+  result.Z = Z3;
+
+  return result;
+
+}
+
+
 void printMem(Scalar input)
 {
     for(int i = 0; i < MSM_params_t::BITS/32; i++){
@@ -486,7 +649,103 @@ BN254G1Compute add(BN254G1Compute a, BN254G1Compute b) {
 
 }
 
-__global__ void MSM_unit_processing(Scalar* inputScalarArray, BN254G1* inputBaseArray, BN254G1* outputBN254Array, int outerc, int windowSize, int tableInnerSize, int batch_size){
+__device__ __forceinline__
+BN254G2Compute add(BN254G2Compute a, BN254G2Compute b) {
+  // Handle special cases having to do with O
+
+  if (isZero(a)) {
+      return b;
+  }
+
+  if (isZero(b)) {
+      return a;
+  }
+
+
+  BN254G2Compute result;
+  memset(result.X._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.Y._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.Z._limbs, 0, MSM_params_t::num_of_bytes);
+
+  Fp2 a_x, a_y, a_z, b_x, b_y, b_z;
+  a_x = a.X; 
+  a_y = a.Y; 
+  a_z = a.Z;
+  b_x = b.X;
+  b_y = b.Y;
+  b_z = b.Z;
+
+  Fp2 Z1Z1, Z2Z2, U1, U2, Z1_cubed, Z2_cubed, S1, S2;
+  
+  Z1Z1 = mul(a_z, a_z);
+  Z2Z2 = mul(b_z, b_z);
+
+  U1 = mul(a_x, Z2Z2);
+  U2 = mul(b_x, Z1Z1);
+
+  Z1_cubed = mul(a_z, Z1Z1);
+  Z2_cubed = mul(b_z, Z2Z2);
+
+  S1 = mul(a_y, Z2_cubed);
+  S2 = mul(b_y, Z1_cubed);
+
+
+  if (cgbn_equals(_env, U1.a, U2.a) && cgbn_equals(_env, U1.b, U2.b)
+    && cgbn_equals(_env, S1.a, S2.a) && cgbn_equals(_env, S1.b, S2.b)
+    ) {
+      // Double case; nothing above can be reused.
+      return twice(a);
+  }
+
+  Fp2 H, S2_minus_S1, I, J, r, V, X3, S1_J, Y3, Z3;
+  
+  // H = U2-U1
+  H = sub(U2, U1);
+  S2_minus_S1 = sub(S2, S1);
+
+  // I = (2 * H)^2
+  I = add(H, H);
+  I = mul(I, I);
+
+  // J = H * I
+  J = mul(H, I);
+
+  // r = 2 * (S2-S1)
+  r = add(S2_minus_S1, S2_minus_S1);
+
+  // V = U1 * I
+  V = mul(U1, I);
+
+  // X3 = r^2 - J - 2 * V
+  X3 = mul(r, r);
+  X3 = sub(X3, J);
+  X3 = sub(X3, V);
+  X3 = sub(X3, V);
+
+  // Y3 = r * (V-X3)-2 * S1_J
+  Y3 = sub(V, X3);
+  Y3 = mul(r, Y3);
+  Y3 = sub(Y3, S1_J);
+  Y3 = sub(Y3, S1_J);
+
+  // Z3 = ((Z1+Z2)^2-Z1Z1-Z2Z2) * H
+
+  Z3 = add(Z1, Z2);
+  Z3 = mul(Z3, Z3);
+  Z3 = sub(Z3, Z1Z1);
+  Z3 = sub(Z3, Z2Z2);
+  Z3 = mul(Z3, H);
+
+  result.X = X3;
+  result.Y = Y3;
+  result.Z = Z3;
+
+  return result;
+
+}
+
+
+__global__ void fixedbase_MSM_unit_processing_G1(Scalar* inputScalarArray, BN254G1* inputBaseArray, BN254G1* outputBN254Array, int outerc, int windowSize, int tableInnerSize, int batch_size){
     const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
     context_t _context;
     env_t    _env(_context);
@@ -496,10 +755,8 @@ __global__ void MSM_unit_processing(Scalar* inputScalarArray, BN254G1* inputBase
     cgbn_load(_env, res.Z, &inputBaseArray[0].Z);
 
     if(idx >= batch_size){
-      //printf("found large idx=%d\n", idx);
       return;
     }
-    //TODO lianke: this for loop is commented to reduce number of execution during debugging. remeber to uncomment it.
     for (int outer = 0; outer < outerc; ++outer) {
         int inner = 0;
         for (int i = 0; i < windowSize; ++i) {
@@ -516,17 +773,57 @@ __global__ void MSM_unit_processing(Scalar* inputScalarArray, BN254G1* inputBase
         res = add(res, to_added);
     }
 
-    // bn_t x,y,z;
-    // cgbn_load(_env, x, &res.X);
-    // cgbn_load(_env, y, &res.Y);
-    // cgbn_load(_env, z, &res.Z);
-    // print_bn_t(x, 1);
-    // print_bn_t(y, 1);
-    // print_bn_t(z, 1);
-    //TODO lianke: res is calculated as 254-bit BN254G1, but the output in CPU side is only 4 uint32_t structure, which is wierd.
     cgbn_store(_env, &outputBN254Array[idx].X, res.X);
     cgbn_store(_env, &outputBN254Array[idx].Y, res.Y);
     cgbn_store(_env, &outputBN254Array[idx].Z, res.Z);
+
+    return;
+}
+
+
+__global__ void fixedbase_MSM_unit_processing_G2(Scalar* inputScalarArray, BN254G2* inputBaseArray, BN254G2* outputBN254Array, int outerc, int windowSize, int tableInnerSize, int batch_size){
+    const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
+    context_t _context;
+    env_t    _env(_context);
+    BN254G2Compute res;
+    cgbn_load(_env, res.X.a, &inputBaseArray[0].Xa);
+    cgbn_load(_env, res.X.b, &inputBaseArray[0].Xb);
+    cgbn_load(_env, res.Y.a, &inputBaseArray[0].Ya);
+    cgbn_load(_env, res.Y.b, &inputBaseArray[0].Yb);
+    cgbn_load(_env, res.Z.a, &inputBaseArray[0].Za);
+    cgbn_load(_env, res.Z.b, &inputBaseArray[0].Zb);
+
+
+    if(idx >= batch_size){
+      return;
+    }
+    for (int outer = 0; outer < outerc; ++outer) {
+        int inner = 0;
+        for (int i = 0; i < windowSize; ++i) {
+            //testBit is correct
+            if (testBit(inputScalarArray[idx], outer * windowSize + i)) {
+                inner |= 1 << i;
+            }
+        }
+        //printf("idx=%d, outer=%d, inner=%d\n", idx, outer, inner);
+        BN254G2Compute to_added;
+        cgbn_load(_env, to_added.X.a, &inputBaseArray[tableInnerSize * outer + inner].Xa);
+        cgbn_load(_env, to_added.X.b, &inputBaseArray[tableInnerSize * outer + inner].Xb);
+        cgbn_load(_env, to_added.Y.a, &inputBaseArray[tableInnerSize * outer + inner].Ya);
+        cgbn_load(_env, to_added.Y.b, &inputBaseArray[tableInnerSize * outer + inner].Yb);
+        cgbn_load(_env, to_added.Z.a, &inputBaseArray[tableInnerSize * outer + inner].Za);
+        cgbn_load(_env, to_added.Z.b, &inputBaseArray[tableInnerSize * outer + inner].Zb);
+
+        res = add(res, to_added);
+    }
+
+    cgbn_store(_env, &outputBN254Array[idx].Xa, res.X.a);
+    cgbn_store(_env, &outputBN254Array[idx].Xb, res.X.b);
+    cgbn_store(_env, &outputBN254Array[idx].Ya, res.Y.a);
+    cgbn_store(_env, &outputBN254Array[idx].Yb, res.Y.b);
+    cgbn_store(_env, &outputBN254Array[idx].Za, res.Z.a);
+    cgbn_store(_env, &outputBN254Array[idx].Zb, res.Z.b);
+
 
     return;
 }
@@ -558,7 +855,7 @@ void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1>
 
     printf("launch block = %d thread = %d\n", blocks, threads_per_block);
 
-    MSM_unit_processing <<<blocks,threads_per_block, 32 * 1024>>>( inputScalarArrayGPU, inputBaseArrayGPU, outputBN254ArrayGPU, outerc, windowSize, inner_len, batch_size);
+    fixedbase_MSM_unit_processing_G1 <<<blocks,threads_per_block, 32 * 1024>>>( inputScalarArrayGPU, inputBaseArrayGPU, outputBN254ArrayGPU, outerc, windowSize, inner_len, batch_size);
     CUDA_CALL(cudaDeviceSynchronize());
 
 
@@ -569,25 +866,78 @@ void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1>
         exit(-1);
     }
 
-
-
     CUDA_CALL(cudaMemcpy((void**)outputArray, outputBN254ArrayGPU, sizeof(BN254G1) * batch_size, cudaMemcpyDeviceToHost); )
     CUDA_CALL(cudaDeviceSynchronize());
 
-
-  // for(int i = 0; i < batch_size; i++){
-  //   cout << "CUDA i=" << i << " X=";
-  //   printMem(outputArray[i].X);
-  //   cout << "Y=";
-  //   printMem(outputArray[i].Y);
-  //   cout << "Z=";
-  //   printMem(outputArray[i].Z);
-  // }
     CUDA_CALL(cudaFree(inputScalarArrayGPU));
     CUDA_CALL(cudaFree(inputBaseArrayGPU));
     CUDA_CALL(cudaFree(outputBN254ArrayGPU));
 
+}
 
+
+void  fixed_double_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> &multiplesOfBase1PtrArray, std::vector<BN254G2> &multiplesOfBase2PtrArray,
+                            BN254G1* outputArrayG1, BN254G2* outputArrayG2,
+                            int outerc1, int windowSize1, int outerc2, int windowSize2, 
+                            int out_len1, int inner_len1 , int out_len2, int inner_len2)
+{
+	  int cnt;
+    cudaGetDeviceCount(&cnt);
+    size_t batch_size = bigScalarArray.size();
+
+    printf("CUDA Devices: %d, input_field size: %lu, input_field count: %lu\n", cnt, sizeof(Scalar), batch_size);
+    size_t threads_per_block = 128;
+    size_t instance_per_block = (threads_per_block / MSM_params_t::TPI);//TPI threads per instance, each block has threads.
+    size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
+    printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
+    CUDA_CALL(cudaSetDevice(0));
+    Scalar *inputScalarArrayGPU; 
+    CUDA_CALL( cudaMalloc((void**)&inputScalarArrayGPU, sizeof(Scalar) * batch_size); )
+    CUDA_CALL( cudaMemcpy(inputScalarArrayGPU, (void**)&bigScalarArray[0], sizeof(Scalar) * batch_size, cudaMemcpyHostToDevice); )
+    
+    BN254G1 *inputBase1ArrayGPU; 
+    CUDA_CALL( cudaMalloc((void**)&inputBase1ArrayGPU, sizeof(BN254G1) * out_len1 * inner_len1); )
+    CUDA_CALL( cudaMemcpy(inputBase1ArrayGPU, (void**)&multiplesOfBase1PtrArray[0], sizeof(BN254G1) * out_len1 * inner_len1, cudaMemcpyHostToDevice); )
+    
+    BN254G2 *inputBase2ArrayGPU; 
+    CUDA_CALL( cudaMalloc((void**)&inputBase2ArrayGPU, sizeof(BN254G2) * out_len2 * inner_len2); )
+    CUDA_CALL( cudaMemcpy(inputBase2ArrayGPU, (void**)&multiplesOfBase2PtrArray[0], sizeof(BN254G2) * out_len2 * inner_len2, cudaMemcpyHostToDevice); )
+    
+
+    BN254G1* outputBN254G1ArrayGPU;
+    CUDA_CALL( cudaMalloc((void**)&outputBN254G1ArrayGPU, sizeof(BN254G1) * batch_size); )
+    CUDA_CALL( cudaMemset(outputBN254G1ArrayGPU, 0, sizeof(BN254G1) * batch_size); )
+
+    BN254G2* outputBN254G2ArrayGPU;
+    CUDA_CALL( cudaMalloc((void**)&outputBN254G2ArrayGPU, sizeof(BN254G2) * batch_size); )
+    CUDA_CALL( cudaMemset(outputBN254G2ArrayGPU, 0, sizeof(BN254G2) * batch_size); )
+
+    printf("launch block = %d thread = %d\n", blocks, threads_per_block);
+
+    fixedbase_MSM_unit_processing_G1 <<<blocks,threads_per_block, 32 * 1024>>>( inputScalarArrayGPU, inputBase1ArrayGPU, outputBN254G1ArrayGPU, outerc, windowSize, inner_len, batch_size);
+    
+    //TODO lianke call MSM G2 here.
+    
+    CUDA_CALL(cudaDeviceSynchronize());
+
+
+    cudaError_t error = cudaGetLastError();
+    if(error != cudaSuccess)
+    {
+        printf("CUDA error: %s\n", cudaGetErrorString(error));
+        exit(-1);
+    }
+
+    CUDA_CALL(cudaMemcpy((void**)outputArrayG1, outputBN254G1ArrayGPU, sizeof(BN254G1) * batch_size, cudaMemcpyDeviceToHost); )
+    CUDA_CALL(cudaMemcpy((void**)outputArrayG2, outputBN254G2ArrayGPU, sizeof(BN254G2) * batch_size, cudaMemcpyDeviceToHost); )
+
+    CUDA_CALL(cudaDeviceSynchronize());
+
+    CUDA_CALL(cudaFree(inputScalarArrayGPU));
+    CUDA_CALL(cudaFree(inputBase1ArrayGPU));
+    CUDA_CALL(cudaFree(outputBN254G1ArrayGPU));
+    CUDA_CALL(cudaFree(inputBase2ArrayGPU));
+    CUDA_CALL(cudaFree(outputBN254G2ArrayGPU));
 }
 
 /*
@@ -730,7 +1080,6 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
 
 
 
-  // //TODO parallelize it
   // for(int i = 0; i < out_len1;i++){
   //   for(int j = 0; j < inner_len1; j++){
   //     jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase1, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
@@ -799,3 +1148,88 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// __device__ __forceinline__
+// bool equals(BN254G1 a, BN254G1 b)
+// {
+//   if(isZero(a)){
+//     return isZero(b);
+//   }
+
+//   if(isZero(b)){
+//     return false;
+//   }
+
+//   context_t _context;
+//   env_t    _env(_context);
+
+//   Scalar modulus_binary;
+//   memcpy(modulus_binary._limbs, modulus_raw_G1, MSM_params_t::num_of_bytes);
+//   bn_t modulus;
+//   cgbn_load(_env, modulus, &modulus_binary);
+
+//   bn_t a_x, a_y, a_z, b_x, b_y, b_z;
+//   cgbn_load(_env, a_x, &a.X);
+//   cgbn_load(_env, a_y, &a.Y);
+//   cgbn_load(_env, a_z, &a.Z);
+//   cgbn_load(_env, b_x, &b.X);
+//   cgbn_load(_env, b_y, &b.Y);
+//   cgbn_load(_env, b_z, &b.Z);   
+
+
+//   bn_t Z1_squared, Z2_squared, XZ1_squared, XZ2_squared, Z1_cubed, Z2_cubed;
+//   cgbn_mul(_env, Z1_squared, a_z, a_z);
+//   cgbn_rem(_env, Z1_squared, Z1_squared, modulus);
+
+//   cgbn_mul(_env, Z2_squared, b_z, b_z);
+//   cgbn_rem(_env, Z2_squared, Z2_squared, modulus);
+
+//   cgbn_mul(_env, XZ1_squared, Z1_squared, b_x);
+//   cgbn_rem(_env, XZ1_squared, XZ1_squared, modulus);
+
+//   cgbn_mul(_env, XZ2_squared, Z2_squared, a_x);
+//   cgbn_rem(_env, XZ2_squared, XZ2_squared, modulus);
+
+
+//   if(cgbn_equals(_env, XZ1_squared, XZ2_squared)){
+//     return false;
+//   }
+
+//   cgbn_mul(_env, Z1_cubed, Z1_squared, a_z);
+//   cgbn_rem(_env, Z1_cubed, Z1_cubed, modulus);
+
+//   cgbn_mul(_env, Z2_cubed, Z2_squared, b_z);
+//   cgbn_rem(_env, Z2_cubed, Z2_cubed, modulus);
+
+
+//   bn_t YZ2_cubed, YZ1_cubed;
+//   cgbn_mul(_env, YZ1_cubed, Z1_cubed, b_y);
+//   cgbn_rem(_env, YZ1_cubed, YZ1_cubed, modulus);
+
+//   cgbn_mul(_env, YZ2_cubed, Z2_cubed, a_y);
+//   cgbn_rem(_env, YZ2_cubed, YZ2_cubed, modulus);
+
+//   if(cgbn_equals(_env, YZ1_cubed, YZ2_cubed)){
+//     return false;
+//   }
+
+//   return true;
+// }

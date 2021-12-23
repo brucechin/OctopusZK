@@ -13,8 +13,9 @@ import java.io.Serializable;
 import java.math.BigInteger;
 
 public class Fp2 extends AbstractFieldElement<Fp2> implements Serializable {
-    protected final Fp c0;
-    protected final Fp c1;
+    //modulus is 21888242871839275222246405745257275088696311157297823662689037894645226208583
+    public Fp c0;
+    public Fp c1;
     private final AbstractFp2Parameters Fp2Parameters;
 
     public Fp2(final Fp c0, final Fp c1, final AbstractFp2Parameters Fp2Parameters) {
@@ -24,6 +25,7 @@ public class Fp2 extends AbstractFieldElement<Fp2> implements Serializable {
     }
 
     public Fp2(final BigInteger c0, final BigInteger c1, final AbstractFp2Parameters Fp2Parameters) {
+        //System.out.println("Fp2 modulus=" + Fp2Parameters.FpParameters().modulus());
         this.c0 = new Fp(c0, Fp2Parameters.FpParameters());
         this.c1 = new Fp(c1, Fp2Parameters.FpParameters());
         this.Fp2Parameters = Fp2Parameters;
@@ -48,14 +50,21 @@ public class Fp2 extends AbstractFieldElement<Fp2> implements Serializable {
     }
 
     public Fp2 mul(final Fp that) {
+        //lianke: this Fp2 mul Fp is only used in reducePairing and the final verification.
+        //it will not be used in the setup and proving high overhead computation phase, so we do not need to care about it on GPU side
+        //System.out.println("surprise? this mul is called");
         return new Fp2(c0.mul(that), c1.mul(that), Fp2Parameters);
     }
 
     public Fp2 mul(final Fp2 that) {
     /* Devegili OhEig Scott Dahab --- Multiplication and Squaring on AbstractPairing-Friendly
      Fields.pdf; Section 3 (Karatsuba) */
+        System.out.println("HAHA? this mul is also called");
+
         final Fp c0C0 = c0.mul(that.c0);
         final Fp c1C1 = c1.mul(that.c1);
+        //System.out.println("nonresidue=" + Fp2Parameters.nonresidue().toBigInteger());
+
         return new Fp2(
                 c0C0.add(Fp2Parameters.nonresidue().mul(c1C1)),
                 (c0.add(c1)).mul(that.c0.add(that.c1)).sub(c0C0).sub(c1C1),
@@ -130,6 +139,8 @@ public class Fp2 extends AbstractFieldElement<Fp2> implements Serializable {
     public String toString() {
         return c0.toString() + ", " + c1.toString();
     }
+
+    
 
     public boolean equals(final Fp2 that) {
         if (that == null) {
