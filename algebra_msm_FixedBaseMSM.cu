@@ -78,12 +78,12 @@ typedef struct {
 } BN254G1;//this is raw memory struct.
 
 typedef struct {
-  cgbn_mem_t<BITS> Xa;
-  cgbn_mem_t<BITS> Xb;
-  cgbn_mem_t<BITS> Ya;
-  cgbn_mem_t<BITS> Yb;
-  cgbn_mem_t<BITS> Za;
-  cgbn_mem_t<BITS> Zb;
+  cgbn_mem_t<MSM_params_t::BITS> Xa;
+  cgbn_mem_t<MSM_params_t::BITS> Xb;
+  cgbn_mem_t<MSM_params_t::BITS> Ya;
+  cgbn_mem_t<MSM_params_t::BITS> Yb;
+  cgbn_mem_t<MSM_params_t::BITS> Za;
+  cgbn_mem_t<MSM_params_t::BITS> Zb;
 } BN254G2;
 
 typedef struct {
@@ -103,10 +103,8 @@ typedef struct {
   Fp2 Z;
 } BN254G2Compute;
 
-
-//TODO lianke implement mul, add, sub for Fp2.
-
-__device__ __forceinline__
+//TODO this three Fp2 functions may have bugs
+__device__ 
 Fp2 add(Fp2 input1, Fp2 input2)
 {
     context_t _context;
@@ -128,7 +126,7 @@ Fp2 add(Fp2 input1, Fp2 input2)
     return result;
 }
 
-__device__ __forceinline__
+__device__ 
 Fp2 sub(Fp2 input1, Fp2 input2)
 {
     context_t _context;
@@ -153,7 +151,7 @@ Fp2 sub(Fp2 input1, Fp2 input2)
     return result;
 }
 
-__device__ __forceinline__
+__device__ 
 Fp2 mul(Fp2 input1, Fp2 input2)
 {
     context_t _context;
@@ -185,6 +183,8 @@ Fp2 mul(Fp2 input1, Fp2 input2)
     cgbn_mul(_env, tmp1, residue, c1c1);
     cgbn_rem(_env, tmp1, tmp1, modulus);
     cgbn_add(_env, tmp1, tmp1, c0c0);
+    cgbn_rem(_env, tmp1, tmp1, modulus);
+
 
     bn_t tmp2, tmp3;
 
@@ -243,7 +243,7 @@ bool isZero(BN254G2Compute input)
     return cgbn_equals(_env, zero, input.Z.a) && cgbn_equals(_env, zero, input.Z.b);
 }
 
-__device__ __forceinline__
+__device__ 
 BN254G1Compute twice(BN254G1Compute a)
 {
   context_t _context;
@@ -265,9 +265,6 @@ BN254G1Compute twice(BN254G1Compute a)
   a_x = a.X;
   a_y = a.Y;
   a_z = a.Z;
-  // cgbn_load(_env, a_x, &a.X);
-  // cgbn_load(_env, a_y, &a.Y);
-  // cgbn_load(_env, a_z, &a.Z);
 
   bn_t A,B,C,D,E,F,X3,Y3,Y1Z1,Z3, eightC;
 
@@ -351,7 +348,7 @@ BN254G1Compute twice(BN254G1Compute a)
 }
 
 
-__device__ __forceinline__
+__device__ 
 BN254G2Compute twice(BN254G2Compute a)
 {
   if(isZero(a)){
@@ -359,82 +356,62 @@ BN254G2Compute twice(BN254G2Compute a)
   }
 
   BN254G2Compute result;
-  memset(result.X._limbs, 0, MSM_params_t::num_of_bytes);
-  memset(result.Y._limbs, 0, MSM_params_t::num_of_bytes);
-  memset(result.Z._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.X.a._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.X.b._limbs, 0, MSM_params_t::num_of_bytes);
+
+  memset(result.Y.a._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.Y.b._limbs, 0, MSM_params_t::num_of_bytes);
+
+  memset(result.Z.a._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.Z.b._limbs, 0, MSM_params_t::num_of_bytes);
+
   Fp2 a_x, a_y, a_z;
   a_x = a.X;
   a_y = a.Y;
   a_z = a.Z;
 
 
-  Fp2 A,B,C,D,E,F,X3,Y3,Y1Z1,Z3, eightC;
+  Fp2 A,B,C,D,E,F,X3,Y3,Z3, eightC;
 
 
   A = mul(a_x, a_x);
-
   B = mul(a_y, a_y);
 
-
-  cgbn_mul(_env, C, B, B);
-  cgbn_rem(_env, C, C, modulus);
-
+  C = mul(B, B);
 
  // D = 2 * ((X1 + B)^2 - A - C)
-  cgbn_add(_env, D, a_x, B);
-  cgbn_rem(_env, D, D, modulus);
-  cgbn_mul(_env, D, D, D);
-  cgbn_rem(_env, D, D, modulus);
-  cgbn_add(_env, D, D, modulus);
-  cgbn_add(_env, D, D, modulus);
-  cgbn_sub(_env, D, D, A);
-  cgbn_sub(_env, D, D, C);
-  cgbn_add(_env, D, D, D);
-  cgbn_rem(_env, D, D, modulus);
+  D = add(a_x, B);
+  D = mul(D, D);
+  D = sub(D, A);
+  D = sub(D, C);
+  D = add(D, D);
 
   // E = 3 * A
-  cgbn_add(_env, E, A, A);
-  cgbn_add(_env, E, E, A);
-  cgbn_rem(_env, E, E, modulus);
+  E = add(A, A);
+  E = add(E, A);
 
   // F = E^2
-  cgbn_mul(_env, F, E, E);
-  cgbn_rem(_env, F, F, modulus);
-
-
+  F = mul(E, E);
 
    // X3 = F - 2 D
-  cgbn_add(_env, X3, F, modulus);
-  cgbn_add(_env, X3, F, modulus);
-  cgbn_sub(_env, X3, X3, D);
-  cgbn_sub(_env, X3, X3, D);
-  cgbn_rem(_env, X3, X3, modulus);
+  X3 = sub(F, D);
+  X3 = sub(X3, D);
 
 
 
-
-  cgbn_add(_env, eightC, C, C);
-  cgbn_add(_env, eightC, eightC, eightC);
-  cgbn_add(_env, eightC, eightC, eightC);
-  cgbn_rem(_env, eightC, eightC, modulus);
-
+  eightC = add(C, C);
+  eightC = add(eightC, eightC);
+  eightC = add(eightC, eightC);
 
   // Y3 = E * (D - X3) - 8 * C
-  cgbn_add(_env, Y3, D, modulus);
-  cgbn_sub(_env, Y3, Y3, X3);
-  cgbn_rem(_env, Y3, Y3, modulus);
-  cgbn_mul(_env, Y3, Y3, E);
-  cgbn_rem(_env, Y3, Y3, modulus);
-  cgbn_add(_env, Y3, Y3, modulus);
-  cgbn_sub(_env, Y3, Y3, eightC);
-  cgbn_rem(_env, Y3, Y3, modulus);
+  Y3 = sub(D, X3);
+  Y3 = mul(E, Y3);
+  Y3 = sub(Y3, eightC);
 
 
   // Z3 = 2 * Y1 * Z1
-  cgbn_mul(_env, Y1Z1, a_y, a_z);
-  cgbn_rem(_env, Y1Z1, Y1Z1, modulus);
-  cgbn_add(_env, Z3, Y1Z1, Y1Z1);
-  cgbn_rem(_env, Z3, Z3, modulus);
+  Z3 = mul(a_y, a_z);
+  Z3 = add(Z3, Z3);
 
   result.X = X3;
   result.Y = Y3;
@@ -455,34 +432,34 @@ void printMem(Scalar input)
 }
 
 
-__device__ __forceinline__
-void print_bn_t(bn_t &number, int instance_id_) {
-  using __env_t = bn_t::parent_env_t;
-  const int IPB = 128/__env_t::TPI;
-  const int TPI = __env_t::TPI;
-  __shared__ uint32_t n[IPB][(__env_t::BITS/32)] ;
-  __shared__ uint32_t vote[IPB];
-  bool is_represent = (threadIdx.x % TPI) == 0;
-  int  instance_id  = threadIdx.x / TPI;
-  int  tid_in_instance = threadIdx.x % TPI;
-  int global_instance_id = (threadIdx.x + blockIdx.x * blockDim.x)/TPI ;
-  if (global_instance_id == instance_id_) {
-    if (is_represent) vote[instance_id] = 0;
-    for (int i = 0; i < __env_t::LIMBS; i++)
-      n[instance_id][tid_in_instance * __env_t::LIMBS + i] = number._limbs[i];
-    atomicAdd(&vote[instance_id], 1);
-    while (vote[instance_id] < TPI) ;
-    if (is_represent) {
-      //printf("instance %d is ", global_instance_id);
-      for (int i = 0; i < __env_t::BITS/32; i++) {
-        printf(" %u |", n[instance_id][i]);
-      }
-      printf("\n");
-    }
-  }
-}
+// __device__ __forceinline__
+// void print_bn_t(bn_t &number, int instance_id_) {
+//   using __env_t = bn_t::parent_env_t;
+//   const int IPB = 128/__env_t::TPI;
+//   const int TPI = __env_t::TPI;
+//   __shared__ uint32_t n[IPB][(__env_t::BITS/32)] ;
+//   __shared__ uint32_t vote[IPB];
+//   bool is_represent = (threadIdx.x % TPI) == 0;
+//   int  instance_id  = threadIdx.x / TPI;
+//   int  tid_in_instance = threadIdx.x % TPI;
+//   int global_instance_id = (threadIdx.x + blockIdx.x * blockDim.x)/TPI ;
+//   if (global_instance_id == instance_id_) {
+//     if (is_represent) vote[instance_id] = 0;
+//     for (int i = 0; i < __env_t::LIMBS; i++)
+//       n[instance_id][tid_in_instance * __env_t::LIMBS + i] = number._limbs[i];
+//     atomicAdd(&vote[instance_id], 1);
+//     while (vote[instance_id] < TPI) ;
+//     if (is_represent) {
+//       //printf("instance %d is ", global_instance_id);
+//       for (int i = 0; i < __env_t::BITS/32; i++) {
+//         printf(" %u |", n[instance_id][i]);
+//       }
+//       printf("\n");
+//     }
+//   }
+// }
 
-__device__ __forceinline__
+__device__ 
 BN254G1Compute add(BN254G1Compute a, BN254G1Compute b) {
     // // Handle special cases having to do with O
 
@@ -517,22 +494,14 @@ BN254G1Compute add(BN254G1Compute a, BN254G1Compute b) {
   b_x = b.X;
   b_y = b.Y;
   b_z = b.Z;
-  // cgbn_load(_env, a_x, &a.X);
-  // cgbn_load(_env, a_y, &a.Y);
-  // cgbn_load(_env, a_z, &a.Z);
-  // cgbn_load(_env, b_x, &b.X);
-  // cgbn_load(_env, b_y, &b.Y);
-  // cgbn_load(_env, b_z, &b.Z);
+
 
   bn_t Z1Z1, Z2Z2, U1, U2, Z1_cubed, Z2_cubed, S1, S2;
   
   
-  //TODO lianke: print out these values in GPU for debugging
-  //print_bn_t(a_z, 1);
+
   cgbn_mul(_env, Z1Z1, a_z, a_z);
-  //print_bn_t(Z1Z1, 1);
   cgbn_rem(_env, Z1Z1, Z1Z1, modulus);
-  //print_bn_t(Z1Z1, 1);
 
   cgbn_mul(_env, Z2Z2, b_z, b_z);
   cgbn_rem(_env, Z2Z2, Z2Z2, modulus);
@@ -634,13 +603,6 @@ BN254G1Compute add(BN254G1Compute a, BN254G1Compute b) {
   cgbn_rem(_env, Z3, Z3, modulus);
   // printf("555555\n");
 
-  // print_bn_t(X3, 1);
-  // print_bn_t(Y3, 1);
-  // print_bn_t(Z3, 1);
-
-  // cgbn_store(_env, &result.X, X3);
-  // cgbn_store(_env, &result.Y, Y3);
-  // cgbn_store(_env, &result.Z, Z3);
   result.X = X3;
   result.Y = Y3;
   result.Z = Z3;
@@ -649,7 +611,7 @@ BN254G1Compute add(BN254G1Compute a, BN254G1Compute b) {
 
 }
 
-__device__ __forceinline__
+__device__ 
 BN254G2Compute add(BN254G2Compute a, BN254G2Compute b) {
   // Handle special cases having to do with O
 
@@ -661,11 +623,18 @@ BN254G2Compute add(BN254G2Compute a, BN254G2Compute b) {
       return a;
   }
 
+  context_t _context;
+  env_t    _env(_context);
 
   BN254G2Compute result;
-  memset(result.X._limbs, 0, MSM_params_t::num_of_bytes);
-  memset(result.Y._limbs, 0, MSM_params_t::num_of_bytes);
-  memset(result.Z._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.X.a._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.X.b._limbs, 0, MSM_params_t::num_of_bytes);
+
+  memset(result.Y.a._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.Y.b._limbs, 0, MSM_params_t::num_of_bytes);
+
+  memset(result.Z.a._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.Z.b._limbs, 0, MSM_params_t::num_of_bytes);
 
   Fp2 a_x, a_y, a_z, b_x, b_y, b_z;
   a_x = a.X; 
@@ -723,6 +692,7 @@ BN254G2Compute add(BN254G2Compute a, BN254G2Compute b) {
   X3 = sub(X3, V);
 
   // Y3 = r * (V-X3)-2 * S1_J
+  S1_J = mul(S1, J);
   Y3 = sub(V, X3);
   Y3 = mul(r, Y3);
   Y3 = sub(Y3, S1_J);
@@ -730,7 +700,7 @@ BN254G2Compute add(BN254G2Compute a, BN254G2Compute b) {
 
   // Z3 = ((Z1+Z2)^2-Z1Z1-Z2Z2) * H
 
-  Z3 = add(Z1, Z2);
+  Z3 = add(a_z, b_z);
   Z3 = mul(Z3, Z3);
   Z3 = sub(Z3, Z1Z1);
   Z3 = sub(Z3, Z2Z2);
@@ -914,10 +884,13 @@ void  fixed_double_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<B
 
     printf("launch block = %d thread = %d\n", blocks, threads_per_block);
 
-    fixedbase_MSM_unit_processing_G1 <<<blocks,threads_per_block, 32 * 1024>>>( inputScalarArrayGPU, inputBase1ArrayGPU, outputBN254G1ArrayGPU, outerc, windowSize, inner_len, batch_size);
+    fixedbase_MSM_unit_processing_G1 <<<blocks,threads_per_block, 32 * 1024>>>( inputScalarArrayGPU, inputBase1ArrayGPU, outputBN254G1ArrayGPU, outerc1, windowSize1, inner_len1, batch_size);
     
-    //TODO lianke call MSM G2 here.
     
+    CUDA_CALL(cudaDeviceSynchronize());
+
+    fixedbase_MSM_unit_processing_G2 <<<blocks,threads_per_block, 32 * 1024>>> (inputScalarArrayGPU, inputBase2ArrayGPU, outputBN254G2ArrayGPU, outerc2, windowSize2, inner_len2, batch_size);
+
     CUDA_CALL(cudaDeviceSynchronize());
 
 
@@ -982,8 +955,6 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
       int len = env->GetArrayLength(element);
       char* tmp = (char*)multiplesOfBasePtrArray[i * inner_len + j].X._limbs;
       memcpy(tmp, bytes,len);
-      //cout << "CUDA out=" << i << " in=" << j << " X=";
-      //printMem(multiplesOfBasePtrArray[i * inner_len + j].X);
 
     }
   }
@@ -1014,16 +985,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
 
   fixed_batch_MSM(bigScalarArray, multiplesOfBasePtrArray, outputBN254ArrayCPU, outerc, windowSize, out_len, inner_len);
   for(int i = 0; i < batch_size; i++){
-    // cout << "CUDA i=" << i << " X=";
-    // printMem(outputBN254ArrayCPU[i].X);
-    // cout << "Y=";
-    // printMem(outputBN254ArrayCPU[i].Y);
-    // cout << "Z=";
-    // printMem(outputBN254ArrayCPU[i].Z);
-
     env->SetByteArrayRegion(resultByteArray, i * sizeof(BN254G1) , sizeof(BN254G1) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[i]));
-    // env->SetByteArrayRegion(resultByteArray, (3 * i +1) * sizeof(Scalar) , sizeof(Scalar) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[i].Y._limbs));
-    // env->SetByteArrayRegion(resultByteArray, (3 * i +2)* sizeof(Scalar) , sizeof(Scalar) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[i].Z._limbs));
   }
 
   return resultByteArray;
@@ -1037,109 +999,173 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
  * Method:    doubleBatchMSMNativeHelper
  * Signature: (IIIILjava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;)Lalgebra/groups/AbstractGroup;
  */
+
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeHelper
-  (JNIEnv * env, jclass obj, jint outerc1, jint windowSize1, jint outerc2, jint windowSize2, jobject multiplesOfBase1, jobject multiplesOfBase2, jobject bigScalars){
+  (JNIEnv * env, jclass obj, jint outerc1, jint windowSize1, jint outerc2, jint windowSize2, jobject multiplesOfBase1_X, jobject multiplesOfBase1_Y,
+   jobject multiplesOfBase1_Z, jobject multiplesOfBase2_Xa, jobject multiplesOfBase2_Ya, jobject multiplesOfBase2_Za, jobject multiplesOfBase2_Xb,
+    jobject multiplesOfBase2_Yb, jobject multiplesOfBase2_Zb, jobject bigScalars){
 
   jclass java_util_ArrayList      = static_cast<jclass>(env->NewGlobalRef(env->FindClass("java/util/ArrayList")));
   jmethodID java_util_ArrayList_size = env->GetMethodID(java_util_ArrayList, "size", "()I");
   jmethodID java_util_ArrayList_get  = env->GetMethodID(java_util_ArrayList, "get", "(I)Ljava/lang/Object;");
 
-  jint out_len1 = env->CallIntMethod(multiplesOfBase1, java_util_ArrayList_size);
-  jint inner_len1 = env->CallIntMethod(env->CallObjectMethod(multiplesOfBase1, java_util_ArrayList_get, 0), java_util_ArrayList_size);
-  jint out_len2 = env->CallIntMethod(multiplesOfBase2, java_util_ArrayList_size);
-  jint inner_len2 = env->CallIntMethod(env->CallObjectMethod(multiplesOfBase2, java_util_ArrayList_get, 0), java_util_ArrayList_size);
+  jint out_len1 = env->CallIntMethod(multiplesOfBase1_X, java_util_ArrayList_size);
+  jint inner_len1 = env->CallIntMethod(env->CallObjectMethod(multiplesOfBase1_X, java_util_ArrayList_get, 0), java_util_ArrayList_size);
+  jint out_len2 = env->CallIntMethod(multiplesOfBase2_Xa, java_util_ArrayList_size);
+  jint inner_len2 = env->CallIntMethod(env->CallObjectMethod(multiplesOfBase2_Xa, java_util_ArrayList_get, 0), java_util_ArrayList_size);
   
   jint batch_size = env->CallIntMethod(bigScalars, java_util_ArrayList_size);
   cout << "cpp side batch size: " << batch_size << endl;
+  cout << "cpp side out len1 , inner_len1 : " << out_len1 << " " << inner_len1 << endl;
+  cout << "cpp side out len2 , inner_len2 : " << out_len2 << " " << inner_len2 << endl;
 
+  auto start = std::chrono::steady_clock::now();
+  vector<Scalar> bigScalarArray = vector<Scalar>(batch_size, Scalar());
+  vector<BN254G1> multiplesOfBase1PtrArray = vector<BN254G1>(out_len1 * inner_len1, BN254G1());
+  vector<BN254G2> multiplesOfBase2PtrArray = vector<BN254G2>(out_len2 * inner_len2, BN254G2());
 
-  // auto start = std::chrono::steady_clock::now();
-  // vector<BigInt> bigScalarArray = vector<BigInt>(batch_size, BigInt());
-  // vector<vector<BigInt>> multiplesOfBasePtrArray1 = vector<vector<BigInt>>(out_len1, vector<BigInt>(inner_len1, BigInt()));
-  // vector<vector<BigInt>> multiplesOfBasePtrArray2 = vector<vector<BigInt>>(out_len2, vector<BigInt>(inner_len2, BigInt()));
-
-  // auto end = std::chrono::steady_clock::now();
-  // std::chrono::duration<double> elapsed_seconds = end-start;
-  // //std::cout << "doubleBatchMSM BigInt allocation elapsed time: " << elapsed_seconds.count() << "s\n";
-
-
-
-
-  // start = std::chrono::steady_clock::now();
-  // for(int i =0; i < batch_size; i++){
-  //     jbyteArray element = (jbyteArray)env->CallObjectMethod(bigScalars, java_util_ArrayList_get, i);
-  //     char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-  //     bigScalarArray[i].len = env->GetArrayLength(element);
-  //     char* tmp = (char*)&bigScalarArray[i].bytes;
-
-  //     memcpy(tmp +BigInt::num_of_bytes - bigScalarArray[i].len, 
-  //                               bytes,
-  //                               bigScalarArray[i].len);
-
-  // }
+  auto end = std::chrono::steady_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  std::cout << "doubleBatchMSM BigInt allocation elapsed time: " << elapsed_seconds.count() << "s\n";
 
 
 
-  // for(int i = 0; i < out_len1;i++){
-  //   for(int j = 0; j < inner_len1; j++){
-  //     jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase1, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
-  //     char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-  //     multiplesOfBasePtrArray1[i][j].len = env->GetArrayLength(element);
-  //     char* tmp = (char*)multiplesOfBasePtrArray1[i][j].bytes;
-  //     memcpy(tmp + BigInt::num_of_bytes - multiplesOfBasePtrArray1[i][j].len, bytes,  multiplesOfBasePtrArray1[i][j].len);
-  //   }
-  // }
 
-  // for(int i = 0; i < out_len2;i++){
-  //   for(int j = 0; j < inner_len2; j++){
-  //     jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase2, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
-  //     char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-  //     multiplesOfBasePtrArray2[i][j].len = env->GetArrayLength(element);
-  //     char* tmp = (char*)multiplesOfBasePtrArray2[i][j].bytes;
-  //     memcpy(tmp + BigInt::num_of_bytes - multiplesOfBasePtrArray2[i][j].len, bytes,  multiplesOfBasePtrArray2[i][j].len);    }
-  // }
+  start = std::chrono::steady_clock::now();
+  for(int i =0; i < batch_size; i++){
+      jbyteArray element = (jbyteArray)env->CallObjectMethod(bigScalars, java_util_ArrayList_get, i);
+      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
+      int len = env->GetArrayLength(element);
+      char* tmp = (char*)&bigScalarArray[i]._limbs;
+      memcpy(tmp, bytes, len);
+  }
+  //std::cout << "biscalar" <<endl;
 
-  //   end = std::chrono::steady_clock::now();
-  //   elapsed_seconds = end-start;
-  //   //std::cout << "doubleBatchMSM Read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
+  for(int i = 0; i < out_len1;i++){
+    for(int j = 0; j < inner_len1; j++){
+      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase1_X, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
+      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
+      int len = env->GetArrayLength(element);
+      char* tmp = (char*)multiplesOfBase1PtrArray[i * inner_len1 + j].X._limbs;
+      memcpy(tmp, bytes,len);
+
+    }
+  }
+
+  for(int i = 0; i < out_len1;i++){
+    for(int j = 0; j < inner_len1; j++){
+      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase1_Y, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
+      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
+      int len = env->GetArrayLength(element);
+      char* tmp = (char*)multiplesOfBase1PtrArray[i * inner_len1 + j].Y._limbs;
+      memcpy(tmp, bytes,len);
+    }
+  }
+
+  for(int i = 0; i < out_len1;i++){
+    for(int j = 0; j < inner_len1; j++){
+      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase1_Z, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
+      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
+      int len = env->GetArrayLength(element);
+      char* tmp = (char*)multiplesOfBase1PtrArray[i * inner_len1 + j].Z._limbs;
+      memcpy(tmp, bytes,len);
+    }
+  }
+  //std::cout << "G1" <<endl;
 
 
-  // start = std::chrono::steady_clock::now();
-  jbyteArray resultByteArray = env->NewByteArray( batch_size * 2);
-  // for(int batch_index = 0; batch_index < batch_size; batch_index++){
-  //   BigInt res1 = multiplesOfBasePtrArray1[0][0];
-  //   for (int outer = 0; outer < outerc1; ++outer) {
-  //       int inner = 0;
-  //       for (int i = 0; i < windowSize1; ++i) {
-  //           if (bigScalarArray[batch_index].testBit(outer * windowSize1 + i)) { //Returns true if and only if the designated bit is set.
-  //               inner |= 1 << i;
-  //           }
-  //       }
-  //       res1 = res1 + multiplesOfBasePtrArray1[outer][inner];
-  //   }
+
+  for(int i = 0; i < out_len2;i++){
+    for(int j = 0; j < inner_len2; j++){
+      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase2_Xa, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
+      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
+      int len = env->GetArrayLength(element);
+      char* tmp = (char*)multiplesOfBase2PtrArray[i * inner_len2 + j].Xa._limbs;
+      memcpy(tmp, bytes,len);
+    }
+  }
+
+  for(int i = 0; i < out_len2;i++){
+    for(int j = 0; j < inner_len2; j++){
+      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase2_Xb, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
+      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
+      int len = env->GetArrayLength(element);
+      char* tmp = (char*)multiplesOfBase2PtrArray[i * inner_len2 + j].Xb._limbs;
+      memcpy(tmp, bytes,len);
+    }
+  }
+  //std::cout << "G2X" <<endl;
+
+  for(int i = 0; i < out_len2;i++){
+    for(int j = 0; j < inner_len2; j++){
+      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase2_Ya, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
+      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
+      int len = env->GetArrayLength(element);
+      char* tmp = (char*)multiplesOfBase2PtrArray[i * inner_len2 + j].Ya._limbs;
+      memcpy(tmp, bytes,len);
+    }
+  }
+
+  for(int i = 0; i < out_len2;i++){
+    for(int j = 0; j < inner_len2; j++){
+      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase2_Yb, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
+      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
+      int len = env->GetArrayLength(element);
+      char* tmp = (char*)multiplesOfBase2PtrArray[i * inner_len2 + j].Yb._limbs;
+      memcpy(tmp, bytes,len);
+    }
+  }
+  //std::cout << "G2Y" <<endl;
+
+  for(int i = 0; i < out_len2;i++){
+    for(int j = 0; j < inner_len2; j++){
+      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase2_Za, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
+      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
+      int len = env->GetArrayLength(element);
+      char* tmp = (char*)multiplesOfBase2PtrArray[i * inner_len2 + j].Za._limbs;
+      memcpy(tmp, bytes,len);
+    }
+  }
+
+  for(int i = 0; i < out_len2;i++){
+    for(int j = 0; j < inner_len2; j++){
+      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase2_Zb, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
+      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
+      int len = env->GetArrayLength(element);
+      char* tmp = (char*)multiplesOfBase2PtrArray[i * inner_len2 + j].Zb._limbs;
+      memcpy(tmp, bytes,len);
+    }
+  }
+
+  //std::cout << "G2" <<endl;
+
+  end = std::chrono::steady_clock::now();
+  elapsed_seconds = end-start;
+  std::cout << "doubleBatchMSM Read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
 
 
+  start = std::chrono::steady_clock::now();
+  jbyteArray resultByteArray = env->NewByteArray(batch_size * (sizeof(BN254G1) + sizeof(BN254G2)));
+  BN254G1* outputBN254G1ArrayCPU = new BN254G1[batch_size];
+  memset(outputBN254G1ArrayCPU, 0, sizeof(BN254G1) * batch_size);
+  BN254G2* outputBN254G2ArrayCPU = new BN254G2[batch_size];
+  memset(outputBN254G2ArrayCPU, 0, sizeof(BN254G2) * batch_size);
 
-  //   BigInt res2 = multiplesOfBasePtrArray2[0][0];
-  //   for (int outer = 0; outer < outerc2; ++outer) {
-  //       int inner = 0;
-  //       for (int i = 0; i < windowSize2; ++i) {
-  //           if (bigScalarArray[batch_index].testBit(outer * windowSize2 + i)) { //Returns true if and only if the designated bit is set.
-  //               inner |= 1 << i;
-  //           }
-  //       }
-  //       res2 = res2 + multiplesOfBasePtrArray2[outer][inner];
-  //   }
+  fixed_double_batch_MSM(bigScalarArray, multiplesOfBase1PtrArray, multiplesOfBase2PtrArray, 
+                          outputBN254G1ArrayCPU, outputBN254G2ArrayCPU,
+                          outerc1, windowSize1, outerc2, windowSize2,
+                          out_len1, inner_len1, out_len2, inner_len2);
 
-  //   env->SetByteArrayRegion(resultByteArray, 2 * batch_index * BigInt::num_of_bytes , BigInt::num_of_bytes,   reinterpret_cast<const jbyte*>(res1.bytes));
-  //   env->SetByteArrayRegion(resultByteArray, (2 * batch_index + 1) * BigInt::num_of_bytes , BigInt::num_of_bytes,   reinterpret_cast<const jbyte*>(res2.bytes));
 
-  // }
-
-  //   end = std::chrono::steady_clock::now();
-  //   elapsed_seconds = end-start;
-  //   //std::cout << "doubleBatchMSM C++ Compute elapsed time: " << elapsed_seconds.count() << "s\n";
+  end = std::chrono::steady_clock::now();
+  elapsed_seconds = end-start;
+  //std::cout << "doubleBatchMSM C++ Compute elapsed time: " << elapsed_seconds.count() << "s\n";
   
+  for(int i = 0; i < batch_size; i++){
+    env->SetByteArrayRegion(resultByteArray, i * (sizeof(BN254G1) +sizeof(BN254G2)), sizeof(BN254G1) ,   reinterpret_cast<const jbyte*>(&outputBN254G1ArrayCPU[i]));
+    env->SetByteArrayRegion(resultByteArray, i * (sizeof(BN254G1) +sizeof(BN254G2)) + sizeof(BN254G1), sizeof(BN254G2) ,   reinterpret_cast<const jbyte*>(&outputBN254G2ArrayCPU[i]));
+  }
+
 
   return resultByteArray;
 

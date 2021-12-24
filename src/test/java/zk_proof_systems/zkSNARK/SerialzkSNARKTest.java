@@ -146,9 +146,6 @@ public class SerialzkSNARKTest implements Serializable {
         final BN254aG1 g1Factory = BN254aG1Parameters.ONE;
         final BN254aG2 g2Factory = BN254aG2Parameters.ONE;
         final BN254aPairing pairing = new BN254aPairing();
-        LargeFpParameters FpParameters = new LargeFpParameters();
-        // final Fp FieldFactory = new Fp(259, FpParameters);
-        // System.out.println("fp=" + byteToString(FieldFactory.toBigInteger().toByteArray()));
         SerialBNProofSystemTest(numInputs, numConstraints, fieldFactory, g1Factory, g2Factory, pairing);
     }
 

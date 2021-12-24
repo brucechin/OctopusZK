@@ -58,7 +58,13 @@ public class BN254aG2Parameters
     );
 
     public BN254aG2 ZERO() {
-        return new BN254aG2(BN254aFq2.ZERO, BN254aFq2.ONE, BN254aFq2.ZERO);
+        BN254aFq2 a = new BN254aFq2(0,0);
+        BN254aFq2 b = new BN254aFq2(0,0);
+        BN254aFq2 c = new BN254aFq2(0,0);
+
+        return new BN254aG2(a,b,c);
+        //lianke: i do not want a static ZERO instance.
+        //return new BN254aG2(BN254aFq2.ZERO, BN254aFq2.ONE, BN254aFq2.ZERO);
     }
 
     public BN254aG2 ONE() {

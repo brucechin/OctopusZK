@@ -24,8 +24,8 @@ public class VariableBaseMSM {
     public static final BigInteger BOS_COSTER_MSM_THRESHOLD = new BigInteger("1048576");
 
     static {
-		System.loadLibrary("AlgebraMSMVariableBaseMSM");
-        System.out.println("AlgebraMSMVariableBaseMSM loaded");
+		// System.loadLibrary("AlgebraMSMVariableBaseMSM");
+        // System.out.println("AlgebraMSMVariableBaseMSM loaded");
 	}
     
     /**
@@ -113,6 +113,16 @@ public class VariableBaseMSM {
         return result;
     }
 
+    public static byte[] bigIntegerToByteArrayHelperCGBN(BigInteger bigint){
+        byte[] temp = bigint.toByteArray();
+
+        byte[] res = new byte[(temp.length + 3)/ 4 * 4];
+        for(int i = 0; i < temp.length; i++){
+            res[temp.length - i - 1] = temp[i];
+        }
+        return res;
+
+    }
 
     public static byte[] bigIntegerToByteArrayHelper(BigInteger bigint){
         byte[] temp = bigint.toByteArray();
@@ -157,6 +167,7 @@ public class VariableBaseMSM {
         GroupT result = zero;
         //System.out.println("java side length: " + length + "log2 length: " + log2Length + "c " + c + " numGroups " + numGroups + "numBuckets " +  numBuckets);
         ArrayList<GroupT> resultArray = new ArrayList<>();
+        //TOD lianke: this for loop could mean we call the CUDA kernel for numGroups times.
         for (int k = numGroups - 1; k >= 0; k--) {
             if (k < numGroups - 1) {
                 for (int i = 0; i < c; i++) {
@@ -164,8 +175,9 @@ public class VariableBaseMSM {
                 }
             }
 
+            //TODO lianke: this buckets should be a global array shared by all CUDA processes.
             final ArrayList<GroupT> buckets = new ArrayList<>(bucketsModel);
-
+            //TODO lianke: this for loop should be CUDA implemented.
             for (int i = 0; i < length; i++) {
                 int id = 0;
                 for (int j = 0; j < c; j++) {
@@ -277,7 +289,9 @@ public class VariableBaseMSM {
 
     public static native <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
     byte[] variableBaseSerialMSMNativeHelper(
-            final ArrayList<byte[]> bases,
+            final ArrayList<byte[]> basesX,
+            final ArrayList<byte[]> basesY,
+            final ArrayList<byte[]> basesZ,
             final ArrayList<byte[]> scalars);
 
     public static <
@@ -291,33 +305,47 @@ public class VariableBaseMSM {
         assert (bases.size() == scalars.size());
 
 
-
+        //serialMSM is only called for  BN254G1 curve.
 
         // ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
         // for (FieldT scalar : scalars) {
-        //     bigScalars.add(bigIntegerToByteArrayHelper(scalar.toBigInteger()));
+        //     bigScalars.add(bigIntegerToByteArrayHelperCGBN(scalar.toBigInteger()));
         // }
-        // ArrayList<byte[]> basesArray = new ArrayList<byte[]>();
+        // ArrayList<byte[]> basesArrayX = new ArrayList<byte[]>();
+        // ArrayList<byte[]> basesArrayY = new ArrayList<byte[]>();
+        // ArrayList<byte[]> basesArrayZ = new ArrayList<byte[]>();
+
         // for (GroupT base : bases){
-        //     basesArray.add(bigIntegerToByteArrayHelper(base.toBigInteger()));
+        //     ArrayList<BigInteger> three_values = base.BN254G1ToBigInteger();
+
+        //     basesArrayX.add(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
+        //     basesArrayY.add(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
+        //     basesArrayZ.add(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
+
         // }
 
-        // byte[] resArray = variableBaseSerialMSMNativeHelper(basesArray, bigScalars);
+        // byte[] resArray = variableBaseSerialMSMNativeHelper(basesArrayX, basesArrayY, basesArrayZ, bigScalars);
         
         // int size_of_bigint_cpp_side = 64;
-        // BigInteger modulus = new BigInteger("1532495540865888858358347027150309183618765510462668801");
         
-        // byte[] converted_back = new byte[size_of_bigint_cpp_side];
-        // for(int j = 63; j >= 3; j-=4){
-        //     converted_back[j] = resArray[ j - 3];
-        //     converted_back[j-1] = resArray[j - 2];
-        //     converted_back[j-2] = resArray[ j - 1];
-        //     converted_back[j-3] = resArray[ j];
+        // byte[] converted_back_X = new byte[64];
+        // byte[] converted_back_Y = new byte[64];
+        // byte[] converted_back_Z = new byte[64];
+
+        // for(int j =0; j < size_of_bigint_cpp_side; j++){
+        //     converted_back_X[j] = resArray[size_of_bigint_cpp_side - j - 1];
         // }
-        // BigInteger bi = new BigInteger(converted_back);
-        // BigInteger output = bi.mod(modulus);
-        // GroupT res = bases.get(0).zero();
-        // res.setBigInteger(output);
+        // for(int j =0; j < size_of_bigint_cpp_side; j++){
+        //     converted_back_Y[j] = resArray[2*size_of_bigint_cpp_side - j - 1];
+        // }
+        // for(int j =0; j < size_of_bigint_cpp_side; j++){
+        //     converted_back_Z[j] = resArray[3*size_of_bigint_cpp_side - j - 1];
+        // }
+        // BigInteger bi_X = new BigInteger(converted_back_X);
+        // BigInteger bi_Y = new BigInteger(converted_back_Y);
+        // BigInteger bi_Z = new BigInteger(converted_back_Z);       
+        // GroupT jni_res = bases.get(0).zero();
+        // jni_res.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
 
 
 

@@ -59,7 +59,7 @@ public class Fp2 extends AbstractFieldElement<Fp2> implements Serializable {
     public Fp2 mul(final Fp2 that) {
     /* Devegili OhEig Scott Dahab --- Multiplication and Squaring on AbstractPairing-Friendly
      Fields.pdf; Section 3 (Karatsuba) */
-        System.out.println("HAHA? this mul is also called");
+        //System.out.println("HAHA? this mul is also called");
 
         final Fp c0C0 = c0.mul(that.c0);
         final Fp c1C1 = c1.mul(that.c1);
