@@ -107,17 +107,18 @@ typedef struct {
 __device__ 
 Fp2 add(Fp2 input1, Fp2 input2)
 {
+  //add should be good.
     context_t _context;
     env_t    _env(_context);  
     Fp2 result;
-
+    memset(result.a._limbs, 0, MSM_params_t::num_of_bytes);
+    memset(result.b._limbs, 0, MSM_params_t::num_of_bytes);
     Scalar modulus_binary;
     memcpy(modulus_binary._limbs, modulus_raw_G1, MSM_params_t::num_of_bytes);
     bn_t modulus;
     cgbn_load(_env, modulus, &modulus_binary);
 
-    memset(result.a._limbs, 0, MSM_params_t::num_of_bytes);
-    memset(result.b._limbs, 0, MSM_params_t::num_of_bytes);
+
     cgbn_add(_env, result.a, input1.a, input2.a);
     cgbn_rem(_env, result.a, result.a, modulus);
 
@@ -132,21 +133,24 @@ Fp2 sub(Fp2 input1, Fp2 input2)
     context_t _context;
     env_t    _env(_context);  
     Fp2 result;
+    memset(result.a._limbs, 0, MSM_params_t::num_of_bytes);
+    memset(result.b._limbs, 0, MSM_params_t::num_of_bytes);
+
+
 
     Scalar modulus_binary;
     memcpy(modulus_binary._limbs, modulus_raw_G1, MSM_params_t::num_of_bytes);
     bn_t modulus;
     cgbn_load(_env, modulus, &modulus_binary);
 
-    memset(result.a._limbs, 0, MSM_params_t::num_of_bytes);
-    memset(result.b._limbs, 0, MSM_params_t::num_of_bytes);
+
 
     cgbn_add(_env, result.a, input1.a, modulus);
     cgbn_sub(_env, result.a, result.a, input2.a);
     cgbn_rem(_env, result.a, result.a, modulus);
 
     cgbn_add(_env, result.b, input1.b, modulus);
-    cgbn_add(_env, result.b, result.b, input2.b);
+    cgbn_sub(_env, result.b, result.b, input2.b);
     cgbn_rem(_env, result.b, result.b, modulus);
     return result;
 }
@@ -157,6 +161,8 @@ Fp2 mul(Fp2 input1, Fp2 input2)
     context_t _context;
     env_t    _env(_context);  
     Fp2 result;
+    memset(result.a._limbs, 0, MSM_params_t::num_of_bytes);
+    memset(result.b._limbs, 0, MSM_params_t::num_of_bytes);
 
     Scalar modulus_binary;
     memcpy(modulus_binary._limbs, modulus_raw_G1, MSM_params_t::num_of_bytes);
@@ -168,8 +174,7 @@ Fp2 mul(Fp2 input1, Fp2 input2)
     bn_t residue;
     cgbn_load(_env, residue, &residue_binary);
 
-    memset(result.a._limbs, 0, MSM_params_t::num_of_bytes);
-    memset(result.b._limbs, 0, MSM_params_t::num_of_bytes);
+
 
 
     bn_t c0c0, c1c1, tmp1;
@@ -432,32 +437,34 @@ void printMem(Scalar input)
 }
 
 
-// __device__ __forceinline__
-// void print_bn_t(bn_t &number, int instance_id_) {
-//   using __env_t = bn_t::parent_env_t;
-//   const int IPB = 128/__env_t::TPI;
-//   const int TPI = __env_t::TPI;
-//   __shared__ uint32_t n[IPB][(__env_t::BITS/32)] ;
-//   __shared__ uint32_t vote[IPB];
-//   bool is_represent = (threadIdx.x % TPI) == 0;
-//   int  instance_id  = threadIdx.x / TPI;
-//   int  tid_in_instance = threadIdx.x % TPI;
-//   int global_instance_id = (threadIdx.x + blockIdx.x * blockDim.x)/TPI ;
-//   if (global_instance_id == instance_id_) {
-//     if (is_represent) vote[instance_id] = 0;
-//     for (int i = 0; i < __env_t::LIMBS; i++)
-//       n[instance_id][tid_in_instance * __env_t::LIMBS + i] = number._limbs[i];
-//     atomicAdd(&vote[instance_id], 1);
-//     while (vote[instance_id] < TPI) ;
-//     if (is_represent) {
-//       //printf("instance %d is ", global_instance_id);
-//       for (int i = 0; i < __env_t::BITS/32; i++) {
-//         printf(" %u |", n[instance_id][i]);
-//       }
-//       printf("\n");
-//     }
-//   }
-// }
+__device__ 
+void print_bn_t(bn_t &number, int instance_id_) {
+  using __env_t = bn_t::parent_env_t;
+  const int IPB = 128/__env_t::TPI;
+  const int TPI = __env_t::TPI;
+  __shared__ uint32_t n[IPB][(__env_t::BITS/32)] ;
+  __shared__ uint32_t vote[IPB];
+  bool is_represent = (threadIdx.x % TPI) == 0;
+  int  instance_id  = threadIdx.x / TPI;
+  int  tid_in_instance = threadIdx.x % TPI;
+  int global_instance_id = (threadIdx.x + blockIdx.x * blockDim.x)/TPI ;
+if(global_instance_id == instance_id_){
+  if (is_represent) vote[instance_id] = 0;
+  for (int i = 0; i < __env_t::LIMBS; i++)
+    n[instance_id][tid_in_instance * __env_t::LIMBS + i] = number._limbs[i];
+  atomicAdd(&vote[instance_id], 1);
+  while (vote[instance_id] < TPI) ;
+  if (is_represent) {
+    //printf("instance %d is ", global_instance_id);
+    for (int i = 0; i < __env_t::BITS/32; i++) {
+      printf(" %u |", n[instance_id][i]);
+    }
+    printf("\n");
+  }
+}
+
+  
+}
 
 __device__ 
 BN254G1Compute add(BN254G1Compute a, BN254G1Compute b) {
@@ -799,6 +806,7 @@ __global__ void fixedbase_MSM_unit_processing_G2(Scalar* inputScalarArray, BN254
 }
 
 
+
 void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> &multiplesOfBasePtrArray, BN254G1* outputArray,int outerc, int windowSize, int out_len, int inner_len)
 {
 	int cnt;
@@ -883,7 +891,6 @@ void  fixed_double_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<B
     CUDA_CALL( cudaMemset(outputBN254G2ArrayGPU, 0, sizeof(BN254G2) * batch_size); )
 
     printf("launch block = %d thread = %d\n", blocks, threads_per_block);
-
     fixedbase_MSM_unit_processing_G1 <<<blocks,threads_per_block, 32 * 1024>>>( inputScalarArrayGPU, inputBase1ArrayGPU, outputBN254G1ArrayGPU, outerc1, windowSize1, inner_len1, batch_size);
     
     
@@ -1190,9 +1197,6 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
 
 
 
-
-
-
 // __device__ __forceinline__
 // bool equals(BN254G1 a, BN254G1 b)
 // {
@@ -1258,4 +1262,38 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
 //   }
 
 //   return true;
+// }
+
+
+
+
+// this code is only used for Fp2 debugging purpose.
+// __global__ void fp2_test(BN254G2* inputBaseArray, BN254G2* outputArray){
+//       context_t _context;
+//     env_t    _env(_context);
+//         const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
+//     Fp2 a, b;
+
+
+//     cgbn_load(_env, a.a, &inputBaseArray[idx].Xa);
+//     cgbn_load(_env, a.b, &inputBaseArray[idx].Xb);
+//     cgbn_load(_env, b.a, &inputBaseArray[idx].Ya);
+//     cgbn_load(_env, b.b, &inputBaseArray[idx].Yb);
+//     // print_bn_t(a.a, 1);
+//     // print_bn_t(a.b, 1);
+//     // print_bn_t(b.a, 1);
+//     // print_bn_t(b.b, 1);
+//     Fp2 a_b_add = add(a, b);
+//     Fp2 a_b_sub = sub(a, b);
+//     Fp2 a_b_mul = mul(a, b);
+
+//     // print_bn_t(a_b_add.a, 1);
+//     // print_bn_t(a_b_add.b, 1);
+//     cgbn_store(_env, &outputArray[idx].Xa, a_b_add.a);
+//     cgbn_store(_env, &outputArray[idx].Xb, a_b_add.b);
+//     cgbn_store(_env, &outputArray[idx].Ya, a_b_sub.a);
+//     cgbn_store(_env, &outputArray[idx].Yb, a_b_sub.b);
+//     cgbn_store(_env, &outputArray[idx].Za, a_b_mul.a);
+//     cgbn_store(_env, &outputArray[idx].Zb, a_b_mul.b);
+
 // }

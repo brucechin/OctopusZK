@@ -24,6 +24,7 @@ import algebra.fields.fieldparameters.LargeFpParameters;
 import algebra.groups.AdditiveIntegerGroup;
 import algebra.groups.integergroupparameters.LargeAdditiveIntegerGroupParameters;
 import java.math.BigInteger;
+import algebra.fields.Fp2;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -388,11 +389,12 @@ public class FixedBaseMSM {
         ArrayList<ArrayList<byte[]>> multiplesOfBase2_Xb = new ArrayList<ArrayList<byte[]>>();
         ArrayList<ArrayList<byte[]>> multiplesOfBase2_Yb = new ArrayList<ArrayList<byte[]>>();
         ArrayList<ArrayList<byte[]>> multiplesOfBase2_Zb = new ArrayList<ArrayList<byte[]>>();
-
         int out_size1 = multiplesOfBase1.size();
         int in_size1 = multiplesOfBase1.get(0).size();
         int out_size2 = multiplesOfBase2.size();
         int in_size2 = multiplesOfBase2.get(0).size();
+
+
         for(int i =0; i < out_size1; i++){
             ArrayList<byte[]> tmpX = new ArrayList<byte[]>();
             ArrayList<byte[]> tmpY = new ArrayList<byte[]>();
@@ -434,13 +436,10 @@ public class FixedBaseMSM {
 
         final int outerc1 = (scalarSize1 + windowSize1 - 1) / windowSize1;
         final int outerc2 = (scalarSize2 + windowSize2 - 1) / windowSize2;
-        //System.out.println("java side, base2 out and in len=" + multiplesOfBase2_Xa.size() + " " + multiplesOfBase2_Xa.get(0).size());
         ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
         for (FieldT scalar : scalars) {
             bigScalars.add(bigIntegerToByteArrayHelperCGBN(scalar.toBigInteger()));
         }
-
-
 
 
         byte[] resultByteArray = doubleBatchMSMNativeHelper(outerc1, windowSize1, outerc2, windowSize2,
@@ -454,7 +453,7 @@ public class FixedBaseMSM {
         long start = System.currentTimeMillis();
         int size_of_bigint_cpp_side = 64;
 
-        // //because each G1 value takes up 3 BigIntegers, and each G2 takes up 6 BigIntegers.
+        // because each G1 value takes up 3 BigIntegers, and each G2 takes up 6 BigIntegers.
         for(int i = 0; i < scalars.size(); i++){
             byte[] slice1 = Arrays.copyOfRange(resultByteArray, 9*i*size_of_bigint_cpp_side, (9 * i + 3) * size_of_bigint_cpp_side);
             byte[] converted_back_X = new byte[64];
@@ -514,7 +513,8 @@ public class FixedBaseMSM {
 
             G2T temp2 = multiplesOfBase2.get(0).get(0).zero();
             temp2.setBigIntegerBN254G2(bi_Xa, bi_Xb, bi_Ya, bi_Yb, bi_Za, bi_Zb);
-            System.out.println("CUDA G2=" + temp2.toString());
+            //System.out.println("CUDA G2=" +temp2.toString());
+
             jni_res.add(new Tuple2<>(temp1, temp2));
         }
 
@@ -523,15 +523,15 @@ public class FixedBaseMSM {
         System.out.println("data receive transformation time elapsed: " + timeElapsed + " ms");
 
 
-        //TODO lianke for verification purpose
-        for (FieldT scalar : scalars) {
-            res.add(new Tuple2<>(
-                    serialMSM(scalarSize1, windowSize1, multiplesOfBase1, scalar),
-                    serialMSM(scalarSize2, windowSize2, multiplesOfBase2, scalar)));
-            System.out.println("java G2 X,Y,Z=" + serialMSM(scalarSize2, windowSize2, multiplesOfBase2, scalar).toString());
-        }
+        // lianke the original code for correctness check purpose
+        // for (FieldT scalar : scalars) {
+        //     res.add(new Tuple2<>(
+        //             serialMSM(scalarSize1, windowSize1, multiplesOfBase1, scalar),
+        //             serialMSM(scalarSize2, windowSize2, multiplesOfBase2, scalar)));
+        //     //System.out.println("java G2 X,Y,Z=" + serialMSM(scalarSize2, windowSize2, multiplesOfBase2, scalar).toString());
+        // }
 
-        return res;
+        return jni_res;
     }
 
     public static <G1T extends AbstractG1<G1T>,

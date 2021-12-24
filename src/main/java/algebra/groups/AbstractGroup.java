@@ -13,6 +13,7 @@ import java.math.BigInteger;
 import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import algebra.fields.Fp2;
 
 public abstract class AbstractGroup<GroupT extends AbstractGroup<GroupT>> implements Serializable {
 
@@ -84,7 +85,7 @@ public abstract class AbstractGroup<GroupT extends AbstractGroup<GroupT>> implem
     public abstract void setBigInteger(final BigInteger bigInteger);
     public abstract void setBigIntegerBN254G1(BigInteger x, BigInteger y, BigInteger z);
     public abstract void setBigIntegerBN254G2(BigInteger x1, BigInteger x2, BigInteger y1, BigInteger y2, BigInteger z1, BigInteger z2);
-
+    public abstract ArrayList<Fp2> BN254G2ToFp2();
     /**
      * If secureSeed is provided, returns cryptographically secure random group element using byte[].
      * Else if seed is provided, returns pseudorandom group element using long as seed.
