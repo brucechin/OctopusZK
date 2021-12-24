@@ -101,7 +101,7 @@ typedef struct {
   Fp2 Z;
 } BN254G2Compute;
 
-__device__ __forceinline__
+__device__ 
 bool testBit(Scalar input, int n)
 {
     int byte_index =n / 32;
@@ -111,7 +111,7 @@ bool testBit(Scalar input, int n)
 
 
 
-__device__ __forceinline__
+__device__ 
 bool isZero(BN254G1Compute input)
 {
     context_t _context;
@@ -125,7 +125,7 @@ bool isZero(BN254G1Compute input)
     return cgbn_equals(_env, zero, input.Z);
 }
 
-__device__ __forceinline__
+__device__ 
 bool isZero(BN254G2Compute input)
 {
     context_t _context;
@@ -139,7 +139,7 @@ bool isZero(BN254G2Compute input)
     return cgbn_equals(_env, zero, input.Z.a) && cgbn_equals(_env, zero, input.Z.b);
 }
 
-__device__ __forceinline__
+__device__ 
 BN254G1Compute twice(BN254G1Compute a)
 {
   context_t _context;
@@ -245,7 +245,7 @@ BN254G1Compute twice(BN254G1Compute a)
 
 
 
-__device__ __forceinline__
+__device__ 
 BN254G1Compute add(BN254G1Compute a, BN254G1Compute b) {
     // // Handle special cases having to do with O
 
@@ -398,46 +398,102 @@ BN254G1Compute add(BN254G1Compute a, BN254G1Compute b) {
 }
 
 
-__global__ void pippengerMSMG1_unit(Scalar* inputScalarArray, BN254G1* inputBaseArray, BN254G1* outputBN254Array, int batch_size){
+__global__ void pippengerMSMG1_unit1(Scalar* inputScalarArray, BN254G1* inputBaseArray, BN254G1* buckets, int batch_size, int c, int k){
+    const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
+    context_t _context;
+    env_t    _env(_context);
+    //TODO lianke we need to figure out how to fix the concurrency problem.
+    if(idx >= batch_size){
+      return;
+    }
+    if(idx == 0){
+        for(int i = 0; i < batch_size; i++){
+            int id = 0;
+            for (int j = 0; j < c; j++) {
+                if (testBit(inputScalarArray[i], k * c + j)) {
+                    id |= 1 << j;
+                }
+            }
+            if (id == 0) {
+                return;
+            }
+            BN254G1Compute original, to_add, res;
+            //TODO lianke : this may concurrency bug?
+            cgbn_load(_env, original.X, &buckets[id].X);
+            cgbn_load(_env, original.Y, &buckets[id].Y);
+            cgbn_load(_env, original.Z, &buckets[id].Z);
+
+            cgbn_load(_env, to_add.X, &inputBaseArray[i].X);
+            cgbn_load(_env, to_add.Y, &inputBaseArray[i].Y);
+            cgbn_load(_env, to_add.Z, &inputBaseArray[i].Z);
+            
+            res = add(original, to_add);
+
+            cgbn_store(_env, &buckets[id].X, res.X);
+            cgbn_store(_env, &buckets[id].Y, res.Y);
+            cgbn_store(_env, &buckets[id].Z, res.Z);
+        }
+
+    }
+
+
+    return;
+}
+
+__global__ void pippengerMSMG1_unit2_runningSum(BN254G1* buckets, BN254G1* result, int numBuckets){
+    const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
+    context_t _context;
+    env_t    _env(_context);
+    BN254G1Compute res, runningSum;
+    runningSum.Y._limbs[0] = 1;
+
+    cgbn_load(_env, res.X, &result[0].X);
+    cgbn_load(_env, res.Y, &result[0].Y);
+    cgbn_load(_env, res.Z, &result[0].Z);
+    if(idx == 0){
+        for(int i = numBuckets - 1; i > 0; i--){
+            BN254G1Compute to_add;
+            cgbn_load(_env, to_add.X, &buckets[i].X);
+            cgbn_load(_env, to_add.Y, &buckets[i].Y);
+            cgbn_load(_env, to_add.Z, &buckets[i].Z);
+            runningSum = add(runningSum, to_add);
+            res = add(res, runningSum);
+        }   
+    }
+    cgbn_store(_env, &result[0].X, res.X);
+    cgbn_store(_env, &result[0].Y, res.Y);
+    cgbn_store(_env, &result[0].Z, res.Z);
+}
+
+__global__ void pippengerMSMG1_unit3(BN254G1* result, int c){
     const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
     context_t _context;
     env_t    _env(_context);
     BN254G1Compute res;
-    cgbn_load(_env, res.X, &inputBaseArray[0].X);
-    cgbn_load(_env, res.Y, &inputBaseArray[0].Y);
-    cgbn_load(_env, res.Z, &inputBaseArray[0].Z);
+    cgbn_load(_env, res.X, &result[0].X);
+    cgbn_load(_env, res.Y, &result[0].Y);
+    cgbn_load(_env, res.Z, &result[0].Z);
 
-    if(idx >= batch_size){
-      return;
+    if(idx == 0){
+        for (int i = 0; i < c; i++) {
+            res = twice(res);
+        } 
     }
 
+    cgbn_store(_env, &result[0].X, res.X);
+    cgbn_store(_env, &result[0].Y, res.Y);
+    cgbn_store(_env, &result[0].Z, res.Z);
 
-    //TODO it seems that pippengerMSM is not easy to parallelize.
-
-    // for (int outer = 0; outer < outerc; ++outer) {
-    //     int inner = 0;
-    //     for (int i = 0; i < windowSize; ++i) {
-    //         //testBit is correct
-    //         if (testBit(inputScalarArray[idx], outer * windowSize + i)) {
-    //             inner |= 1 << i;
-    //         }
-    //     }
-    //     //printf("idx=%d, outer=%d, inner=%d\n", idx, outer, inner);
-    //     BN254G1Compute to_added;
-    //     cgbn_load(_env, to_added.X, &inputBaseArray[tableInnerSize * outer + inner].X);
-    //     cgbn_load(_env, to_added.Y, &inputBaseArray[tableInnerSize * outer + inner].Y);
-    //     cgbn_load(_env, to_added.Z, &inputBaseArray[tableInnerSize * outer + inner].Z);
-    //     res = add(res, to_added);
-    // }
-
-
-
-    cgbn_store(_env, &outputBN254Array[idx].X, res.X);
-    cgbn_store(_env, &outputBN254Array[idx].Y, res.Y);
-    cgbn_store(_env, &outputBN254Array[idx].Z, res.Z);
-
-    return;
 }
+
+void printMem(Scalar input)
+{
+    for(int i = 0; i < MSM_params_t::BITS/32; i++){
+      std::cout << input._limbs[i] << "|";
+    }
+    printf("finished\n");
+}
+
 
 void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> &multiplesOfBasePtrArray, BN254G1* outputArray)
 {
@@ -459,31 +515,44 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
     CUDA_CALL( cudaMalloc((void**)&inputBaseArrayGPU, sizeof(BN254G1) * batch_size); )
     CUDA_CALL( cudaMemcpy(inputBaseArrayGPU, (void**)&multiplesOfBasePtrArray[0], sizeof(BN254G1) * batch_size, cudaMemcpyHostToDevice); )
     
-    BN254G1* outputBN254ArrayGPU;//TODO this is partial results, should be aggregated again to obtain one G1 value.
-    CUDA_CALL( cudaMalloc((void**)&outputBN254ArrayGPU, sizeof(BN254G1) * batch_size); )
-    CUDA_CALL( cudaMemset(outputBN254ArrayGPU, 0, sizeof(BN254G1) * batch_size); )
+
 
     printf("launch block = %d thread = %d\n", blocks, threads_per_block);
 
 
     int numBits = 254;//BN254 specific value;
     int length = batch_size;
-    int log2Length = max(1, log2(length));
+    int log2Length = max(1, (int)log2(length));
     int c= log2Length - (log2Length/3);
     int numBuckets = 1 << c;
     int numGroups = (numBits + c - 1 ) / c;
     BN254G1  zero;
     zero.Y._limbs[0] = 1;
     vector<BN254G1> buketsModel(numBuckets, zero);
-    //TODO lianke
+
+    BN254G1* resultGPU ;
+    CUDA_CALL( cudaMalloc((void**)&resultGPU, sizeof(BN254G1)); )
+    CUDA_CALL( cudaMemcpy(resultGPU, (void**)&zero, sizeof(BN254G1), cudaMemcpyHostToDevice); )
+
+    CUDA_CALL(cudaDeviceSynchronize());
+
+
     for(int k = numGroups - 1; k >= 0; k--){
+        BN254G1* buckets;//TODO this is partial results, should be aggregated again to obtain one G1 value.
+        CUDA_CALL( cudaMalloc((void**)&buckets, sizeof(BN254G1) * batch_size); )
+        CUDA_CALL(cudaMemcpy(buckets, (void**)&buketsModel[0], sizeof(BN254G1) * numBuckets, cudaMemcpyHostToDevice);)
+        pippengerMSMG1_unit1 <<<blocks,threads_per_block>>>( inputScalarArrayGPU, inputBaseArrayGPU, buckets, batch_size, c, k);
+        CUDA_CALL(cudaDeviceSynchronize();)
+        pippengerMSMG1_unit2_runningSum<<<1, 128>>>(buckets, resultGPU, numBuckets);
+        CUDA_CALL(cudaDeviceSynchronize();)
 
-        pippengerMSMG1_unit <<<blocks,threads_per_block, 32 * 1024>>>( inputScalarArrayGPU, inputBaseArrayGPU, outputBN254ArrayGPU, batch_size);
-        CUDA_CALL(cudaDeviceSynchronize());
+        if(k > 0){
+            pippengerMSMG1_unit3 <<<1, 128>>>(resultGPU, c);
+            CUDA_CALL(cudaDeviceSynchronize());
+
+        }
+        
     }
-
-    //TODO lianke write another cuda kernel to aggregate outputBN254ArrayGPU.
-
 
     cudaError_t error = cudaGetLastError();
     if(error != cudaSuccess)
@@ -491,13 +560,19 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
         printf("CUDA error: %s\n", cudaGetErrorString(error));
         exit(-1);
     }
-
-    CUDA_CALL(cudaMemcpy((void**)outputArray, outputBN254ArrayGPU, sizeof(BN254G1) * batch_size, cudaMemcpyDeviceToHost); )
+    //this outputArray should only contain one BN254G1 element.
+    CUDA_CALL( cudaMemcpy((void**)&outputArray, resultGPU,  sizeof(BN254G1), cudaMemcpyDeviceToHost); )
     CUDA_CALL(cudaDeviceSynchronize());
 
-    CUDA_CALL(cudaFree(inputScalarArrayGPU));
-    CUDA_CALL(cudaFree(inputBaseArrayGPU));
-    CUDA_CALL(cudaFree(outputBN254ArrayGPU));
+    // cout << "gonna print output" <<endl;
+    // printMem(outputArray[0].X);
+    // printMem(outputArray[0].Y);
+    // printMem(outputArray[0].Z);
+
+    //TODO lianke free CUDA memory
+    //CUDA_CALL(cudaDeviceSynchronize());
+    // CUDA_CALL(cudaFree(inputScalarArrayGPU));
+    // CUDA_CALL(cudaFree(inputBaseArrayGPU));
 
 }
 
@@ -516,23 +591,23 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
     jmethodID java_util_ArrayList_get  = env->GetMethodID(java_util_ArrayList, "get", "(I)Ljava/lang/Object;");
 
 
-    jint base_size = env->CallIntMethod(bases, java_util_ArrayList_size);
-    jint scalars_size = env->CallIntMethod(scalars, java_util_ArrayList_size);
-
+    jint batch_size = env->CallIntMethod(scalars, java_util_ArrayList_size);
+    // jint scalars_size = env->CallIntMethod(scalars, java_util_ArrayList_size);
+    //two arrays sizes should be the same
 
     vector<Scalar> bigScalarArray = vector<Scalar>(batch_size, Scalar());
-    vector<BN254G1> multiplesOfBasePtrArray = vector<BN254G1>(base_size, BN254G1());
+    vector<BN254G1> multiplesOfBasePtrArray = vector<BN254G1>(batch_size, BN254G1());
 
 
     for(int i =0; i < batch_size; i++){
-        jbyteArray element = (jbyteArray)env->CallObjectMethod(bigScalars, java_util_ArrayList_get, i);
+        jbyteArray element = (jbyteArray)env->CallObjectMethod(scalars, java_util_ArrayList_get, i);
         char* bytes = (char*)env->GetByteArrayElements(element, NULL);
         int len = env->GetArrayLength(element);
         char* tmp = (char*)&bigScalarArray[i]._limbs;
         memcpy(tmp, bytes, len);
     }
 
-    for(int i = 0; i < base_size;i++){
+    for(int i = 0; i < batch_size;i++){
         jbyteArray element = (jbyteArray)env->CallObjectMethod(multiplesOfBaseX, java_util_ArrayList_get, i);
         char* bytes = (char*)env->GetByteArrayElements(element, NULL);
         int len = env->GetArrayLength(element);
@@ -542,7 +617,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
         
     }
 
-    for(int i = 0; i < base_size;i++){
+    for(int i = 0; i < batch_size;i++){
         jbyteArray element = (jbyteArray)env->CallObjectMethod(multiplesOfBaseY, java_util_ArrayList_get, i) ;
         char* bytes = (char*)env->GetByteArrayElements(element, NULL);
         int len = env->GetArrayLength(element);
@@ -551,7 +626,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
         
     }
 
-    for(int i = 0; i < base_size;i++){
+    for(int i = 0; i < batch_size;i++){
         jbyteArray element = (jbyteArray)env->CallObjectMethod(multiplesOfBaseZ, java_util_ArrayList_get, i);
         char* bytes = (char*)env->GetByteArrayElements(element, NULL);
         int len = env->GetArrayLength(element);
@@ -563,60 +638,14 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
 
     //lianke: we know in advance that the numBits will be at most 254. we hard encode it.
 
+    BN254G1* resultCPU = new BN254G1[1];
+    pippengerMSMG1(bigScalarArray, multiplesOfBasePtrArray, resultCPU);
 
 
-    jbyteArray resultByteArray = env->NewByteArray((jsize)BigInt::num_of_bytes);
+    jbyteArray resultByteArray = env->NewByteArray((jsize)sizeof(BN254G1));
 
 
-    int length = filteredInput.size();
-    int log2Length =  max(1, (int)log2(length));
-    int c = log2Length - (log2Length / 3);
-    int numBuckets = 1 << c;
-    int numGroups = (numBits + c - 1)/c;
-    BigInt zero("0"); 
-    vector<BigInt> bucketsModel = vector<BigInt>(numBuckets, zero);
-    BigInt result("0"); 
-    for(int k = numGroups - 1; k >=0; k--){
-        if (k < numGroups - 1) {
-            for (int i = 0; i < c; i++) {
-                result = (result + result) ;
-                result %= FqModulusParameter; 
-            }
-        }
-        vector<BigInt> buckets = vector<BigInt>(bucketsModel);
-
-    for (int i = 0; i < length; i++) {
-            int id = 0;
-            for (int j = 0; j < c; j++) {
-                if (std::get<0>(filteredInput[i]).testBit(k * c + j)) {
-                    id |= 1 << j;
-                }
-            }
-
-            if (id == 0) {
-                continue;
-            }
-
-            // Potentially use mixed addition here.
-            buckets[id] = (buckets[id] + std::get<1>(filteredInput[i]));
-            buckets[id]  %= FqModulusParameter;
-    }
-
-
-    BigInt runningSum("0");
-    for(int i = numBuckets - 1; i > 0; i--){
-        runningSum = (runningSum + buckets[i]);
-        runningSum %= FqModulusParameter;
-        result = (result + runningSum);
-        result %= FqModulusParameter;
-    }
-    }
-
-
-    acc = (acc + result);
-    acc %= FqModulusParameter;
-
-    env->SetByteArrayRegion(resultByteArray, 0 , BigInt::num_of_bytes,   reinterpret_cast<const jbyte*>(acc.bytes));
+    env->SetByteArrayRegion(resultByteArray, 0 , sizeof(BN254G1) ,   reinterpret_cast<const jbyte*>(&resultCPU[0]));
 
     return resultByteArray;
 
