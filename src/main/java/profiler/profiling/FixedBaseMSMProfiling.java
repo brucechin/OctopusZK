@@ -19,7 +19,8 @@ public class FixedBaseMSMProfiling {
     public static void serialFixedBaseMSMG1Profiling(final Configuration config, final long size) {
         final BN254aFr fieldFactory = new BN254aFr(2L);
         final BN254aG1 groupFactory = new BN254aG1Parameters().ONE();
-        final int scalarSize = groupFactory.bitSize();
+        BN254aG1 generatorG1 = groupFactory.random(config.seed(), config.secureSeed());
+        final int scalarSize = generatorG1.bitSize();
 
         final Random rand = new Random(System.nanoTime());
         final ArrayList<BN254aFr> scalars = new ArrayList<>();
@@ -30,17 +31,18 @@ public class FixedBaseMSMProfiling {
         config.setContext("FixedBaseMSMG1-Serial");
         config.beginRuntimeMetadata("Size (inputs)", size);
 
-        config.beginLog("FixedBaseMSM");
-        config.beginRuntime("FixedBaseMSM");
         final int windowSize = FixedBaseMSM.getWindowSize((int) size, groupFactory);
         final List<List<BN254aG1>> multiplesOfBase = FixedBaseMSM
                 .getWindowTable(groupFactory, scalarSize, windowSize);
+        config.beginLog("FixedBaseMSM");
+        config.beginRuntime("FixedBaseMSM");
         final List<BN254aG1> result = FixedBaseMSM
                 .batchMSM(scalarSize, windowSize, multiplesOfBase, scalars);
         config.endRuntime("FixedBaseMSM");
         config.endLog("FixedBaseMSM");
 
         config.writeRuntimeLog(config.context());
+        System.out.println("Fix" +result.get(result.size() - 1).toString());
     }
 
     public static void serialFixedBaseMSMG2Profiling(final Configuration config, final long size) {
@@ -57,12 +59,14 @@ public class FixedBaseMSMProfiling {
         config.setContext("FixedBaseMSMG2-Serial");
         config.beginRuntimeMetadata("Size (inputs)", size);
 
-        config.beginLog("FixedBaseMSM");
-        config.beginRuntime("FixedBaseMSM");
+        //config.beginLog("FixedBaseMSM");
+        //config.beginRuntime("FixedBaseMSM");
         final int windowSize = FixedBaseMSM.getWindowSize((int) size, groupFactory);
         final List<List<BN254aG2>> multiplesOfBase = FixedBaseMSM
                 .getWindowTable(groupFactory, scalarSize, windowSize);
-        final List<BN254aG2> result = FixedBaseMSM
+        config.beginLog("FixedBaseMSM");
+        config.beginRuntime("FixedBaseMSM");
+  	final List<BN254aG2> result = FixedBaseMSM
                 .batchMSM(scalarSize, windowSize, multiplesOfBase, scalars);
         config.endRuntime("FixedBaseMSM");
         config.endLog("FixedBaseMSM");

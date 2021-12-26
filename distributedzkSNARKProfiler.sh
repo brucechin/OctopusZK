@@ -1,12 +1,12 @@
 
-for TOTAL_CORES in 1; do
-  for SIZE in `seq 20 20`; do
+for TOTAL_CORES in 2; do
+  for SIZE in `seq 23 23`; do
 
-    export APP=fmsm-g1
+    export APP=fft
     export MEMORY=64G
     export MULTIPLIER=1
 
-    export CORES=1
+    export CORES=2
     export NUM_EXECUTORS=$((TOTAL_CORES / CORES))
     export NUM_PARTITIONS=$((TOTAL_CORES * MULTIPLIER))
 
