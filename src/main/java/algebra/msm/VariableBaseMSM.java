@@ -205,7 +205,7 @@ public class VariableBaseMSM {
                     result = result.twice();
                 }
             }
-            System.out.println("k=" +k + " result=" + result.toString());
+            //System.out.println("k=" +k + " result=" + result.toString());
         }
 
         return result;

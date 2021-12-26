@@ -171,13 +171,13 @@ void best_fft (std::vector<Scalar> &a, const Scalar &omg)
 	int cnt;
     cudaGetDeviceCount(&cnt);
 
-    printf("CUDA Devices: %d, input_field size: %lu, input_field count: %lu\n", cnt, sizeof(Scalar), a.size());
+    //printf("CUDA Devices: %d, input_field size: %lu, input_field count: %lu\n", cnt, sizeof(Scalar), a.size());
 
     size_t threads_per_block = 128;
     size_t instance_per_block = (threads_per_block / fft_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (a.size() + instance_per_block - 1) / instance_per_block;
 
-    printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
+    //printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
     CUDA_CALL(cudaSetDevice(0));
     Scalar *in; 
     CUDA_CALL( cudaMalloc((void**)&in, sizeof(Scalar) * a.size()); )
@@ -186,7 +186,7 @@ void best_fft (std::vector<Scalar> &a, const Scalar &omg)
     const size_t length = a.size();
     const size_t log_m = log2(length); 
     //auto start = std::chrono::steady_clock::now();
-    printf("launch block = %d thread = %d\n", blocks, threads_per_block);
+    //printf("launch block = %d thread = %d\n", blocks, threads_per_block);
     cuda_fft_first_step <<<blocks,threads_per_block>>>( in, omg, length, log_m);
     CUDA_CALL(cudaDeviceSynchronize());
     //cout << "finish first round" <<endl;

@@ -85,12 +85,13 @@ public class FixedBaseMSMProfiling {
                 .getWindowSize(size / config.numPartitions(), groupFactory);
         final List<List<BN254aG1>> multiplesOfBase = FixedBaseMSM
                 .getWindowTable(groupFactory, scalarSize, windowSize);
-        FixedBaseMSM.distributedBatchMSM(
+        JavaPairRDD<Long, BN254aG1> result = FixedBaseMSM.distributedBatchMSM(
                 scalarSize,
                 windowSize,
                 multiplesOfBase,
                 scalars,
-                config.sparkContext()).count();
+                config.sparkContext()).persist(config.storageLevel());
+        result.count();
         config.endRuntime("FixedBaseMSM");
         config.endLog("FixedBaseMSM");
 

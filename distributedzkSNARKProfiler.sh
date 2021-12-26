@@ -1,10 +1,10 @@
 
-for TOTAL_CORES in 8; do
-  for SIZE in `seq 15 16`; do
+for TOTAL_CORES in 1; do
+  for SIZE in `seq 20 20`; do
 
-    export APP=zksnark
+    export APP=fmsm-g1
     export MEMORY=64G
-    export MULTIPLIER=2
+    export MULTIPLIER=1
 
     export CORES=1
     export NUM_EXECUTORS=$((TOTAL_CORES / CORES))

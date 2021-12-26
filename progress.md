@@ -39,7 +39,7 @@ meet some difficult issues when implementing MSM using the NVIDIA CGBN library. 
 
 
 # 2021.12.25 
-found out that the distributed zk can not use the newest JDK version 11.
+found out that the distributed zk can not execute. because of the following error
 ### Caused by: java.lang.IllegalArgumentException: Invalid lambda deserialization at reductions.r1cs_to_qap.R1CStoQAPRDD.$deserializeLambda$(R1CStoQAPRDD.java:1)'
  
-remember to use JDK-8 version to avoid this problem.
+i think it is due to some Serializable overriding bugs by myself?

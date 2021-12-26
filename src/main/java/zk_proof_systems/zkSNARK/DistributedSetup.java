@@ -23,7 +23,6 @@ import scala.Tuple2;
 import zk_proof_systems.zkSNARK.objects.CRS;
 import zk_proof_systems.zkSNARK.objects.ProvingKeyRDD;
 import zk_proof_systems.zkSNARK.objects.VerificationKey;
-
 import java.util.List;
 
 public class DistributedSetup {
@@ -74,6 +73,32 @@ public class DistributedSetup {
         config.endLog("Computing deltaABC and gammaABC for R1CS proving key and verification key");
 
         config.beginLog("Computing query densities");
+        // Accumulator<Integer> nonZeroAt = 0;
+        // Accumulator<Integer> nonZeroBt = 0;
+        // for (int i = 0; i < qap.numVariables(); i++) {
+        //     if (!qap.At(i).isZero()) {
+        //         nonZeroAt++;
+        //     }
+        //     if (!qap.Bt(i).isZero()) {
+        //         nonZeroBt++;
+        //     }
+        // }
+        // long numNonZeroAt = 0; 
+        // qap.At().foreach(a ->{
+        //         if(!a._2.isZero()){
+        //                 numNonZeroAt++;
+        //         }
+        // } 
+        // );
+
+        // long numNonZeroBt = 0; 
+        // qap.Bt().foreach(a ->{
+        //         if(!a._2.isZero())
+        //                 numNonZeroBt++;
+                
+        // } 
+        // );
+
         final long numNonZeroAt = qap.At().filter(e -> !e._2.isZero()).count();
         final long numNonZeroBt = qap.Bt().filter(e -> !e._2.isZero()).count();
         config.endLog("Computing query densities");
@@ -111,9 +136,9 @@ public class DistributedSetup {
                 windowSizeG1,
                 windowTableG1,
                 deltaABC,
-                config.sparkContext()).persist(config.storageLevel());
+                config.sparkContext()).cache();
         deltaABCG1.count();
-        qap.Ct().unpersist();
+        //qap.Ct().unpersist();
         config.endLog("Encoding deltaABC for R1CS proving key");
 
         config.beginLog("Computing query A");
@@ -122,9 +147,9 @@ public class DistributedSetup {
                 windowSizeG1,
                 windowTableG1,
                 qap.At(),
-                config.sparkContext()).persist(config.storageLevel());
+                config.sparkContext()).cache();
         queryA.count();
-        qap.At().unpersist();
+        //qap.At().unpersist();
         config.endLog("Computing query A");
 
         config.beginLog("Computing query B");
@@ -136,9 +161,9 @@ public class DistributedSetup {
                 windowSizeG2,
                 windowTableG2,
                 qap.Bt(),
-                config.sparkContext()).persist(config.storageLevel());
+                config.sparkContext()).cache();
         queryB.count();
-        qap.Bt().unpersist();
+        //qap.Bt().unpersist();
         config.endLog("Computing query B");
 
         config.beginLog("Computing query H");
@@ -150,9 +175,9 @@ public class DistributedSetup {
                 windowSizeG1,
                 windowTableG1,
                 inverseDeltaHtZt,
-                config.sparkContext()).persist(config.storageLevel());
+                config.sparkContext()).cache();//persist(config.storageLevel());
         queryH.count();
-        qap.Ht().unpersist();
+        // qap.Ht().unpersist();
         config.endLog("Computing query H");
 
         config.endLog("Generating R1CS proving key");
@@ -167,13 +192,13 @@ public class DistributedSetup {
                 windowSizeG1,
                 windowTableG1,
                 gammaABC,
-                config.sparkContext()).persist(config.storageLevel());
+                config.sparkContext());//.persist(config.storageLevel());
         final JavaPairRDD<Long, G1T> fullGammaABCG1 = Utils
                 .fillRDD(numInputs, generatorG1.zero(), config)
                 .union(gammaABCG1).reduceByKey(G1T::add);
         final List<G1T> UVWGammaG1 = Utils
                 .convertFromPair(fullGammaABCG1.collect(), numInputs);
-        ABC.unpersist();
+        //ABC.unpersist();
         config.endLog("Computing gammaABC for R1CS verification key");
         config.endRuntime("Verification Key");
 

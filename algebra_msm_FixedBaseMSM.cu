@@ -813,11 +813,11 @@ void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1>
     cudaGetDeviceCount(&cnt);
     size_t batch_size = bigScalarArray.size();
 
-    printf("CUDA Devices: %d, input_field size: %lu, input_field count: %lu\n", cnt, sizeof(Scalar), batch_size);
+    //printf("CUDA Devices: %d, input_field size: %lu, input_field count: %lu\n", cnt, sizeof(Scalar), batch_size);
     size_t threads_per_block = 128;
     size_t instance_per_block = (threads_per_block / MSM_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
-    printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
+    //printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
     CUDA_CALL(cudaSetDevice(0));
     Scalar *inputScalarArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputScalarArrayGPU, sizeof(Scalar) * batch_size); )
@@ -831,7 +831,7 @@ void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1>
     CUDA_CALL( cudaMalloc((void**)&outputBN254ArrayGPU, sizeof(BN254G1) * batch_size); )
     CUDA_CALL( cudaMemset(outputBN254ArrayGPU, 0, sizeof(BN254G1) * batch_size); )
 
-    printf("launch block = %d thread = %d\n", blocks, threads_per_block);
+    //printf("launch block = %d thread = %d\n", blocks, threads_per_block);
 
     fixedbase_MSM_unit_processing_G1 <<<blocks,threads_per_block, 32 * 1024>>>( inputScalarArrayGPU, inputBaseArrayGPU, outputBN254ArrayGPU, outerc, windowSize, inner_len, batch_size);
     CUDA_CALL(cudaDeviceSynchronize());
@@ -863,11 +863,11 @@ void  fixed_double_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<B
     cudaGetDeviceCount(&cnt);
     size_t batch_size = bigScalarArray.size();
 
-    printf("CUDA Devices: %d, input_field size: %lu, input_field count: %lu\n", cnt, sizeof(Scalar), batch_size);
+    //printf("CUDA Devices: %d, input_field size: %lu, input_field count: %lu\n", cnt, sizeof(Scalar), batch_size);
     size_t threads_per_block = 128;
     size_t instance_per_block = (threads_per_block / MSM_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
-    printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
+    //printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
     CUDA_CALL(cudaSetDevice(0));
     Scalar *inputScalarArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputScalarArrayGPU, sizeof(Scalar) * batch_size); )
@@ -890,7 +890,7 @@ void  fixed_double_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<B
     CUDA_CALL( cudaMalloc((void**)&outputBN254G2ArrayGPU, sizeof(BN254G2) * batch_size); )
     CUDA_CALL( cudaMemset(outputBN254G2ArrayGPU, 0, sizeof(BN254G2) * batch_size); )
 
-    printf("launch block = %d thread = %d\n", blocks, threads_per_block);
+    //printf("launch block = %d thread = %d\n", blocks, threads_per_block);
     fixedbase_MSM_unit_processing_G1 <<<blocks,threads_per_block, 32 * 1024>>>( inputScalarArrayGPU, inputBase1ArrayGPU, outputBN254G1ArrayGPU, outerc1, windowSize1, inner_len1, batch_size);
     
     
@@ -941,9 +941,9 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   vector<Scalar> bigScalarArray = vector<Scalar>(batch_size, Scalar());
   vector<BN254G1> multiplesOfBasePtrArray = vector<BN254G1>(out_len * inner_len, BN254G1());
 
-  cout << "CUDA side base out and inner len :" << out_len << " " << inner_len <<endl;
+  //cout << "CUDA side base out and inner len :" << out_len << " " << inner_len <<endl;
 
-  cout << "CUDA side base outerc and windowSize :" << outerc << " " << windowSize <<endl;
+  //cout << "CUDA side base outerc and windowSize :" << outerc << " " << windowSize <<endl;
 
   auto start = std::chrono::steady_clock::now();
 
@@ -990,14 +990,14 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
       memcpy(tmp, bytes,len);
     }
   }
-  cout << "output array number of bytes=" << sizeof(BN254G1) * batch_size <<endl;
+  //cout << "output array number of bytes=" << sizeof(BN254G1) * batch_size <<endl;
   jbyteArray resultByteArray = env->NewByteArray(sizeof(BN254G1) * batch_size);
   BN254G1* outputBN254ArrayCPU = new BN254G1[batch_size];
   memset(outputBN254ArrayCPU, 0, sizeof(BN254G1) * batch_size);
 
   auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
-  std::cout << "C++ read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
+  //std::cout << "C++ read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
 
   fixed_batch_MSM(bigScalarArray, multiplesOfBasePtrArray, outputBN254ArrayCPU, outerc, windowSize, out_len, inner_len);
   end = std::chrono::steady_clock::now();
@@ -1009,7 +1009,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   }
   end = std::chrono::steady_clock::now();
   elapsed_seconds = end-start;
-  std::cout << "C++ write results back to JVM elapsed time: " << elapsed_seconds.count() << "s\n";
+  //std::cout << "C++ write results back to JVM elapsed time: " << elapsed_seconds.count() << "s\n";
 
 
   return resultByteArray;
@@ -1039,9 +1039,9 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
   jint inner_len2 = env->CallIntMethod(env->CallObjectMethod(multiplesOfBase2_Xa, java_util_ArrayList_get, 0), java_util_ArrayList_size);
   
   jint batch_size = env->CallIntMethod(bigScalars, java_util_ArrayList_size);
-  cout << "cpp side batch size: " << batch_size << endl;
-  cout << "cpp side out len1 , inner_len1 : " << out_len1 << " " << inner_len1 << endl;
-  cout << "cpp side out len2 , inner_len2 : " << out_len2 << " " << inner_len2 << endl;
+  //cout << "cpp side batch size: " << batch_size << endl;
+  //cout << "cpp side out len1 , inner_len1 : " << out_len1 << " " << inner_len1 << endl;
+  //cout << "cpp side out len2 , inner_len2 : " << out_len2 << " " << inner_len2 << endl;
 
   auto start = std::chrono::steady_clock::now();
   vector<Scalar> bigScalarArray = vector<Scalar>(batch_size, Scalar());
@@ -1050,7 +1050,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
 
   auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
-  std::cout << "doubleBatchMSM BigInt allocation elapsed time: " << elapsed_seconds.count() << "s\n";
+  //std::cout << "doubleBatchMSM BigInt allocation elapsed time: " << elapsed_seconds.count() << "s\n";
 
 
 
@@ -1165,7 +1165,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
 
   end = std::chrono::steady_clock::now();
   elapsed_seconds = end-start;
-  std::cout << "doubleBatchMSM Read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
+  //std::cout << "doubleBatchMSM Read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
 
 
   jbyteArray resultByteArray = env->NewByteArray(batch_size * (sizeof(BN254G1) + sizeof(BN254G2)));
@@ -1188,7 +1188,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
 
   end = std::chrono::steady_clock::now();
   elapsed_seconds = end-start;
-  std::cout << "doubleBatchMSM C++ Compute elapsed time: " << elapsed_seconds.count() << "s\n";
+  //std::cout << "doubleBatchMSM C++ Compute elapsed time: " << elapsed_seconds.count() << "s\n";
   
   return resultByteArray;
 

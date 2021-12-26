@@ -1,8 +1,8 @@
 
-for TOTAL_CORES in 8; do
-  for SIZE in `seq 20 20`; do
+for TOTAL_CORES in 16; do
+  for SIZE in `seq 22 22`; do
 
-    export APP=zksnark
+    export APP=fmsm-g1
     export MEMORY=64G
     export MULTIPLIER=2
 
@@ -10,7 +10,7 @@ for TOTAL_CORES in 8; do
     export NUM_EXECUTORS=$((TOTAL_CORES / CORES))
     export NUM_PARTITIONS=$((TOTAL_CORES * MULTIPLIER))
 
-    spark-submit \
+    /opt/spark/bin/spark-submit \
       --conf spark.driver.memory=$MEMORY \
       --conf spark.driver.maxResultSize=$MEMORY \
       --conf spark.executor.cores=$CORES \

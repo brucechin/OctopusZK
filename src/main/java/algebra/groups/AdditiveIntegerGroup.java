@@ -14,6 +14,8 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Random;
 
+import algebra.fields.Fp2;
+
 /*
  * AdditiveIntegerGroup is an additive cyclic group of order r.
  * If the order is not provided for the constructor, the group behaves as the integer group Z.
@@ -142,4 +144,26 @@ public class AdditiveIntegerGroup extends AbstractGroup<AdditiveIntegerGroup> {
         }
         return this.number.equals(that.number);
     }
+
+
+    public  ArrayList<Fp2> BN254G2ToFp2(){
+        ArrayList<Fp2> res = new ArrayList<>();
+        return res;
+    }
+    public  void setBigIntegerBN254G1(BigInteger x, BigInteger y, BigInteger z){
+
+    }
+    public  void setBigIntegerBN254G2(BigInteger x1, BigInteger x2, BigInteger y1, BigInteger y2, BigInteger z1, BigInteger z2){
+
+    }
+
+    public  ArrayList<BigInteger> BN254G1ToBigInteger(){
+        ArrayList<BigInteger> result = new ArrayList<BigInteger>();
+        return result;
+    }
+    public ArrayList<BigInteger> BN254G2ToBigInteger(){
+        ArrayList<BigInteger> result = new ArrayList<BigInteger>();
+        return result;
+    }
+    
 }

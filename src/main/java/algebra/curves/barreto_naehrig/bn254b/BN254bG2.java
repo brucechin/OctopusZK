@@ -44,4 +44,23 @@ public class BN254bG2
         ArrayList<Fp2> res = new ArrayList<>();
         return res;
     }
+
+    public  void setBigIntegerBN254G2(BigInteger x1, BigInteger x2, BigInteger y1, BigInteger y2, BigInteger z1, BigInteger z2){
+
+    }
+
+
+    public  void setBigIntegerBN254G1(BigInteger x, BigInteger y, BigInteger z){
+
+    }
+
+    public  ArrayList<BigInteger> BN254G1ToBigInteger(){
+        ArrayList<BigInteger> result = new ArrayList<BigInteger>();
+        return result;
+    }
+    public  ArrayList<BigInteger> BN254G2ToBigInteger(){
+        ArrayList<BigInteger> result = new ArrayList<BigInteger>();
+        return result;
+    }
+
 }
