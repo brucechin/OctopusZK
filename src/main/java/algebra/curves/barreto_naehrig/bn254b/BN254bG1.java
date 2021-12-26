@@ -12,7 +12,8 @@ import algebra.curves.barreto_naehrig.bn254b.BN254bFields.BN254bFq;
 import algebra.curves.barreto_naehrig.bn254b.BN254bFields.BN254bFr;
 import algebra.curves.barreto_naehrig.bn254b.bn254b_parameters.BN254bG1Parameters;
 import java.math.BigInteger;
-
+import java.util.ArrayList;
+import algebra.fields.Fp2;
 public class BN254bG1
         extends BNG1<BN254bFr, BN254bFq, BN254bG1, BN254bG1Parameters> {
 
@@ -36,5 +37,10 @@ public class BN254bG1
 
     public void setBigInteger(BigInteger bigInteger) {
         //do not use it
+    }
+
+    public  ArrayList<Fp2> BN254G2ToFp2(){
+        ArrayList<Fp2> res = new ArrayList<>();
+        return res;
     }
 }

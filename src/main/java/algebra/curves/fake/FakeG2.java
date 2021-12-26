@@ -14,6 +14,7 @@ import algebra.curves.fake.abstract_fake_parameters.AbstractFakeG2Parameters;
 import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import algebra.fields.Fp2;
 
 public class FakeG2 extends AbstractG2<FakeG2> implements Serializable {
 
@@ -100,7 +101,10 @@ public class FakeG2 extends AbstractG2<FakeG2> implements Serializable {
     public String toString() {
         return this.element.toString();
     }
-
+    public  ArrayList<Fp2> BN254G2ToFp2(){
+        ArrayList<Fp2> res = new ArrayList<>();
+        return res;
+    }
     public boolean equals(final FakeG2 that) {
         if (that == null) {
             return false;
