@@ -551,7 +551,10 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
             CUDA_CALL(cudaDeviceSynchronize());
 
         }
-        
+
+        CUDA_CALL( cudaMemcpy((void**)&outputArray, resultGPU,  sizeof(BN254G1), cudaMemcpyDeviceToHost); )
+        CUDA_CALL(cudaDeviceSynchronize());
+        printMem(outputArray[0].X);
     }
 
     cudaError_t error = cudaGetLastError();
@@ -634,6 +637,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
         memcpy(tmp, bytes,len);
         
     }
+
 
 
     //lianke: we know in advance that the numBits will be at most 254. we hard encode it.

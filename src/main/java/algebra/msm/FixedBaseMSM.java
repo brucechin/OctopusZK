@@ -393,6 +393,7 @@ public class FixedBaseMSM {
         int in_size1 = multiplesOfBase1.get(0).size();
         int out_size2 = multiplesOfBase2.size();
         int in_size2 = multiplesOfBase2.get(0).size();
+        long start = System.currentTimeMillis();
 
 
         for(int i =0; i < out_size1; i++){
@@ -440,7 +441,9 @@ public class FixedBaseMSM {
         for (FieldT scalar : scalars) {
             bigScalars.add(bigIntegerToByteArrayHelperCGBN(scalar.toBigInteger()));
         }
-
+        long finish = System.currentTimeMillis();
+        long timeElapsed = finish - start;
+        System.out.println("JAVA side prepare data time elapsed: " + timeElapsed + " ms");
 
         byte[] resultByteArray = doubleBatchMSMNativeHelper(outerc1, windowSize1, outerc2, windowSize2,
                                         multiplesOfBase1_X, multiplesOfBase1_Y, multiplesOfBase1_Z,
@@ -450,7 +453,7 @@ public class FixedBaseMSM {
 
         final List<Tuple2<G1T, G2T>> jni_res = new ArrayList<>(scalars.size());
 
-        long start = System.currentTimeMillis();
+        start = System.currentTimeMillis();
         int size_of_bigint_cpp_side = 64;
 
         // because each G1 value takes up 3 BigIntegers, and each G2 takes up 6 BigIntegers.
@@ -518,8 +521,8 @@ public class FixedBaseMSM {
             jni_res.add(new Tuple2<>(temp1, temp2));
         }
 
-        long finish = System.currentTimeMillis();
-        long timeElapsed = finish - start;
+        finish = System.currentTimeMillis();
+        timeElapsed = finish - start;
         System.out.println("data receive transformation time elapsed: " + timeElapsed + " ms");
 
 

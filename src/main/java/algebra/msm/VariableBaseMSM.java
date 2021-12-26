@@ -170,11 +170,7 @@ public class VariableBaseMSM {
         ArrayList<GroupT> resultArray = new ArrayList<>();
         //TOD lianke: this for loop could mean we call the CUDA kernel for numGroups times.
         for (int k = numGroups - 1; k >= 0; k--) {
-            if (k < numGroups - 1) {
-                for (int i = 0; i < c; i++) {
-                    result = result.twice();
-                }
-            }
+
 
             //TODO lianke: this buckets should be a global array shared by all CUDA processes.
             final ArrayList<GroupT> buckets = new ArrayList<>(bucketsModel);
@@ -204,7 +200,12 @@ public class VariableBaseMSM {
             }
             resultArray.add(result);
 
-
+            if (k > 0) {
+                for (int i = 0; i < c; i++) {
+                    result = result.twice();
+                }
+            }
+            System.out.println("k=" +k + " result=" + result.toString());
         }
 
         return result;
@@ -361,20 +362,19 @@ public class VariableBaseMSM {
         int numBits = 0;
         for (int i = 0; i < bases.size(); i++) {
             final BigInteger scalar = scalars.get(i).toBigInteger();
-            if (scalar.equals(BigInteger.ZERO)) {
-                continue;
-            }
+            // if (scalar.equals(BigInteger.ZERO)) {
+            //     continue;
+            // }
 
             final GroupT base = bases.get(i);
 
-            if (scalar.equals(BigInteger.ONE)) {
-                acc = acc.add(base);
-            } else {
+            // if (scalar.equals(BigInteger.ONE)) {
+            //     acc = acc.add(base);
+            // } else {
                 filteredInput.add(new Tuple2<>(scalar, base));
                 //System.out.println("java side filteredInput add <scalar,base> index:" + i + "\n"  +  byteToString(scalar.toByteArray()) + ",\n " + byteToString(base.toBigInteger().toByteArray()));
-
                 numBits = Math.max(numBits, scalar.bitLength());
-            }
+            // }
         }
 
     //    System.out.println("java side filteredInput size : " + filteredInput.size() + " number of bits " + numBits + " current acc is " + byteToString(acc.toBigInteger().toByteArray()));

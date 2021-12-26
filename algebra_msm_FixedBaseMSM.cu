@@ -945,14 +945,15 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
 
   cout << "CUDA side base outerc and windowSize :" << outerc << " " << windowSize <<endl;
 
-
+  auto start = std::chrono::steady_clock::now();
 
   for(int i =0; i < batch_size; i++){
       jbyteArray element = (jbyteArray)env->CallObjectMethod(bigScalars, java_util_ArrayList_get, i);
       char* bytes = (char*)env->GetByteArrayElements(element, NULL);
       int len = env->GetArrayLength(element);
+      //cout << len << " ";
       char* tmp = (char*)&bigScalarArray[i]._limbs;
-      memcpy(tmp, bytes, len);
+     memcpy(tmp, bytes, len);
   }
 
   for(int i = 0; i < out_len;i++){
@@ -960,8 +961,10 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
       jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBaseX, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
       char* bytes = (char*)env->GetByteArrayElements(element, NULL);
       int len = env->GetArrayLength(element);
+           // cout << len << " ";
+
       char* tmp = (char*)multiplesOfBasePtrArray[i * inner_len + j].X._limbs;
-      memcpy(tmp, bytes,len);
+     memcpy(tmp, bytes,len);
 
     }
   }
@@ -971,8 +974,10 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
       jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBaseY, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
       char* bytes = (char*)env->GetByteArrayElements(element, NULL);
       int len = env->GetArrayLength(element);
+      //cout << len << " ";
+
       char* tmp = (char*)multiplesOfBasePtrArray[i * inner_len + j].Y._limbs;
-      memcpy(tmp, bytes,len);
+     memcpy(tmp, bytes,len);
     }
   }
 
@@ -990,10 +995,22 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   BN254G1* outputBN254ArrayCPU = new BN254G1[batch_size];
   memset(outputBN254ArrayCPU, 0, sizeof(BN254G1) * batch_size);
 
+  auto end = std::chrono::steady_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end-start;
+  std::cout << "C++ read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
+
   fixed_batch_MSM(bigScalarArray, multiplesOfBasePtrArray, outputBN254ArrayCPU, outerc, windowSize, out_len, inner_len);
+  end = std::chrono::steady_clock::now();
+
+
+  start = std::chrono::steady_clock::now();
   for(int i = 0; i < batch_size; i++){
     env->SetByteArrayRegion(resultByteArray, i * sizeof(BN254G1) , sizeof(BN254G1) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[i]));
   }
+  end = std::chrono::steady_clock::now();
+  elapsed_seconds = end-start;
+  std::cout << "C++ write results back to JVM elapsed time: " << elapsed_seconds.count() << "s\n";
+
 
   return resultByteArray;
 }
@@ -1151,7 +1168,6 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
   std::cout << "doubleBatchMSM Read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
 
 
-  start = std::chrono::steady_clock::now();
   jbyteArray resultByteArray = env->NewByteArray(batch_size * (sizeof(BN254G1) + sizeof(BN254G2)));
   BN254G1* outputBN254G1ArrayCPU = new BN254G1[batch_size];
   memset(outputBN254G1ArrayCPU, 0, sizeof(BN254G1) * batch_size);
@@ -1163,17 +1179,17 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
                           outerc1, windowSize1, outerc2, windowSize2,
                           out_len1, inner_len1, out_len2, inner_len2);
 
+  start = std::chrono::steady_clock::now();
 
-  end = std::chrono::steady_clock::now();
-  elapsed_seconds = end-start;
-  //std::cout << "doubleBatchMSM C++ Compute elapsed time: " << elapsed_seconds.count() << "s\n";
-  
   for(int i = 0; i < batch_size; i++){
     env->SetByteArrayRegion(resultByteArray, i * (sizeof(BN254G1) +sizeof(BN254G2)), sizeof(BN254G1) ,   reinterpret_cast<const jbyte*>(&outputBN254G1ArrayCPU[i]));
     env->SetByteArrayRegion(resultByteArray, i * (sizeof(BN254G1) +sizeof(BN254G2)) + sizeof(BN254G1), sizeof(BN254G2) ,   reinterpret_cast<const jbyte*>(&outputBN254G2ArrayCPU[i]));
   }
 
-
+  end = std::chrono::steady_clock::now();
+  elapsed_seconds = end-start;
+  std::cout << "doubleBatchMSM C++ Compute elapsed time: " << elapsed_seconds.count() << "s\n";
+  
   return resultByteArray;
 
   }

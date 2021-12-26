@@ -36,3 +36,10 @@ Because the GPUSnark repo is not correct with the DIZK computation results, and 
 # 2021.12.22 
 
 meet some difficult issues when implementing MSM using the NVIDIA CGBN library. each cgbn_t is operated by TPI threads, so when i tried to write back the computation results back to CPU memory, i can only write a partial component with each thread. need to carefully operate on global variables and local variables in order to obtain the correct CGBN computation results and memcpy them back to CPU.
+
+
+# 2021.12.25 
+found out that the distributed zk can not use the newest JDK version 11.
+### Caused by: java.lang.IllegalArgumentException: Invalid lambda deserialization at reductions.r1cs_to_qap.R1CStoQAPRDD.$deserializeLambda$(R1CStoQAPRDD.java:1)'
+ 
+remember to use JDK-8 version to avoid this problem.
