@@ -835,9 +835,9 @@ __global__ void getWindowTableG1(BN254G1* outputTable, BN254G1* outerArray, BN25
     while(in_index > 0){
       if(in_index %2 ==1){
         BN254G1Compute to_add;
-        cgbn_load(_env, to_add.X, &outputTable[out_index * windowSize + counter].X);
-        cgbn_load(_env, to_add.Y, &outputTable[out_index * windowSize + counter].Y);
-        cgbn_load(_env, to_add.Z, &outputTable[out_index * windowSize + counter].Z);
+        cgbn_load(_env, to_add.X, &outerArray[out_index * windowSize + counter].X);
+        cgbn_load(_env, to_add.Y, &outerArray[out_index * windowSize + counter].Y);
+        cgbn_load(_env, to_add.Z, &outerArray[out_index * windowSize + counter].Z);
 
         zero = add(zero, to_add);
       }
@@ -878,9 +878,9 @@ __global__ void calculateBaseOuterG1Helper(BN254G1* outerArray, BN254G1 baseOute
   }
 
   for(int outer = 0; outer < windowSize; outer++){
-    cgbn_store(_env, &outerArray[outer].X, base.X);
-    cgbn_store(_env, &outerArray[outer].X, base.X);
-    cgbn_store(_env, &outerArray[outer].X, base.X);
+    cgbn_store(_env, &outerArray[idx * windowSize + outer].X, base.X);
+    cgbn_store(_env, &outerArray[idx * windowSize + outer].X, base.X);
+    cgbn_store(_env, &outerArray[idx * windowSize + outer].X, base.X);
     base = add(base, base);
   }
   
