@@ -35,7 +35,7 @@ public class SerialSetup {
             final G1T g1Factory,
             final G2T g2Factory,
             final PairingT pairing,
-            final Configuration config) {
+            final Configuration config) throws Exception{
         // Generate secret randomness.
         final FieldT t = fieldFactory.random(config.seed(), config.secureSeed());
         final FieldT alpha = fieldFactory.random(config.seed(), config.secureSeed());

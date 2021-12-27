@@ -27,7 +27,7 @@ import zk_proof_systems.zkSNARK.objects.Proof;
 
 public class ZKSNARKProfiling {
 
-    public static void serialzkSNARKProfiling(final Configuration config, final long numConstraints) {
+    public static void serialzkSNARKProfiling(final Configuration config, final long numConstraints) throws Exception{
         final int numInputs = 1023;
 
         final BN254aFr fieldFactory = new BN254aFr(2L);
@@ -82,7 +82,7 @@ public class ZKSNARKProfiling {
     }
 
     public static void serialzkSNARKLargeProfiling(
-            final Configuration config, final long numConstraints) {
+            final Configuration config, final long numConstraints) throws Exception{
         final int numInputs = 1023;
 
         final BN254bFr fieldFactory = new BN254bFr(2L);

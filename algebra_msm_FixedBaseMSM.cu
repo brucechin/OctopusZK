@@ -722,6 +722,13 @@ BN254G2Compute add(BN254G2Compute a, BN254G2Compute b) {
 }
 
 
+  // vector<BN254G1> multiplesOfBasePtrArray = vector<BN254G1>(out_len * inner_len, BN254G1());
+
+__global__ void getWindowTableG1(BN254G1* outputTable, BN254G1 base, int numWindows, int innerLimit){
+  
+}
+
+
 __global__ void fixedbase_MSM_unit_processing_G1(Scalar* inputScalarArray, BN254G1* inputBaseArray, BN254G1* outputBN254Array, int outerc, int windowSize, int tableInnerSize, int batch_size){
     const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
     context_t _context;
@@ -835,7 +842,7 @@ void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1>
 
     fixedbase_MSM_unit_processing_G1 <<<blocks,threads_per_block, 32 * 1024>>>( inputScalarArrayGPU, inputBaseArrayGPU, outputBN254ArrayGPU, outerc, windowSize, inner_len, batch_size);
     CUDA_CALL(cudaDeviceSynchronize());
-
+   //TODO lianke: reverse the endian on GPU to save some time for java side.
 
     cudaError_t error = cudaGetLastError();
     if(error != cudaSuccess)
@@ -926,17 +933,15 @@ void  fixed_double_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<B
  * Signature: (IILjava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;I)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
-  (JNIEnv *env, jclass obj, jint outerc, jint windowSize, jobject multiplesOfBaseX, jobject multiplesOfBaseY, jobject multiplesOfBaseZ,  jobject bigScalars, jint BNType)
+  (JNIEnv *env, jclass obj, jint outerc, jint windowSize, jint out_len, jint inner_len, jint batch_size, 
+  jbyteArray multiplesOfBaseXYZ,  jbyteArray bigScalarsArrayInput, jint BNType)
 {
 
   jclass java_util_ArrayList      = static_cast<jclass>(env->NewGlobalRef(env->FindClass("java/util/ArrayList")));
   jmethodID java_util_ArrayList_size = env->GetMethodID(java_util_ArrayList, "size", "()I");
   jmethodID java_util_ArrayList_get  = env->GetMethodID(java_util_ArrayList, "get", "(I)Ljava/lang/Object;");
 
-  jint out_len = env->CallIntMethod(multiplesOfBaseX, java_util_ArrayList_size);
-  jint inner_len = env->CallIntMethod(env->CallObjectMethod(multiplesOfBaseX, java_util_ArrayList_get, 0), java_util_ArrayList_size);
-  
-  jint batch_size = env->CallIntMethod(bigScalars, java_util_ArrayList_size);
+  vector<Scalar> bigScalarArrayFake = vector<Scalar>(batch_size, Scalar());
 
   vector<Scalar> bigScalarArray = vector<Scalar>(batch_size, Scalar());
   vector<BN254G1> multiplesOfBasePtrArray = vector<BN254G1>(out_len * inner_len, BN254G1());
@@ -946,70 +951,45 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   //cout << "CUDA side base outerc and windowSize :" << outerc << " " << windowSize <<endl;
 
   auto start = std::chrono::steady_clock::now();
+  int len = 32; //254-bit BN254.
 
-  for(int i =0; i < batch_size; i++){
-      jbyteArray element = (jbyteArray)env->CallObjectMethod(bigScalars, java_util_ArrayList_get, i);
-      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-      int len = env->GetArrayLength(element);
-      //cout << len << " ";
-      char* tmp = (char*)&bigScalarArray[i]._limbs;
-     memcpy(tmp, bytes, len);
-  }
-
+  char* baseByteArrayXYZ = (char*)env->GetByteArrayElements(multiplesOfBaseXYZ, NULL);
   for(int i = 0; i < out_len;i++){
     for(int j = 0; j < inner_len; j++){
-      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBaseX, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
-      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-      int len = env->GetArrayLength(element);
-           // cout << len << " ";
 
       char* tmp = (char*)multiplesOfBasePtrArray[i * inner_len + j].X._limbs;
-     memcpy(tmp, bytes,len);
+      memcpy(tmp, &baseByteArrayXYZ[(3 * (i * inner_len + j)) * len ],len);
+      char* tmp2 = (char*)multiplesOfBasePtrArray[i * inner_len + j].Y._limbs;
+      memcpy(tmp2,  &baseByteArrayXYZ[(3 * (i * inner_len + j) +1) * len],len);
+      char* tmp3 = (char*)multiplesOfBasePtrArray[i * inner_len + j].Z._limbs;
+      memcpy(tmp3, &baseByteArrayXYZ[(3 * (i * inner_len + j) +2) * len],len);
 
     }
   }
 
-  for(int i = 0; i < out_len;i++){
-    for(int j = 0; j < inner_len; j++){
-      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBaseY, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
-      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-      int len = env->GetArrayLength(element);
-      //cout << len << " ";
-
-      char* tmp = (char*)multiplesOfBasePtrArray[i * inner_len + j].Y._limbs;
-     memcpy(tmp, bytes,len);
-    }
+  char* scalarBytes = (char*)env->GetByteArrayElements(bigScalarsArrayInput, NULL);
+  for(int i =0; i < batch_size; i++){
+    char* tmp = (char*)&bigScalarArray[i]._limbs;
+    memcpy(tmp, &scalarBytes[i * len ], len);
   }
 
-  for(int i = 0; i < out_len;i++){
-    for(int j = 0; j < inner_len; j++){
-      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBaseZ, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
-      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-      int len = env->GetArrayLength(element);
-      char* tmp = (char*)multiplesOfBasePtrArray[i * inner_len + j].Z._limbs;
-      memcpy(tmp, bytes,len);
-    }
-  }
-  //cout << "output array number of bytes=" << sizeof(BN254G1) * batch_size <<endl;
   jbyteArray resultByteArray = env->NewByteArray(sizeof(BN254G1) * batch_size);
   BN254G1* outputBN254ArrayCPU = new BN254G1[batch_size];
   memset(outputBN254ArrayCPU, 0, sizeof(BN254G1) * batch_size);
 
   auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
-  //std::cout << "C++ read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
+  std::cout << "C++ read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
 
   fixed_batch_MSM(bigScalarArray, multiplesOfBasePtrArray, outputBN254ArrayCPU, outerc, windowSize, out_len, inner_len);
   end = std::chrono::steady_clock::now();
 
 
   start = std::chrono::steady_clock::now();
-  for(int i = 0; i < batch_size; i++){
-    env->SetByteArrayRegion(resultByteArray, i * sizeof(BN254G1) , sizeof(BN254G1) ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[i]));
-  }
+  env->SetByteArrayRegion(resultByteArray, 0 , sizeof(BN254G1) * batch_size ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[0]));
   end = std::chrono::steady_clock::now();
   elapsed_seconds = end-start;
-  //std::cout << "C++ write results back to JVM elapsed time: " << elapsed_seconds.count() << "s\n";
+  std::cout << "C++ write results back to JVM elapsed time: " << elapsed_seconds.count() << "s\n";
 
 
   return resultByteArray;
@@ -1025,146 +1005,66 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
  */
 
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeHelper
-  (JNIEnv * env, jclass obj, jint outerc1, jint windowSize1, jint outerc2, jint windowSize2, jobject multiplesOfBase1_X, jobject multiplesOfBase1_Y,
-   jobject multiplesOfBase1_Z, jobject multiplesOfBase2_Xa, jobject multiplesOfBase2_Ya, jobject multiplesOfBase2_Za, jobject multiplesOfBase2_Xb,
-    jobject multiplesOfBase2_Yb, jobject multiplesOfBase2_Zb, jobject bigScalars){
+  (JNIEnv * env, jclass obj, jint outerc1, jint windowSize1, jint outerc2, jint windowSize2, 
+  jint out_len1, jint inner_len1, jint out_len2, jint inner_len2, jint batch_size, 
+   jbyteArray multiplesOfBaseXYZ, jbyteArray multiplesOfBaseXYZABC, jbyteArray bigScalarsArrayInput
+){
 
   jclass java_util_ArrayList      = static_cast<jclass>(env->NewGlobalRef(env->FindClass("java/util/ArrayList")));
   jmethodID java_util_ArrayList_size = env->GetMethodID(java_util_ArrayList, "size", "()I");
   jmethodID java_util_ArrayList_get  = env->GetMethodID(java_util_ArrayList, "get", "(I)Ljava/lang/Object;");
 
-  jint out_len1 = env->CallIntMethod(multiplesOfBase1_X, java_util_ArrayList_size);
-  jint inner_len1 = env->CallIntMethod(env->CallObjectMethod(multiplesOfBase1_X, java_util_ArrayList_get, 0), java_util_ArrayList_size);
-  jint out_len2 = env->CallIntMethod(multiplesOfBase2_Xa, java_util_ArrayList_size);
-  jint inner_len2 = env->CallIntMethod(env->CallObjectMethod(multiplesOfBase2_Xa, java_util_ArrayList_get, 0), java_util_ArrayList_size);
-  
-  jint batch_size = env->CallIntMethod(bigScalars, java_util_ArrayList_size);
-  //cout << "cpp side batch size: " << batch_size << endl;
-  //cout << "cpp side out len1 , inner_len1 : " << out_len1 << " " << inner_len1 << endl;
-  //cout << "cpp side out len2 , inner_len2 : " << out_len2 << " " << inner_len2 << endl;
 
-  auto start = std::chrono::steady_clock::now();
   vector<Scalar> bigScalarArray = vector<Scalar>(batch_size, Scalar());
   vector<BN254G1> multiplesOfBase1PtrArray = vector<BN254G1>(out_len1 * inner_len1, BN254G1());
   vector<BN254G2> multiplesOfBase2PtrArray = vector<BN254G2>(out_len2 * inner_len2, BN254G2());
 
-  auto end = std::chrono::steady_clock::now();
-  std::chrono::duration<double> elapsed_seconds = end-start;
-  //std::cout << "doubleBatchMSM BigInt allocation elapsed time: " << elapsed_seconds.count() << "s\n";
 
-
-
-
-  start = std::chrono::steady_clock::now();
-  for(int i =0; i < batch_size; i++){
-      jbyteArray element = (jbyteArray)env->CallObjectMethod(bigScalars, java_util_ArrayList_get, i);
-      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-      int len = env->GetArrayLength(element);
-      char* tmp = (char*)&bigScalarArray[i]._limbs;
-      memcpy(tmp, bytes, len);
-  }
-  //std::cout << "biscalar" <<endl;
-
+  int len = 32; //254-bit BN254.
+  auto start = std::chrono::steady_clock::now();
+  char* baseByteArrayXYZ = (char*)env->GetByteArrayElements(multiplesOfBaseXYZ, NULL);
   for(int i = 0; i < out_len1;i++){
     for(int j = 0; j < inner_len1; j++){
-      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase1_X, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
-      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-      int len = env->GetArrayLength(element);
+
       char* tmp = (char*)multiplesOfBase1PtrArray[i * inner_len1 + j].X._limbs;
-      memcpy(tmp, bytes,len);
+      memcpy(tmp, &baseByteArrayXYZ[(3 * (i * inner_len1 + j)) * len ],len);
+      char* tmp2 = (char*)multiplesOfBase1PtrArray[i * inner_len1 + j].Y._limbs;
+      memcpy(tmp2,  &baseByteArrayXYZ[(3 * (i * inner_len1 + j) +1) * len],len);
+      char* tmp3 = (char*)multiplesOfBase1PtrArray[i * inner_len1 + j].Z._limbs;
+      memcpy(tmp3, &baseByteArrayXYZ[(3 * (i * inner_len1 + j) +2) * len],len);
 
     }
   }
 
-  for(int i = 0; i < out_len1;i++){
-    for(int j = 0; j < inner_len1; j++){
-      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase1_Y, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
-      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-      int len = env->GetArrayLength(element);
-      char* tmp = (char*)multiplesOfBase1PtrArray[i * inner_len1 + j].Y._limbs;
-      memcpy(tmp, bytes,len);
-    }
+  char* scalarBytes = (char*)env->GetByteArrayElements(bigScalarsArrayInput, NULL);
+  for(int i =0; i < batch_size; i++){
+    char* tmp = (char*)&bigScalarArray[i]._limbs;
+    memcpy(tmp, &scalarBytes[i * len ], len);
   }
 
-  for(int i = 0; i < out_len1;i++){
-    for(int j = 0; j < inner_len1; j++){
-      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase1_Z, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
-      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-      int len = env->GetArrayLength(element);
-      char* tmp = (char*)multiplesOfBase1PtrArray[i * inner_len1 + j].Z._limbs;
-      memcpy(tmp, bytes,len);
-    }
-  }
-  //std::cout << "G1" <<endl;
 
-
-
+  char* baseByteArrayXYZABC = (char*)env->GetByteArrayElements(multiplesOfBaseXYZABC, NULL);
   for(int i = 0; i < out_len2;i++){
     for(int j = 0; j < inner_len2; j++){
-      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase2_Xa, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
-      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-      int len = env->GetArrayLength(element);
       char* tmp = (char*)multiplesOfBase2PtrArray[i * inner_len2 + j].Xa._limbs;
-      memcpy(tmp, bytes,len);
+      memcpy(tmp, &baseByteArrayXYZABC[(6 * (i * inner_len2 + j)) * len ],len);
+      char* tmp2 = (char*)multiplesOfBase2PtrArray[i * inner_len2 + j].Xb._limbs;
+      memcpy(tmp2,  &baseByteArrayXYZABC[(6 * (i * inner_len2 + j) +1) * len],len);
+      char* tmp3 = (char*)multiplesOfBase2PtrArray[i * inner_len2 + j].Ya._limbs;
+      memcpy(tmp3, &baseByteArrayXYZABC[(6 * (i * inner_len2 + j) +2) * len],len);
+      char* tmp4 = (char*)multiplesOfBase2PtrArray[i * inner_len2 + j].Yb._limbs;
+      memcpy(tmp4, &baseByteArrayXYZABC[(6 * (i * inner_len2 + j) + 3) * len ],len);
+      char* tmp5 = (char*)multiplesOfBase2PtrArray[i * inner_len2 + j].Za._limbs;
+      memcpy(tmp5,  &baseByteArrayXYZABC[(6 * (i * inner_len2 + j) + 4) * len],len);
+      char* tmp6 = (char*)multiplesOfBase2PtrArray[i * inner_len2 + j].Zb._limbs;
+      memcpy(tmp6, &baseByteArrayXYZABC[(6 * (i * inner_len2 + j) + 5) * len],len);
     }
   }
 
-  for(int i = 0; i < out_len2;i++){
-    for(int j = 0; j < inner_len2; j++){
-      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase2_Xb, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
-      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-      int len = env->GetArrayLength(element);
-      char* tmp = (char*)multiplesOfBase2PtrArray[i * inner_len2 + j].Xb._limbs;
-      memcpy(tmp, bytes,len);
-    }
-  }
-  //std::cout << "G2X" <<endl;
 
-  for(int i = 0; i < out_len2;i++){
-    for(int j = 0; j < inner_len2; j++){
-      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase2_Ya, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
-      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-      int len = env->GetArrayLength(element);
-      char* tmp = (char*)multiplesOfBase2PtrArray[i * inner_len2 + j].Ya._limbs;
-      memcpy(tmp, bytes,len);
-    }
-  }
 
-  for(int i = 0; i < out_len2;i++){
-    for(int j = 0; j < inner_len2; j++){
-      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase2_Yb, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
-      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-      int len = env->GetArrayLength(element);
-      char* tmp = (char*)multiplesOfBase2PtrArray[i * inner_len2 + j].Yb._limbs;
-      memcpy(tmp, bytes,len);
-    }
-  }
-  //std::cout << "G2Y" <<endl;
-
-  for(int i = 0; i < out_len2;i++){
-    for(int j = 0; j < inner_len2; j++){
-      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase2_Za, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
-      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-      int len = env->GetArrayLength(element);
-      char* tmp = (char*)multiplesOfBase2PtrArray[i * inner_len2 + j].Za._limbs;
-      memcpy(tmp, bytes,len);
-    }
-  }
-
-  for(int i = 0; i < out_len2;i++){
-    for(int j = 0; j < inner_len2; j++){
-      jbyteArray element = (jbyteArray)env->CallObjectMethod(env->CallObjectMethod(multiplesOfBase2_Zb, java_util_ArrayList_get, i), java_util_ArrayList_get, j);
-      char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-      int len = env->GetArrayLength(element);
-      char* tmp = (char*)multiplesOfBase2PtrArray[i * inner_len2 + j].Zb._limbs;
-      memcpy(tmp, bytes,len);
-    }
-  }
-
-  //std::cout << "G2" <<endl;
-
-  end = std::chrono::steady_clock::now();
-  elapsed_seconds = end-start;
+  auto end = std::chrono::steady_clock::now();
+  auto elapsed_seconds = end-start;
   //std::cout << "doubleBatchMSM Read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
 
 
@@ -1313,3 +1213,4 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
 //     cgbn_store(_env, &outputArray[idx].Zb, a_b_mul.b);
 
 // }
+

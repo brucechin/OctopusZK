@@ -10,7 +10,7 @@ import profiler.utils.SparkUtils;
 
 public class Profiler {
 
-    public static void serialApp(final String app, final Configuration config, final long size) {
+    public static void serialApp(final String app, final Configuration config, final long size) throws Exception{
         System.out.format("\n[Profiler] - Start Serial %s - %d size\n", SparkUtils.appName(app), size);
 
         if (app.equals("fft")) {
@@ -110,7 +110,7 @@ public class Profiler {
         MatrixMultiplicationProfiling.GaussianProfile(config, n, d, bn, bd);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception{
         if (args.length > 0) {
             String input = args[0].toLowerCase();
             if (input.equals("matmul") || input.equals("matmul_full")) {

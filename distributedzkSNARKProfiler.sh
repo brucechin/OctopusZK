@@ -1,12 +1,12 @@
 
-for TOTAL_CORES in 2; do
-  for SIZE in `seq 23 23`; do
+for TOTAL_CORES in 16; do
+  for SIZE in `seq 24 24`; do
 
-    export APP=fft
+    export APP=fmsm-g1
     export MEMORY=64G
     export MULTIPLIER=1
 
-    export CORES=2
+    export CORES=1
     export NUM_EXECUTORS=$((TOTAL_CORES / CORES))
     export NUM_PARTITIONS=$((TOTAL_CORES * MULTIPLIER))
 
@@ -20,7 +20,7 @@ for TOTAL_CORES in 2; do
       --conf spark.memory.storageFraction=0.3 \
       --conf spark.kryoserializer.buffer.max=1g \
       --conf spark.rdd.compress=true \
-      --conf spark.rpc.message.maxSize=1024 \
+      --conf spark.rpc.message.maxSize=2000 \
       --conf spark.executor.heartbeatInterval=30s \
       --conf spark.network.timeout=300s\
       --conf spark.speculation=true \

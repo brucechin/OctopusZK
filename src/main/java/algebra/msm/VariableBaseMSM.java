@@ -309,47 +309,47 @@ public class VariableBaseMSM {
 
         //serialMSM is only called for  BN254G1 curve.
 
-        ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
-        for (FieldT scalar : scalars) {
-            bigScalars.add(bigIntegerToByteArrayHelperCGBN(scalar.toBigInteger()));
-        }
-        ArrayList<byte[]> basesArrayX = new ArrayList<byte[]>();
-        ArrayList<byte[]> basesArrayY = new ArrayList<byte[]>();
-        ArrayList<byte[]> basesArrayZ = new ArrayList<byte[]>();
+        // ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
+        // for (FieldT scalar : scalars) {
+        //     bigScalars.add(bigIntegerToByteArrayHelperCGBN(scalar.toBigInteger()));
+        // }
+        // ArrayList<byte[]> basesArrayX = new ArrayList<byte[]>();
+        // ArrayList<byte[]> basesArrayY = new ArrayList<byte[]>();
+        // ArrayList<byte[]> basesArrayZ = new ArrayList<byte[]>();
 
-        for (GroupT base : bases){
-            ArrayList<BigInteger> three_values = base.BN254G1ToBigInteger();
+        // for (GroupT base : bases){
+        //     ArrayList<BigInteger> three_values = base.BN254G1ToBigInteger();
 
-            basesArrayX.add(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
-            basesArrayY.add(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
-            basesArrayZ.add(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
+        //     basesArrayX.add(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
+        //     basesArrayY.add(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
+        //     basesArrayZ.add(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
 
-        }
+        // }
 
-        byte[] resArray = variableBaseSerialMSMNativeHelper(basesArrayX, basesArrayY, basesArrayZ, bigScalars);
+        // byte[] resArray = variableBaseSerialMSMNativeHelper(basesArrayX, basesArrayY, basesArrayZ, bigScalars);
         
-        int size_of_bigint_cpp_side = 64;
+        // int size_of_bigint_cpp_side = 64;
         
-        byte[] converted_back_X = new byte[64];
-        byte[] converted_back_Y = new byte[64];
-        byte[] converted_back_Z = new byte[64];
+        // byte[] converted_back_X = new byte[64];
+        // byte[] converted_back_Y = new byte[64];
+        // byte[] converted_back_Z = new byte[64];
 
-        for(int j =0; j < size_of_bigint_cpp_side; j++){
-            converted_back_X[j] = resArray[size_of_bigint_cpp_side - j - 1];
-        }
-        for(int j =0; j < size_of_bigint_cpp_side; j++){
-            converted_back_Y[j] = resArray[2*size_of_bigint_cpp_side - j - 1];
-        }
-        for(int j =0; j < size_of_bigint_cpp_side; j++){
-            converted_back_Z[j] = resArray[3*size_of_bigint_cpp_side - j - 1];
-        }
-        BigInteger bi_X = new BigInteger(converted_back_X);
-        BigInteger bi_Y = new BigInteger(converted_back_Y);
-        BigInteger bi_Z = new BigInteger(converted_back_Z);       
-        GroupT jni_res = bases.get(0).zero();
-        jni_res.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
+        // for(int j =0; j < size_of_bigint_cpp_side; j++){
+        //     converted_back_X[j] = resArray[size_of_bigint_cpp_side - j - 1];
+        // }
+        // for(int j =0; j < size_of_bigint_cpp_side; j++){
+        //     converted_back_Y[j] = resArray[2*size_of_bigint_cpp_side - j - 1];
+        // }
+        // for(int j =0; j < size_of_bigint_cpp_side; j++){
+        //     converted_back_Z[j] = resArray[3*size_of_bigint_cpp_side - j - 1];
+        // }
+        // BigInteger bi_X = new BigInteger(converted_back_X);
+        // BigInteger bi_Y = new BigInteger(converted_back_Y);
+        // BigInteger bi_Z = new BigInteger(converted_back_Z);       
+        // GroupT jni_res = bases.get(0).zero();
+        // jni_res.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
 
-        System.out.println("VariableBaseMSM output=" + jni_res.toString());
+        // System.out.println("VariableBaseMSM output=" + jni_res.toString());
 
 
         // lianke: below is the original code used for verify the JNI cpp side code computation is correct

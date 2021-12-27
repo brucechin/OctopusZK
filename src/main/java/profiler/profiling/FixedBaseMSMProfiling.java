@@ -16,7 +16,7 @@ import java.util.Random;
 
 public class FixedBaseMSMProfiling {
 
-    public static void serialFixedBaseMSMG1Profiling(final Configuration config, final long size) {
+    public static void serialFixedBaseMSMG1Profiling(final Configuration config, final long size) throws Exception {
         final BN254aFr fieldFactory = new BN254aFr(2L);
         final BN254aG1 groupFactory = new BN254aG1Parameters().ONE();
         BN254aG1 generatorG1 = groupFactory.random(config.seed(), config.secureSeed());
@@ -45,9 +45,11 @@ public class FixedBaseMSMProfiling {
         System.out.println("Fix" +result.get(result.size() - 1).toString());
     }
 
-    public static void serialFixedBaseMSMG2Profiling(final Configuration config, final long size) {
+    public static void serialFixedBaseMSMG2Profiling(final Configuration config, final long size) throws Exception{
         final BN254aFr fieldFactory = new BN254aFr(2L);
-        final BN254aG2 groupFactory = new BN254aG2Parameters().ONE();
+        BN254aG2 groupFactory = new BN254aG2Parameters().ONE();
+        groupFactory = groupFactory.random(config.seed(), config.secureSeed());
+
         final int scalarSize = groupFactory.bitSize();
 
         final Random rand = new Random(System.nanoTime());
@@ -76,26 +78,29 @@ public class FixedBaseMSMProfiling {
 
     public static void distributedFixedBaseMSMG1Profiling(final Configuration config, final long size) {
         final BN254aG1 groupFactory = new BN254aG1Parameters().ONE();
-        final int scalarSize = groupFactory.bitSize();
+        BN254aG1 generatorG1 = groupFactory.random(config.seed(), config.secureSeed());
+        final int scalarSize = generatorG1.bitSize();
 
         final JavaPairRDD<Long, BN254aFr> scalars = FixedBaseMSMGenerator.generateData(config, size);
 
         config.setContext("FixedBaseMSMG1");
         config.beginRuntimeMetadata("Size (inputs)", size);
 
-        config.beginLog("FixedBaseMSM");
-        config.beginRuntime("FixedBaseMSM");
+
         final int windowSize = FixedBaseMSM
                 .getWindowSize(size / config.numPartitions(), groupFactory);
         final List<List<BN254aG1>> multiplesOfBase = FixedBaseMSM
                 .getWindowTable(groupFactory, scalarSize, windowSize);
+
+        config.beginLog("FixedBaseMSM");
+        config.beginRuntime("FixedBaseMSM");
         JavaPairRDD<Long, BN254aG1> result = FixedBaseMSM.distributedBatchMSM(
                 scalarSize,
                 windowSize,
                 multiplesOfBase,
                 scalars,
                 config.sparkContext()).persist(config.storageLevel());
-        result.count();
+        //result.count();
         config.endRuntime("FixedBaseMSM");
         config.endLog("FixedBaseMSM");
 
@@ -103,7 +108,10 @@ public class FixedBaseMSMProfiling {
     }
 
     public static void distributedFixedBaseMSMG2Profiling(final Configuration config, final long size) {
-        final BN254aG2 groupFactory = new BN254aG2Parameters().ONE();
+
+        BN254aG2 groupFactory = new BN254aG2Parameters().ONE();
+        groupFactory = groupFactory.random(config.seed(), config.secureSeed());
+
         final int scalarSize = groupFactory.bitSize();
 
         final JavaPairRDD<Long, BN254aFr> scalars = FixedBaseMSMGenerator.generateData(config, size);

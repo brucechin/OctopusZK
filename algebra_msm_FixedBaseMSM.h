@@ -10,18 +10,18 @@ extern "C" {
 /*
  * Class:     algebra_msm_FixedBaseMSM
  * Method:    batchMSMNativeHelper
- * Signature: (IILjava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;I)[B
+ * Signature: (IIIII[B[BI)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
-  (JNIEnv *, jclass, jint, jint, jobject, jobject, jobject, jobject, jint);
+  (JNIEnv *, jclass, jint, jint, jint, jint, jint, jbyteArray, jbyteArray, jint);
 
 /*
  * Class:     algebra_msm_FixedBaseMSM
  * Method:    doubleBatchMSMNativeHelper
- * Signature: (IIIILjava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;)[B
+ * Signature: (IIIIIIIII[B[B[B)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeHelper
-  (JNIEnv *, jclass, jint, jint, jint, jint, jobject, jobject, jobject, jobject, jobject, jobject, jobject, jobject, jobject, jobject);
+  (JNIEnv *, jclass, jint, jint, jint, jint, jint, jint, jint, jint, jint, jbyteArray, jbyteArray, jbyteArray);
 
 #ifdef __cplusplus
 }

@@ -4,7 +4,7 @@ for TOTAL_CORES in 16; do
 
     export APP=fmsm-g1
     export MEMORY=64G
-    export MULTIPLIER=2
+    export MULTIPLIER=1
 
     export CORES=1
     export NUM_EXECUTORS=$((TOTAL_CORES / CORES))
