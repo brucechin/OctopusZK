@@ -722,11 +722,7 @@ BN254G2Compute add(BN254G2Compute a, BN254G2Compute b) {
 }
 
 
-  // vector<BN254G1> multiplesOfBasePtrArray = vector<BN254G1>(out_len * inner_len, BN254G1());
 
-__global__ void getWindowTableG1(BN254G1* outputTable, BN254G1 base, int numWindows, int innerLimit){
-  
-}
 
 
 __global__ void fixedbase_MSM_unit_processing_G1(Scalar* inputScalarArray, BN254G1* inputBaseArray, BN254G1* outputBN254Array, int outerc, int windowSize, int tableInnerSize, int batch_size){
@@ -741,6 +737,9 @@ __global__ void fixedbase_MSM_unit_processing_G1(Scalar* inputScalarArray, BN254
     if(idx >= batch_size){
       return;
     }
+
+
+
     for (int outer = 0; outer < outerc; ++outer) {
         int inner = 0;
         for (int i = 0; i < windowSize; ++i) {
@@ -814,7 +813,81 @@ __global__ void fixedbase_MSM_unit_processing_G2(Scalar* inputScalarArray, BN254
 
 
 
-void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> &multiplesOfBasePtrArray, BN254G1* outputArray,int outerc, int windowSize, int out_len, int inner_len)
+__global__ void getWindowTableG1(BN254G1* outputTable, BN254G1* outerArray, BN254G1 base, int numWindows, int windowSize, int innerLimit){
+  const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
+  //Total size of baseTable is  numWindows * innerLimit
+  int out_index = idx / innerLimit;
+  int in_index = idx % innerLimit;
+    context_t _context;
+    env_t    _env(_context);
+  if(idx > numWindows * innerLimit){
+    return ;
+  }
+
+//TODO this table generation has a bug
+
+    BN254G1Compute zero;
+    memset(zero.X._limbs, 0, MSM_params_t::num_of_bytes);
+    memset(zero.Y._limbs, 0, MSM_params_t::num_of_bytes);
+    memset(zero.Z._limbs, 0, MSM_params_t::num_of_bytes);
+    zero.Y._limbs[0] = 1;
+    int counter = 0;
+    while(in_index > 0){
+      if(in_index %2 ==1){
+        BN254G1Compute to_add;
+        cgbn_load(_env, to_add.X, &outputTable[out_index * windowSize + counter].X);
+        cgbn_load(_env, to_add.Y, &outputTable[out_index * windowSize + counter].Y);
+        cgbn_load(_env, to_add.Z, &outputTable[out_index * windowSize + counter].Z);
+
+        zero = add(zero, to_add);
+      }
+      counter++;
+      in_index = in_index / 2;
+    }
+
+
+    cgbn_store(_env, &outputTable[idx].X, zero.X);
+    cgbn_store(_env, &outputTable[idx].Y, zero.Y);
+    cgbn_store(_env, &outputTable[idx].Z, zero.Z);
+    
+  
+}
+
+__global__ void calculateBaseOuterG1Helper(BN254G1* outerArray, BN254G1 baseOuter, int numWindows, int windowSize){
+  const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
+  /*
+  
+  [[base*1, base*2, base*4, ... , base*2^(windowSize-1)], [], []]
+  */
+
+ //TODO this table generation has a bug
+
+  if(idx >= numWindows){
+    return;
+  }
+  context_t _context;
+  env_t    _env(_context);
+  BN254G1Compute base;
+  cgbn_load(_env, base.X, &baseOuter.X);
+  cgbn_load(_env, base.Y, &baseOuter.Y);
+  cgbn_load(_env, base.Z, &baseOuter.Z);
+  for(int i = 0; i < idx; i++){
+    for(int w = 0; w < windowSize; w++){
+      base = twice(base); //calculate the base for current line of baseOuter.
+    }
+  }
+
+  for(int outer = 0; outer < windowSize; outer++){
+    cgbn_store(_env, &outerArray[outer].X, base.X);
+    cgbn_store(_env, &outerArray[outer].X, base.X);
+    cgbn_store(_env, &outerArray[outer].X, base.X);
+    base = add(base, base);
+  }
+  
+
+}
+
+void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1* outputArray, BN254G1 baseG1, int outerc, int scalarSize, int windowSize, int out_len, int inner_len)
 {
 	int cnt;
     cudaGetDeviceCount(&cnt);
@@ -832,11 +905,28 @@ void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1>
     
     BN254G1 *inputBaseArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputBaseArrayGPU, sizeof(BN254G1) * out_len * inner_len); )
-    CUDA_CALL( cudaMemcpy(inputBaseArrayGPU, (void**)&multiplesOfBasePtrArray[0], sizeof(BN254G1) * out_len * inner_len, cudaMemcpyHostToDevice); )
+    //CUDA_CALL( cudaMemcpy(inputBaseArrayGPU, (void**)&multiplesOfBasePtrArray[0], sizeof(BN254G1) * out_len * inner_len, cudaMemcpyHostToDevice); )
     
     BN254G1* outputBN254ArrayGPU;
     CUDA_CALL( cudaMalloc((void**)&outputBN254ArrayGPU, sizeof(BN254G1) * batch_size); )
     CUDA_CALL( cudaMemset(outputBN254ArrayGPU, 0, sizeof(BN254G1) * batch_size); )
+
+    int numWindows = (scalarSize % windowSize == 0) ? scalarSize / windowSize : scalarSize / windowSize + 1;
+    int innerLimit = (int) pow(2, windowSize);
+
+    BN254G1* baseOuterArray;
+    CUDA_CALL( cudaMalloc((void**)&baseOuterArray, sizeof(BN254G1) * numWindows * windowSize); )
+
+
+    calculateBaseOuterG1Helper  <<<(numWindows + instance_per_block - 1)/instance_per_block, threads_per_block >>> (baseOuterArray, baseG1, numWindows, windowSize);
+    CUDA_CALL(cudaDeviceSynchronize());
+
+
+    size_t msmBaseComputeBlocks = (out_len * inner_len + instance_per_block - 1) / instance_per_block;
+
+    getWindowTableG1<<< msmBaseComputeBlocks, threads_per_block>>>(inputBaseArrayGPU, baseOuterArray, baseG1, numWindows, windowSize, innerLimit); 
+    CUDA_CALL(cudaDeviceSynchronize());
+    
 
     //printf("launch block = %d thread = %d\n", blocks, threads_per_block);
 
@@ -933,15 +1023,14 @@ void  fixed_double_batch_MSM(std::vector<Scalar> & bigScalarArray, std::vector<B
  * Signature: (IILjava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;I)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
-  (JNIEnv *env, jclass obj, jint outerc, jint windowSize, jint out_len, jint inner_len, jint batch_size, 
-  jbyteArray multiplesOfBaseXYZ,  jbyteArray bigScalarsArrayInput, jint BNType)
+  (JNIEnv *env, jclass obj, jint outerc, jint windowSize, jint out_len, jint inner_len, jint batch_size, jint scalarSize, 
+  jbyteArray multiplesOfBaseXYZ,  jbyteArray bigScalarsArrayInput,  jint BNType)
 {
 
   jclass java_util_ArrayList      = static_cast<jclass>(env->NewGlobalRef(env->FindClass("java/util/ArrayList")));
   jmethodID java_util_ArrayList_size = env->GetMethodID(java_util_ArrayList, "size", "()I");
   jmethodID java_util_ArrayList_get  = env->GetMethodID(java_util_ArrayList, "get", "(I)Ljava/lang/Object;");
 
-  vector<Scalar> bigScalarArrayFake = vector<Scalar>(batch_size, Scalar());
 
   vector<Scalar> bigScalarArray = vector<Scalar>(batch_size, Scalar());
   vector<BN254G1> multiplesOfBasePtrArray = vector<BN254G1>(out_len * inner_len, BN254G1());
@@ -973,6 +1062,8 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
     memcpy(tmp, &scalarBytes[i * len ], len);
   }
 
+  BN254G1 baseElement = multiplesOfBasePtrArray[1];
+
   jbyteArray resultByteArray = env->NewByteArray(sizeof(BN254G1) * batch_size);
   BN254G1* outputBN254ArrayCPU = new BN254G1[batch_size];
   memset(outputBN254ArrayCPU, 0, sizeof(BN254G1) * batch_size);
@@ -981,7 +1072,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   std::chrono::duration<double> elapsed_seconds = end-start;
   std::cout << "C++ read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
 
-  fixed_batch_MSM(bigScalarArray, multiplesOfBasePtrArray, outputBN254ArrayCPU, outerc, windowSize, out_len, inner_len);
+  fixed_batch_MSM(bigScalarArray, outputBN254ArrayCPU, baseElement ,outerc, scalarSize, windowSize, out_len, inner_len);
   end = std::chrono::steady_clock::now();
 
 

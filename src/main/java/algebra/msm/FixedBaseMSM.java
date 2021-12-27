@@ -96,23 +96,12 @@ public class FixedBaseMSM {
         return windowTable;
     }
 
-    //TODO lianke for backup purpose
-    // public static native <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
-    // byte[] batchMSMNativeHelper(
-    //         final int outerc,
-    //         final int windowSize,
-    //         final int out_len, final int inner_len, final int batch_size,
-    //         final ArrayList<ArrayList<byte[]>> multiplesOfBaseBN254X,
-    //         final ArrayList<ArrayList<byte[]>> multiplesOfBaseBN254Y,
-    //         final ArrayList<ArrayList<byte[]>> multiplesOfBaseBN254Z,
-    //         final ArrayList<byte[]> bigScalars,
-    //         int BNType);//1 is G1, 2 is G2.
 
     public static native <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
     byte[] batchMSMNativeHelper(
             final int outerc,
             final int windowSize,
-            final int out_len, final int inner_len, final int batch_size,
+            final int out_len, final int inner_len, final int batch_size, final int scalarSize,
             final byte[] multiplesOfBaseBN254XYZ,
             final byte[] bigScalarsArrays,
             int BNType);//1 is G1, 2 is G2.
@@ -251,7 +240,6 @@ public class FixedBaseMSM {
             int in_size = multiplesOfBase.get(0).size();
             long start = System.currentTimeMillis();
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
-            //TODO compute the table on GPU side directly
 
             for(int i =0; i < out_size; i++){
                 for(int j = 0; j< in_size; j++){
@@ -277,7 +265,7 @@ public class FixedBaseMSM {
             long finish = System.currentTimeMillis();
             long timeElapsed = finish - start;
             System.out.println("data transfer preparation time elapsed: " + timeElapsed + " ms");
-            byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, scalars.size(), baseByteArrayXYZ, bigScalarByteArray, 1);
+            byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, scalars.size(), scalarSize, baseByteArrayXYZ, bigScalarByteArray, 1);
             
             start = System.currentTimeMillis();
             int size_of_bigint_cpp_side = 64;
@@ -358,7 +346,7 @@ public class FixedBaseMSM {
             long finish = System.currentTimeMillis();
             long timeElapsed = finish - start;
             System.out.println("data transfer preparation time elapsed: " + timeElapsed + " ms");
-            byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, scalars.size(), baseByteArrayXYZ, bigScalarByteArray, 1);
+            byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, scalars.size(),scalarSize,  baseByteArrayXYZ, bigScalarByteArray, 1);
             
             start = System.currentTimeMillis();
             int size_of_bigint_cpp_side = 64;
