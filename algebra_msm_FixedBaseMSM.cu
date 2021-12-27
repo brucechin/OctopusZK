@@ -879,8 +879,8 @@ __global__ void calculateBaseOuterG1Helper(BN254G1* outerArray, BN254G1 baseOute
 
   for(int outer = 0; outer < windowSize; outer++){
     cgbn_store(_env, &outerArray[idx * windowSize + outer].X, base.X);
-    cgbn_store(_env, &outerArray[idx * windowSize + outer].X, base.X);
-    cgbn_store(_env, &outerArray[idx * windowSize + outer].X, base.X);
+    cgbn_store(_env, &outerArray[idx * windowSize + outer].Y, base.Y);
+    cgbn_store(_env, &outerArray[idx * windowSize + outer].Z, base.Z);
     base = add(base, base);
   }
   
