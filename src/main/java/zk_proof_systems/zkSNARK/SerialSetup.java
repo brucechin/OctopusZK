@@ -90,6 +90,9 @@ public class SerialSetup {
         final int scalarCountG1 = nonZeroAt + nonZeroBt + numVariables;
         final int scalarSizeG1 = generatorG1.bitSize();
         final int windowSizeG1 = FixedBaseMSM.getWindowSize(scalarCountG1, generatorG1);
+        final int numWindowsG1 =
+                (scalarSizeG1 % windowSizeG1 == 0) ? scalarSizeG1 / windowSizeG1 : scalarSizeG1 / windowSizeG1+ 1;
+        final int innerLimitG1 = (int) Math.pow(2, windowSizeG1);
         final List<List<G1T>> windowTableG1 = FixedBaseMSM
                 .getWindowTable(generatorG1, scalarSizeG1, windowSizeG1);
         config.endLog("Generating G1 MSM Window Table");
@@ -114,12 +117,12 @@ public class SerialSetup {
 
         config.beginLog("Encode deltaABC for R1CS proving key", false);
         final List<G1T> deltaABCG1 = FixedBaseMSM
-                .batchMSM(scalarSizeG1, windowSizeG1, windowTableG1, deltaABC);
+                .batchMSM(scalarSizeG1, windowSizeG1, numWindowsG1, innerLimitG1, generatorG1, deltaABC);
         config.endLog("Encode deltaABC for R1CS proving key", false);
 
         config.beginLog("Computing query A", false);
         final List<G1T> queryA = FixedBaseMSM
-                .batchMSM(scalarSizeG1, windowSizeG1, windowTableG1, qap.At());
+                .batchMSM(scalarSizeG1, windowSizeG1,numWindowsG1, innerLimitG1,  generatorG1, qap.At());
         config.endLog("Computing query A", false);
 
         config.beginLog("Computing query B", false);
@@ -139,7 +142,7 @@ public class SerialSetup {
             qap.Ht().set(i, qap.Ht().get(i).mul(inverseDeltaZt));
         }
         final List<G1T> queryH = FixedBaseMSM
-                .batchMSM(scalarSizeG1, windowSizeG1, windowTableG1, qap.Ht());
+                .batchMSM(scalarSizeG1, windowSizeG1, numWindowsG1, innerLimitG1, generatorG1, qap.Ht());
         config.endLog("Computing query H", false);
         //TODO Lianke : batchMSM computing A,B,H takes up 10% of (setup+prove)
         config.endLog("Generating R1CS proving key");
@@ -153,7 +156,7 @@ public class SerialSetup {
 
         config.beginLog("Encoding gammaABC for R1CS verification key");
         final List<G1T> gammaABCG1 = FixedBaseMSM
-                .batchMSM(scalarSizeG1, windowSizeG1, windowTableG1, gammaABC);
+                .batchMSM(scalarSizeG1, windowSizeG1, numWindowsG1, innerLimitG1, generatorG1, gammaABC);
         config.endLog("Encoding gammaABC for R1CS verification key");
 
         config.endLog("Generating R1CS verification key");

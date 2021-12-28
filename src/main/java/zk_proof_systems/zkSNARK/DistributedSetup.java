@@ -73,31 +73,7 @@ public class DistributedSetup {
         config.endLog("Computing deltaABC and gammaABC for R1CS proving key and verification key");
 
         config.beginLog("Computing query densities");
-        // Accumulator<Integer> nonZeroAt = 0;
-        // Accumulator<Integer> nonZeroBt = 0;
-        // for (int i = 0; i < qap.numVariables(); i++) {
-        //     if (!qap.At(i).isZero()) {
-        //         nonZeroAt++;
-        //     }
-        //     if (!qap.Bt(i).isZero()) {
-        //         nonZeroBt++;
-        //     }
-        // }
-        // long numNonZeroAt = 0; 
-        // qap.At().foreach(a ->{
-        //         if(!a._2.isZero()){
-        //                 numNonZeroAt++;
-        //         }
-        // } 
-        // );
 
-        // long numNonZeroBt = 0; 
-        // qap.Bt().foreach(a ->{
-        //         if(!a._2.isZero())
-        //                 numNonZeroBt++;
-                
-        // } 
-        // );
 
         final long numNonZeroAt = qap.At().filter(e -> !e._2.isZero()).count();
         final long numNonZeroBt = qap.Bt().filter(e -> !e._2.isZero()).count();
@@ -108,6 +84,8 @@ public class DistributedSetup {
         final int scalarSizeG1 = generatorG1.bitSize();
         final long scalarCountG1 = numNonZeroAt + numNonZeroBt + numVariables;
         final int windowSizeG1 = FixedBaseMSM.getWindowSize(scalarCountG1 / numPartitions, generatorG1);
+        final int numWindowsG1 = (scalarSizeG1 % windowSizeG1 == 0) ? scalarSizeG1 / windowSizeG1 : scalarSizeG1 / windowSizeG1+ 1;
+        final int innerLimitG1 = (int) Math.pow(2, windowSizeG1);
         final List<List<G1T>> windowTableG1 = FixedBaseMSM
                 .getWindowTable(generatorG1, scalarSizeG1, windowSizeG1);
         config.endLog("Generating G1 MSM Window Table");
@@ -134,7 +112,8 @@ public class DistributedSetup {
         final JavaPairRDD<Long, G1T> deltaABCG1 = FixedBaseMSM.distributedBatchMSM(
                 scalarSizeG1,
                 windowSizeG1,
-                windowTableG1,
+                numWindowsG1, innerLimitG1,
+                generatorG1,
                 deltaABC,
                 config.sparkContext()).cache();
         deltaABCG1.count();
@@ -145,7 +124,8 @@ public class DistributedSetup {
         final JavaPairRDD<Long, G1T> queryA = FixedBaseMSM.distributedBatchMSM(
                 scalarSizeG1,
                 windowSizeG1,
-                windowTableG1,
+                numWindowsG1, innerLimitG1,
+                generatorG1,
                 qap.At(),
                 config.sparkContext()).cache();
         queryA.count();
@@ -173,7 +153,8 @@ public class DistributedSetup {
         final JavaPairRDD<Long, G1T> queryH = FixedBaseMSM.distributedBatchMSM(
                 scalarSizeG1,
                 windowSizeG1,
-                windowTableG1,
+                numWindowsG1, innerLimitG1,
+                generatorG1,
                 inverseDeltaHtZt,
                 config.sparkContext()).cache();//persist(config.storageLevel());
         queryH.count();
@@ -190,7 +171,8 @@ public class DistributedSetup {
         final JavaPairRDD<Long, G1T> gammaABCG1 = FixedBaseMSM.distributedBatchMSM(
                 scalarSizeG1,
                 windowSizeG1,
-                windowTableG1,
+                numWindowsG1, innerLimitG1,
+                generatorG1,
                 gammaABC,
                 config.sparkContext());//.persist(config.storageLevel());
         final JavaPairRDD<Long, G1T> fullGammaABCG1 = Utils

@@ -49,7 +49,7 @@ public class Configuration implements Serializable {
     private boolean debugFlag;
 
     public Configuration() {
-        seed = 5;
+        seed = 10;
         secureSeed = null;
 
         verboseFlag = true;

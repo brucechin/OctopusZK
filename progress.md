@@ -46,3 +46,11 @@ i think it is due to some Serializable overriding bugs by myself?
 
 
 found a stupid microbenchmark error in SerialFixedbaseMSMG1, they did not use the correct group factory
+
+# 2021.12.27 
+offload the windowTable generation to GPU side. because i found that during distributed execution of MSM, the spark broadcast takes much longer time than even computing it. this avoids four overheads:
+1. spark side computing the windowTable. 
+2. spark side broadcaset the windowtable.
+3. java side serialize the windowtable to byteArray
+4. cpp side read and reconstruct the windowtable.
+such an improvement is good for scalability. next step is to implement this feature for G2 curve. also we need to reverse the result endian on GPU side to further reduce the overhead on java side, because java side is just so slow...

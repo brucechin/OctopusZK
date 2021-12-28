@@ -183,7 +183,7 @@ public class FixedBaseMSM {
         return res;
     }
 
-    public static byte[] bigIntegerToByteArrayHelper(BigInteger bigint){
+    public static byte[] bigIntegerToByteArrayHelperForJAVACppChecking(BigInteger bigint){
         byte[] temp = bigint.toByteArray();
         byte[] res = new byte[temp.length / 4 * 4 + 4];
         int size_diff = temp.length / 4 * 4 + 4 - temp.length;
@@ -226,85 +226,83 @@ public class FixedBaseMSM {
     List<T> batchMSM(
             final int scalarSize,
             final int windowSize,
-            final List<List<T>> multiplesOfBase,
+            final int out_size, final int in_size,
+            final T baseElement,
             final List<FieldT> scalars) throws Exception{
         System.out.println("scalarSize len :" + scalarSize);
         System.out.println("windowSize len :" + windowSize);
         System.out.println("batchMSM len :" + scalars.size());
-        System.out.println("multiplesOfBase len : " + multiplesOfBase.size() + " " + multiplesOfBase.get(0).size());
-        System.out.println("multiplesOfBase type : " + multiplesOfBase.get(0).get(0).getClass().getName());
         System.out.println("scalars type : " + scalars.get(0).getClass().getName());
         
     
-            int out_size = multiplesOfBase.size();
-            int in_size = multiplesOfBase.get(0).size();
-            long start = System.currentTimeMillis();
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
 
-            for(int i =0; i < out_size; i++){
-                for(int j = 0; j< in_size; j++){
-                    ArrayList<BigInteger> three_values = multiplesOfBase.get(i).get(j).BN254G1ToBigInteger();
-                    outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
-                    outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
-                    outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
-
-                }
-
-            }
-            byte[] baseByteArrayXYZ = outputStream.toByteArray();
-
-            final int outerc = (scalarSize + windowSize - 1) / windowSize;
-            
-            ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
-
-            for (FieldT scalar : scalars) {
-                bigScalarStream.write(bigIntegerToByteArrayHelperCGBN(scalar.toBigInteger()));
-            }
-            byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
-
-            long finish = System.currentTimeMillis();
-            long timeElapsed = finish - start;
-            System.out.println("data transfer preparation time elapsed: " + timeElapsed + " ms");
-            byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, scalars.size(), scalarSize, baseByteArrayXYZ, bigScalarByteArray, 1);
-            
-            start = System.currentTimeMillis();
-            int size_of_bigint_cpp_side = 64;
-            final List<T> jni_res = new ArrayList<>(scalars.size());
-            
-
-            for(int i = 0; i < scalars.size(); i++){
-                byte[] slice = Arrays.copyOfRange(resultByteArray, 3*i*size_of_bigint_cpp_side, 3*(i+1)*size_of_bigint_cpp_side);
-
-                byte[] converted_back_X = new byte[64];
-                byte[] converted_back_Y = new byte[64];
-                byte[] converted_back_Z = new byte[64];
-
-                for(int j =0; j < size_of_bigint_cpp_side; j++){
-                    converted_back_X[j] = slice[size_of_bigint_cpp_side - j - 1];
-                }
-                for(int j =0; j < size_of_bigint_cpp_side; j++){
-                    converted_back_Y[j] = slice[2*size_of_bigint_cpp_side - j - 1];
-                }
-                for(int j =0; j < size_of_bigint_cpp_side; j++){
-                    converted_back_Z[j] = slice[3*size_of_bigint_cpp_side - j - 1];
-                }
-
-                BigInteger bi_X = new BigInteger(converted_back_X);
-                BigInteger bi_Y = new BigInteger(converted_back_Y);
-                BigInteger bi_Z = new BigInteger(converted_back_Z);
+        long start = System.currentTimeMillis();
 
 
-                T temp = multiplesOfBase.get(0).get(0).zero();
-                temp.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
-                jni_res.add(temp);
-                //System.out.println("CUDA FixedBaseMSM output=" +temp.toString());
-            }
 
-            finish = System.currentTimeMillis();
-            timeElapsed = finish - start;
-            System.out.println("data receive transformation time elapsed: " + timeElapsed + " ms");
-            return jni_res;
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
+        //we only send a single base value to CUDA for computing the windowTable per executor,
+        //this is acutually faster than spark broadcast the windowTable.
+        ArrayList<BigInteger> three_values = baseElement.BN254G1ToBigInteger();
+        outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
+        outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
+        outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
+
+
+        byte[] baseByteArrayXYZ = outputStream.toByteArray();
+
+        final int outerc = (scalarSize + windowSize - 1) / windowSize;
         
+        ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
+
+        for (FieldT scalar : scalars) {
+            bigScalarStream.write(bigIntegerToByteArrayHelperCGBN(scalar.toBigInteger()));
+        }
+        byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
+
+        long finish = System.currentTimeMillis();
+        long timeElapsed = finish - start;
+        System.out.println("data transfer preparation time elapsed: " + timeElapsed + " ms");
+        byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, scalars.size(), scalarSize, baseByteArrayXYZ, bigScalarByteArray, 1);
+        
+        start = System.currentTimeMillis();
+        int size_of_bigint_cpp_side = 64;
+        final List<T> jni_res = new ArrayList<>(scalars.size());
+        
+
+        for(int i = 0; i < scalars.size(); i++){
+            byte[] slice = Arrays.copyOfRange(resultByteArray, 3*i*size_of_bigint_cpp_side, 3*(i+1)*size_of_bigint_cpp_side);
+
+            byte[] converted_back_X = new byte[64];
+            byte[] converted_back_Y = new byte[64];
+            byte[] converted_back_Z = new byte[64];
+            //TODO offload the reverse to GPU side.
+            for(int j =0; j < size_of_bigint_cpp_side; j++){
+                converted_back_X[j] = slice[size_of_bigint_cpp_side - j - 1];
+            }
+            for(int j =0; j < size_of_bigint_cpp_side; j++){
+                converted_back_Y[j] = slice[2*size_of_bigint_cpp_side - j - 1];
+            }
+            for(int j =0; j < size_of_bigint_cpp_side; j++){
+                converted_back_Z[j] = slice[3*size_of_bigint_cpp_side - j - 1];
+            }
+
+            BigInteger bi_X = new BigInteger(converted_back_X);
+            BigInteger bi_Y = new BigInteger(converted_back_Y);
+            BigInteger bi_Z = new BigInteger(converted_back_Z);
+
+
+            T temp = baseElement.zero();
+            temp.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
+            jni_res.add(temp);
+            //System.out.println("CUDA FixedBaseMSM output=" +temp.toString());
+        }
+
+        finish = System.currentTimeMillis();
+        timeElapsed = finish - start;
+        System.out.println("data receive transformation time elapsed: " + timeElapsed + " ms");
+        return jni_res;
+    
 
     }
 
@@ -314,24 +312,23 @@ public class FixedBaseMSM {
     List<Tuple2<Long, T>> batchMSMPartition(
             final int scalarSize,
             final int windowSize,
-            final List<List<T>> multiplesOfBase,
+            final int out_size, final int in_size,
+            final T baseElement,
             final List<Tuple2< Long, FieldT>> scalars) throws Exception {
         
-                int out_size = multiplesOfBase.size();
-            int in_size = multiplesOfBase.get(0).size();
             long start = System.currentTimeMillis();
+
+
+
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
-            //TODO compute the table on GPU side directly
+            //we only send a single base value to CUDA for computing the windowTable per executor,
+            //this is acutually faster than spark broadcast the windowTable.
+            ArrayList<BigInteger> three_values = baseElement.BN254G1ToBigInteger();
+            outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
+            outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
+            outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
 
-            for(int i =0; i < out_size; i++){
-                for(int j = 0; j< in_size; j++){
-                    ArrayList<BigInteger> three_values = multiplesOfBase.get(i).get(j).BN254G1ToBigInteger();
-                    outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
-                    outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
-                    outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
-                }
 
-            }
             byte[] baseByteArrayXYZ = outputStream.toByteArray();
 
             final int outerc = (scalarSize + windowSize - 1) / windowSize;
@@ -346,7 +343,7 @@ public class FixedBaseMSM {
             long finish = System.currentTimeMillis();
             long timeElapsed = finish - start;
             System.out.println("data transfer preparation time elapsed: " + timeElapsed + " ms");
-            byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, scalars.size(),scalarSize,  baseByteArrayXYZ, bigScalarByteArray, 1);
+            byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, scalars.size(), scalarSize, baseByteArrayXYZ, bigScalarByteArray, 1);
             
             start = System.currentTimeMillis();
             int size_of_bigint_cpp_side = 64;
@@ -374,8 +371,7 @@ public class FixedBaseMSM {
                 BigInteger bi_Y = new BigInteger(converted_back_Y);
                 BigInteger bi_Z = new BigInteger(converted_back_Z);
 
-
-                T temp = multiplesOfBase.get(0).get(0).zero();
+                T temp = baseElement.zero();
                 temp.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
                 jni_res.add(new Tuple2<>(scalars.get(i)._1, temp));
                 //System.out.println("CUDA FixedBaseMSM output=" +temp.toString());
@@ -394,12 +390,13 @@ public class FixedBaseMSM {
     distributedBatchMSM(
             final int scalarSize,
             final int windowSize,
-            final List<List<GroupT>> multiplesOfBase,
+            final int out_size, final int in_size,
+            GroupT baseElement,
             final JavaPairRDD<Long, FieldT> scalars,
             final JavaSparkContext sc) {
         long start1 = System.currentTimeMillis();
+        final Broadcast<GroupT> baseBroadcast = sc.broadcast(baseElement);
 
-        final Broadcast<List<List<GroupT>>> baseBroadcast = sc.broadcast(multiplesOfBase);
         long finish1 = System.currentTimeMillis();
         long timeElapsed1 = finish1 - start1;
         System.out.println("Spark broadcast  time elapsed: " + timeElapsed1 + " ms");
@@ -408,7 +405,7 @@ public class FixedBaseMSM {
         JavaPairRDD<Long, GroupT> true_result = scalars.mapPartitionsToPair(
             partition ->  {
                 List<Tuple2<Long, FieldT>> scalar_partition = IteratorUtils.toList(partition);
-                List<Tuple2<Long, GroupT>> res =  batchMSMPartition(scalarSize, windowSize, baseBroadcast.getValue(), scalar_partition);
+                List<Tuple2<Long, GroupT>> res =  batchMSMPartition(scalarSize, windowSize, out_size, in_size, baseBroadcast.getValue(), scalar_partition);
                 return res.iterator();
             }
         );
@@ -770,4 +767,5 @@ public class FixedBaseMSM {
         //                 serialMSM(scalarSize2, windowSize2, baseBroadcast2.value(), scalar._2))));
     }
 }
+
 

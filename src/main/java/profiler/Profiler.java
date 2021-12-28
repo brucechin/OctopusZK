@@ -20,7 +20,7 @@ public class Profiler {
         } else if (app.equals("fmsm-g1")) {
             FixedBaseMSMProfiling.serialFixedBaseMSMG1Profiling(config, size);
         } else if (app.equals("fmsm-g2")) {
-            FixedBaseMSMProfiling.serialFixedBaseMSMG2Profiling(config, size);
+            //FixedBaseMSMProfiling.serialFixedBaseMSMG2Profiling(config, size);
         } else if (app.equals("vmsm-g1")) {
             VariableBaseMSMProfiling.serialVariableBaseMSMG1Profiling(config, size);
         } else if (app.equals("vmsm-g2")) {
@@ -53,11 +53,11 @@ public class Profiler {
         } else if (app.equals("fmsm-g1")) {
             FixedBaseMSMProfiling.distributedFixedBaseMSMG1Profiling(config, size);
         } else if (app.equals("fmsm-g2")) {
-            FixedBaseMSMProfiling.distributedFixedBaseMSMG2Profiling(config, size);
+            //FixedBaseMSMProfiling.distributedFixedBaseMSMG2Profiling(config, size);
         } else if (app.equals("vmsm-g1")) {
             VariableBaseMSMProfiling.distributedVariableBaseMSMG1Profiling(config, size);
         } else if (app.equals("vmsm-g2")) {
-            VariableBaseMSMProfiling.distributedVariableBaseMSMG2Profiling(config, size);
+            //VariableBaseMSMProfiling.distributedVariableBaseMSMG2Profiling(config, size);
         } else if (app.equals("relation")) {
             R1CStoQAPRelationProfiling.distributedQAPRelation(config, size);
         } else if (app.equals("witness")) {

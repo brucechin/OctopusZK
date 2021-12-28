@@ -201,7 +201,7 @@ BN254G1Compute twice(BN254G1Compute a)
 
    // X3 = F - 2 D
   cgbn_add(_env, X3, F, modulus);
-  cgbn_add(_env, X3, F, modulus);
+  cgbn_add(_env, X3, X3, modulus);
   cgbn_sub(_env, X3, X3, D);
   cgbn_sub(_env, X3, X3, D);
   cgbn_rem(_env, X3, X3, modulus);

@@ -42,44 +42,44 @@ public class DistributedFixedBaseMSMTest implements Serializable {
         sc = null;
     }
 
-    @Test
-    public void DistributedMSMTest() {
-        final LargeAdditiveIntegerGroupParameters GroupParameters =
-                new LargeAdditiveIntegerGroupParameters();
-        final LargeFpParameters FpParameters = new LargeFpParameters();
+    // @Test
+    // public void DistributedMSMTest() {
+    //     final LargeAdditiveIntegerGroupParameters GroupParameters =
+    //             new LargeAdditiveIntegerGroupParameters();
+    //     final LargeFpParameters FpParameters = new LargeFpParameters();
 
-        final int scalarSize = 4;
-        final int windowSize = 2;
-        final AdditiveIntegerGroup base = new AdditiveIntegerGroup(7, GroupParameters);
-        final List<List<AdditiveIntegerGroup>> multiplesOfBase = FixedBaseMSM
-                .getWindowTable(base, scalarSize, windowSize);
+    //     final int scalarSize = 4;
+    //     final int windowSize = 2;
+    //     final AdditiveIntegerGroup base = new AdditiveIntegerGroup(7, GroupParameters);
+    //     final List<List<AdditiveIntegerGroup>> multiplesOfBase = FixedBaseMSM
+    //             .getWindowTable(base, scalarSize, windowSize);
 
-        final ArrayList<Fp> scalars = new ArrayList<>(4);
-        scalars.add(new Fp("3", FpParameters));
-        scalars.add(new Fp("11", FpParameters));
-        scalars.add(new Fp("2", FpParameters));
-        scalars.add(new Fp("8", FpParameters));
+    //     final ArrayList<Fp> scalars = new ArrayList<>(4);
+    //     scalars.add(new Fp("3", FpParameters));
+    //     scalars.add(new Fp("11", FpParameters));
+    //     scalars.add(new Fp("2", FpParameters));
+    //     scalars.add(new Fp("8", FpParameters));
 
-        final List<Tuple2<Long, AdditiveIntegerGroup>> result = FixedBaseMSM.distributedBatchMSM(
-                scalarSize,
-                windowSize,
-                multiplesOfBase,
-                sc.parallelizePairs(Utils.convertToPairs(scalars)),
-                sc).collect();
+    //     final List<Tuple2<Long, AdditiveIntegerGroup>> result = FixedBaseMSM.distributedBatchMSM(
+    //             scalarSize,
+    //             windowSize,
+    //             multiplesOfBase,
+    //             sc.parallelizePairs(Utils.convertToPairs(scalars)),
+    //             sc).collect();
 
-        final ArrayList<AdditiveIntegerGroup> answers = new ArrayList<>(4);
-        answers.add(new AdditiveIntegerGroup(21, GroupParameters));
-        answers.add(new AdditiveIntegerGroup(77, GroupParameters));
-        answers.add(new AdditiveIntegerGroup(14, GroupParameters));
-        answers.add(new AdditiveIntegerGroup(56, GroupParameters));
+    //     final ArrayList<AdditiveIntegerGroup> answers = new ArrayList<>(4);
+    //     answers.add(new AdditiveIntegerGroup(21, GroupParameters));
+    //     answers.add(new AdditiveIntegerGroup(77, GroupParameters));
+    //     answers.add(new AdditiveIntegerGroup(14, GroupParameters));
+    //     answers.add(new AdditiveIntegerGroup(56, GroupParameters));
 
-        for (Tuple2<Long, AdditiveIntegerGroup> e : result) {
-            final AdditiveIntegerGroup answer = answers.get(e._1.intValue());
+    //     for (Tuple2<Long, AdditiveIntegerGroup> e : result) {
+    //         final AdditiveIntegerGroup answer = answers.get(e._1.intValue());
 
-            System.out.println(e._2 + " == " + answer);
-            assert (e._2.equals(answer));
-        }
-    }
+    //         System.out.println(e._2 + " == " + answer);
+    //         assert (e._2.equals(answer));
+    //     }
+    // }
 
     @Test
     public void DistributedDoubleMSMTest() {
