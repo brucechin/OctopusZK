@@ -93,8 +93,8 @@ public class SerialSetup {
         final int numWindowsG1 =
                 (scalarSizeG1 % windowSizeG1 == 0) ? scalarSizeG1 / windowSizeG1 : scalarSizeG1 / windowSizeG1+ 1;
         final int innerLimitG1 = (int) Math.pow(2, windowSizeG1);
-        final List<List<G1T>> windowTableG1 = FixedBaseMSM
-                .getWindowTable(generatorG1, scalarSizeG1, windowSizeG1);
+        // final List<List<G1T>> windowTableG1 = FixedBaseMSM
+        //         .getWindowTable(generatorG1, scalarSizeG1, windowSizeG1);
         config.endLog("Generating G1 MSM Window Table");
 
         config.beginLog("Generating G2 MSM Window Table");
@@ -102,8 +102,10 @@ public class SerialSetup {
         final int scalarCountG2 = nonZeroBt;
         final int scalarSizeG2 = generatorG2.bitSize();
         final int windowSizeG2 = FixedBaseMSM.getWindowSize(scalarCountG2, generatorG2);
-        final List<List<G2T>> windowTableG2 = FixedBaseMSM
-                .getWindowTable(generatorG2, scalarSizeG2, windowSizeG2);
+        final int numWindowsG2 =(scalarSizeG2 % windowSizeG2 == 0) ? scalarSizeG2 / windowSizeG2 : scalarSizeG2 / windowSizeG2+ 1;
+        final int innerLimitG2 = (int) Math.pow(2, windowSizeG2);
+        // final List<List<G2T>> windowTableG2 = FixedBaseMSM
+        //         .getWindowTable(generatorG2, scalarSizeG2, windowSizeG2);
         config.endLog("Generating G2 MSM Window Table");
 
         config.beginLog("Generating R1CS proving key");
@@ -127,12 +129,14 @@ public class SerialSetup {
 
         config.beginLog("Computing query B", false);
         final List<Tuple2<G1T, G2T>> queryB = FixedBaseMSM.doubleBatchMSM(
+                numWindowsG1, innerLimitG1,
+                numWindowsG2, innerLimitG2,
                 scalarSizeG1,
                 windowSizeG1,
-                windowTableG1,
+                generatorG1,
                 scalarSizeG2,
                 windowSizeG2,
-                windowTableG2,
+                generatorG2,
                 qap.Bt());
         config.endLog("Computing query B", false);
 
@@ -144,7 +148,6 @@ public class SerialSetup {
         final List<G1T> queryH = FixedBaseMSM
                 .batchMSM(scalarSizeG1, windowSizeG1, numWindowsG1, innerLimitG1, generatorG1, qap.Ht());
         config.endLog("Computing query H", false);
-        //TODO Lianke : batchMSM computing A,B,H takes up 10% of (setup+prove)
         config.endLog("Generating R1CS proving key");
         config.endRuntime("Proving Key");
 

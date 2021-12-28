@@ -434,64 +434,46 @@ public class FixedBaseMSM {
     public static <G1T extends AbstractGroup<G1T>,
             G2T extends AbstractGroup<G2T>,
             FieldT extends AbstractFieldElementExpanded<FieldT>> List<Tuple2<G1T, G2T>> doubleBatchMSM(
+            final int out_size1, final int in_size1,
+            final int out_size2, final int in_size2,
             final int scalarSize1,
             final int windowSize1,
-            final List<List<G1T>> multiplesOfBase1,
+            final G1T baseG1,
             final int scalarSize2,
             final int windowSize2,
-            final List<List<G2T>> multiplesOfBase2,
+            final G2T baseG2,
             final List<FieldT> scalars) throws Exception {
 
-        final List<Tuple2<G1T, G2T>> res = new ArrayList<>(scalars.size());
 
         System.out.println("doubleBatchMSM info:");
         System.out.println("batchMSM size :" + scalars.size());
         System.out.println("scalarSize len :" + scalarSize1 + " " + scalarSize2 );
         System.out.println("windowSize len :" + windowSize1 + " " + windowSize2);
-        System.out.println("multiplesOfBase1 len : " + multiplesOfBase1.size() + " " + multiplesOfBase1.get(0).size());
-        System.out.println("multiplesOfBase2 len : " + multiplesOfBase2.size() + " " + multiplesOfBase2.get(0).size());
-        System.out.println("multiplesOfBase1 type : " + multiplesOfBase1.get(0).get(0).getClass().getName());
-        System.out.println("multiplesOfBase2 type : " + multiplesOfBase2.get(0).get(0).getClass().getName());
         System.out.println("scalars type : " + scalars.get(0).getClass().getName());
 
        
-        int out_size1 = multiplesOfBase1.size();
-        int in_size1 = multiplesOfBase1.get(0).size();
-        int out_size2 = multiplesOfBase2.size();
-        int in_size2 = multiplesOfBase2.get(0).size();
         long start = System.currentTimeMillis();
 
         ByteArrayOutputStream G1outputStream = new ByteArrayOutputStream( );
 
         ByteArrayOutputStream G2outputStream = new ByteArrayOutputStream( );
-            //TODO compute the table on GPU side directly
 
 
-        for(int i =0; i < out_size1; i++){
-        
-            for(int j = 0; j< in_size1; j++){
-                ArrayList<BigInteger> three_values = multiplesOfBase1.get(i).get(j).BN254G1ToBigInteger();
-                G1outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
-                G1outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
-                G1outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
-            }
+        ArrayList<BigInteger> three_values = baseG1.BN254G1ToBigInteger();
+        G1outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
+        G1outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
+        G1outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
 
-        }
         byte[] baseByteArrayXYZ = G1outputStream.toByteArray();
 
-        for(int i =0; i < out_size2; i++){
-   
-            for(int j = 0; j< in_size2; j++){
-                ArrayList<BigInteger> six_values = multiplesOfBase2.get(i).get(j).BN254G2ToBigInteger();
-                G2outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(0)));
-                G2outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(1)));
-                G2outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(2)));
-                G2outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(3)));
-                G2outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(4)));
-                G2outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(5)));
-            }
+        ArrayList<BigInteger> six_values = baseG2.BN254G2ToBigInteger();
+        G2outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(0)));
+        G2outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(1)));
+        G2outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(2)));
+        G2outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(3)));
+        G2outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(4)));
+        G2outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(5)));
 
-        }
         byte[] baseByteArrayXYZABC = G2outputStream.toByteArray();
 
         final int outerc1 = (scalarSize1 + windowSize1 - 1) / windowSize1;
@@ -522,6 +504,7 @@ public class FixedBaseMSM {
             byte[] converted_back_X = new byte[64];
             byte[] converted_back_Y = new byte[64];
             byte[] converted_back_Z = new byte[64];
+            //TODO offload to GPU side.
             for(int j =0; j < size_of_bigint_cpp_side; j++){
                 converted_back_X[j] = slice1[size_of_bigint_cpp_side - j - 1];
             }
@@ -536,7 +519,7 @@ public class FixedBaseMSM {
             BigInteger bi_Y = new BigInteger(converted_back_Y);
             BigInteger bi_Z = new BigInteger(converted_back_Z);
             //System.out.println("G1 X,Y,Z=" + bi_X + " " + bi_Y + " " + bi_Z);
-            G1T temp1 = multiplesOfBase1.get(0).get(0).zero();
+            G1T temp1 = baseG1.zero();
             temp1.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
 
             byte[] slice2 = Arrays.copyOfRange(resultByteArray, (9*i +3)*size_of_bigint_cpp_side, (9*i+9)*size_of_bigint_cpp_side);
@@ -566,7 +549,6 @@ public class FixedBaseMSM {
                 converted_back_Zb[j] = slice2[6*size_of_bigint_cpp_side - j - 1];
             }
 
-
             BigInteger bi_Xa = new BigInteger(converted_back_Xa);
             BigInteger bi_Ya = new BigInteger(converted_back_Ya);
             BigInteger bi_Za = new BigInteger(converted_back_Za);
@@ -574,7 +556,7 @@ public class FixedBaseMSM {
             BigInteger bi_Yb = new BigInteger(converted_back_Yb);
             BigInteger bi_Zb = new BigInteger(converted_back_Zb);
 
-            G2T temp2 = multiplesOfBase2.get(0).get(0).zero();
+            G2T temp2 = baseG2.zero();
             temp2.setBigIntegerBN254G2(bi_Xa, bi_Xb, bi_Ya, bi_Yb, bi_Za, bi_Zb);
             //System.out.println("CUDA G2=" +temp2.toString());
 
@@ -584,8 +566,6 @@ public class FixedBaseMSM {
         finish = System.currentTimeMillis();
         timeElapsed = finish - start;
         System.out.println("data receive transformation time elapsed: " + timeElapsed + " ms");
-
-
 
         return jni_res;
     }
@@ -612,7 +592,6 @@ public class FixedBaseMSM {
     
             ByteArrayOutputStream G2outputStream = new ByteArrayOutputStream( );
     
-            //TODO compute the table on GPU side directly
             for(int i =0; i < out_size1; i++){
             
                 for(int j = 0; j< in_size1; j++){

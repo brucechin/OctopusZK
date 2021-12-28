@@ -149,16 +149,6 @@ public class SerialzkSNARKTest implements Serializable {
         SerialBNProofSystemTest(numInputs, numConstraints, fieldFactory, g1Factory, g2Factory, pairing);
     }
 
-//     @Test
-//     public void SerialBN254bProofSystemTest() {
-//         final int numInputs = 1023;
-//         final int numConstraints = 1024;
-//         final BN254bFields.BN254bFr fieldFactory = new BN254bFields.BN254bFr(1);
-//         final BN254bG1 g1Factory = BN254bG1Parameters.ONE;
-//         final BN254bG2 g2Factory = BN254bG2Parameters.ONE;
-//         final BN254bPairing pairing = new BN254bPairing();
 
-//         SerialBNProofSystemTest(numInputs, numConstraints, fieldFactory, g1Factory, g2Factory, pairing);
-//     }
 }
 
