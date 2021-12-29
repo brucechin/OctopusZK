@@ -102,10 +102,6 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
                 result %= FqModulusParameter; 
             }
         }
-      //   if(k > numGroups - 20) { 
-      //  cout << "cpp side k=" << k << " after exp result is :";
-      //   result.printBinary();
-      //   }
 
 
         vector<BigInt> buckets = vector<BigInt>(bucketsModel);
@@ -122,38 +118,21 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
                   continue;
               }
 
-              // if(k == 80 && i < 10){
-              //   cout << "cpp side i=" << i << " after testBit, id is :" << id << endl;
-              // }
 
               // Potentially use mixed addition here.
               buckets[id] = (buckets[id] + std::get<1>(filteredInput[i]));
               buckets[id]  %= FqModulusParameter;
         }
-        // if(k == 80){
-        //   for(int i = 0; i < numBuckets; i++){
-        //     cout <<"cpp side buckets index " << i << ":";
-        //     buckets[i].printBinary();
-        //   }
-        // }
+
 
         BigInt runningSum("0");
         for(int i = numBuckets - 1; i > 0; i--){
-          // if(k == numGroups - 1){
-          //   cout << "cpp side k " << k << " bucket index " << i << " runningSum" << endl;
-          //   runningSum.printBinary();
-          //   result.printBinary();
-          // }
+
           runningSum = (runningSum + buckets[i]);
           runningSum %= FqModulusParameter;
           result = (result + runningSum);
           result %= FqModulusParameter;
         }
-        // if(k < 10){ 
-        // cout << "cpp side numGroups:" << numGroups <<" k= " << k << " after adding runningSum result is :";
-        // result.printBinary();
-        // }
-        //env->SetByteArrayRegion(resultByteArray, k * BigInt::num_of_bytes, BigInt::num_of_bytes,   reinterpret_cast<const jbyte*>(result.bytes));
 
       }
 

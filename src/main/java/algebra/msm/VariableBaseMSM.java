@@ -212,82 +212,7 @@ public class VariableBaseMSM {
     }
 
     
-    public static <GroupT extends AbstractGroup<GroupT>> ArrayList<GroupT> pippengerMSMTestPurpose(
-             final List<Tuple2<BigInteger, GroupT>> input, final int numBits) {
-
-        final int length = input.size();
-        final int log2Length = Math.max(1, MathUtils.log2(length));
-        final int c = log2Length - (log2Length / 3);
-        System.out.println("on pippengerMSM, input class type is "+ input.get(0)._2.getClass().getName());
-
-        final int numBuckets = 1 << c;
-        final int numGroups = (numBits + c - 1) / c;
-
-        final GroupT zero = input.get(0)._2.zero();
-        final ArrayList<GroupT> bucketsModel = new ArrayList<>(Collections.nCopies(numBuckets, zero));
-
-        GroupT result = zero;
-        System.out.println("java side length: " + length + "log2 length: " + log2Length + "c " + c + " numGroups " + numGroups + "numBuckets " +  numBuckets);
-        ArrayList<GroupT> resultArray = new ArrayList<>();
-        for (int k = numGroups - 1; k >= 0; k--) {
-            if (k < numGroups - 1) {
-                for (int i = 0; i < c; i++) {
-                    result = result.twice();
-                }
-            }
-            // if(k > numGroups - 20) {
-            //     System.out.println("java side k="+k + "  after exp result is :" + byteToString(result.toBigInteger().toByteArray()));
-            // }
-            final ArrayList<GroupT> buckets = new ArrayList<>(bucketsModel);
-
-            for (int i = 0; i < length; i++) {
-                int id = 0;
-                for (int j = 0; j < c; j++) {
-                    if (input.get(i)._1.testBit(k * c + j)) {
-                        id |= 1 << j;
-                    }
-                }
-
-                if (id == 0) {
-                    continue;
-                }
-
-                // if(k == 80 && i  < 10){
-                //     System.out.println("java side i="+i + "  after testBit, id is :" + id);
-                // }
-
-                // Potentially use mixed addition here.
-                buckets.set(id, buckets.get(id).add(input.get(i)._2));
-            }
-            // if(k == 80 ) {
-            //     for(int i = 0; i < numBuckets; i++){
-            //         System.out.println("java side buckets index " + i + ": " + byteToString( buckets.get(i).toBigInteger().toByteArray()));
-            //     }
-    
-            // }
-
-            GroupT runningSum = zero;
-
-            for (int i = numBuckets - 1; i > 0; i--) {
-                // Potentially use mixed addition here.
-                // if(k == numGroups - 1 ) {
-                //         System.out.println("java side k " + k + " buckets index " + i + ", runningSum is " + byteToString( runningSum.toBigInteger().toByteArray()));
-                //         System.out.println("result is :" + byteToString( result.toBigInteger().toByteArray()));
-                    
-                // }
-                runningSum = runningSum.add(buckets.get(i));
-                result = result.add(runningSum);
-            }
-            resultArray.add(result);
-            // if(k < 10) {
-            // System.out.println("java side numGroups="+ numGroups + "    l="+k + "  after adding runningSum, result is :" + byteToString(result.toBigInteger().toByteArray()));
-
-            // }
-
-        }
-
-        return resultArray;
-    }
+ 
 
     public static native <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
     byte[] variableBaseSerialMSMNativeHelper(
@@ -309,85 +234,85 @@ public class VariableBaseMSM {
 
         //serialMSM is only called for  BN254G1 curve.
 
-        // ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
-        // for (FieldT scalar : scalars) {
-        //     bigScalars.add(bigIntegerToByteArrayHelperCGBN(scalar.toBigInteger()));
-        // }
-        // ArrayList<byte[]> basesArrayX = new ArrayList<byte[]>();
-        // ArrayList<byte[]> basesArrayY = new ArrayList<byte[]>();
-        // ArrayList<byte[]> basesArrayZ = new ArrayList<byte[]>();
+        ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
+        for (FieldT scalar : scalars) {
+            bigScalars.add(bigIntegerToByteArrayHelperCGBN(scalar.toBigInteger()));
+        }
+        ArrayList<byte[]> basesArrayX = new ArrayList<byte[]>();
+        ArrayList<byte[]> basesArrayY = new ArrayList<byte[]>();
+        ArrayList<byte[]> basesArrayZ = new ArrayList<byte[]>();
 
-        // for (GroupT base : bases){
-        //     ArrayList<BigInteger> three_values = base.BN254G1ToBigInteger();
+        for (GroupT base : bases){
+            ArrayList<BigInteger> three_values = base.BN254G1ToBigInteger();
 
-        //     basesArrayX.add(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
-        //     basesArrayY.add(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
-        //     basesArrayZ.add(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
+            basesArrayX.add(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
+            basesArrayY.add(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
+            basesArrayZ.add(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
 
-        // }
+        }
 
-        // byte[] resArray = variableBaseSerialMSMNativeHelper(basesArrayX, basesArrayY, basesArrayZ, bigScalars);
+        byte[] resArray = variableBaseSerialMSMNativeHelper(basesArrayX, basesArrayY, basesArrayZ, bigScalars);
         
-        // int size_of_bigint_cpp_side = 64;
+        int size_of_bigint_cpp_side = 64;
         
-        // byte[] converted_back_X = new byte[64];
-        // byte[] converted_back_Y = new byte[64];
-        // byte[] converted_back_Z = new byte[64];
+        byte[] converted_back_X = new byte[64];
+        byte[] converted_back_Y = new byte[64];
+        byte[] converted_back_Z = new byte[64];
 
-        // for(int j =0; j < size_of_bigint_cpp_side; j++){
-        //     converted_back_X[j] = resArray[size_of_bigint_cpp_side - j - 1];
-        // }
-        // for(int j =0; j < size_of_bigint_cpp_side; j++){
-        //     converted_back_Y[j] = resArray[2*size_of_bigint_cpp_side - j - 1];
-        // }
-        // for(int j =0; j < size_of_bigint_cpp_side; j++){
-        //     converted_back_Z[j] = resArray[3*size_of_bigint_cpp_side - j - 1];
-        // }
-        // BigInteger bi_X = new BigInteger(converted_back_X);
-        // BigInteger bi_Y = new BigInteger(converted_back_Y);
-        // BigInteger bi_Z = new BigInteger(converted_back_Z);       
-        // GroupT jni_res = bases.get(0).zero();
-        // jni_res.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
+        for(int j =0; j < size_of_bigint_cpp_side; j++){
+            converted_back_X[j] = resArray[size_of_bigint_cpp_side - j - 1];
+        }
+        for(int j =0; j < size_of_bigint_cpp_side; j++){
+            converted_back_Y[j] = resArray[2*size_of_bigint_cpp_side - j - 1];
+        }
+        for(int j =0; j < size_of_bigint_cpp_side; j++){
+            converted_back_Z[j] = resArray[3*size_of_bigint_cpp_side - j - 1];
+        }
+        BigInteger bi_X = new BigInteger(converted_back_X);
+        BigInteger bi_Y = new BigInteger(converted_back_Y);
+        BigInteger bi_Z = new BigInteger(converted_back_Z);       
+        GroupT jni_res = bases.get(0).zero();
+        jni_res.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
 
         // System.out.println("VariableBaseMSM output=" + jni_res.toString());
 
 
         // lianke: below is the original code used for verify the JNI cpp side code computation is correct
 
-        final List<Tuple2<BigInteger, GroupT>> filteredInput = new ArrayList<>();
+    //     final List<Tuple2<BigInteger, GroupT>> filteredInput = new ArrayList<>();
 
-        GroupT acc = bases.get(0).zero();
+    //     GroupT acc = bases.get(0).zero();
 
 
-        int numBits = 0;
-        for (int i = 0; i < bases.size(); i++) {
-            final BigInteger scalar = scalars.get(i).toBigInteger();
-            // if (scalar.equals(BigInteger.ZERO)) {
-            //     continue;
-            // }
+    //     int numBits = 0;
+    //     for (int i = 0; i < bases.size(); i++) {
+    //         final BigInteger scalar = scalars.get(i).toBigInteger();
+    //         // if (scalar.equals(BigInteger.ZERO)) {
+    //         //     continue;
+    //         // }
 
-            final GroupT base = bases.get(i);
+    //         final GroupT base = bases.get(i);
 
-            // if (scalar.equals(BigInteger.ONE)) {
-            //     acc = acc.add(base);
-            // } else {
-                filteredInput.add(new Tuple2<>(scalar, base));
-                //System.out.println("java side filteredInput add <scalar,base> index:" + i + "\n"  +  byteToString(scalar.toByteArray()) + ",\n " + byteToString(base.toBigInteger().toByteArray()));
-                numBits = Math.max(numBits, scalar.bitLength());
-            // }
-        }
+    //         // if (scalar.equals(BigInteger.ONE)) {
+    //         //     acc = acc.add(base);
+    //         // } else {
+    //             filteredInput.add(new Tuple2<>(scalar, base));
+    //             //System.out.println("java side filteredInput add <scalar,base> index:" + i + "\n"  +  byteToString(scalar.toByteArray()) + ",\n " + byteToString(base.toBigInteger().toByteArray()));
+    //             numBits = Math.max(numBits, scalar.bitLength());
+    //         // }
+    //     }
 
-    //    System.out.println("java side filteredInput size : " + filteredInput.size() + " number of bits " + numBits + " current acc is " + byteToString(acc.toBigInteger().toByteArray()));
+    // //    System.out.println("java side filteredInput size : " + filteredInput.size() + " number of bits " + numBits + " current acc is " + byteToString(acc.toBigInteger().toByteArray()));
 
-       if (!filteredInput.isEmpty()) {
-            acc = acc.add(pippengerMSM(filteredInput, numBits));
-        }
+    //    if (!filteredInput.isEmpty()) {
+    //         acc = acc.add(pippengerMSM(filteredInput, numBits));
+    //     }
 
-        System.out.println("java output = " + acc.toString());
+    //     System.out.println("java output = " + acc.toString());
     
 
 
-        return acc;
+        return jni_res;
     }
 
 

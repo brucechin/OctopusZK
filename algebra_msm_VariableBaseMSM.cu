@@ -110,7 +110,6 @@ bool testBit(Scalar input, int n)
 }
 
 
-
 __device__ 
 bool isZero(BN254G1Compute input)
 {
@@ -232,9 +231,6 @@ BN254G1Compute twice(BN254G1Compute a)
   cgbn_add(_env, Z3, Y1Z1, Y1Z1);
   cgbn_rem(_env, Z3, Z3, modulus);
 
-  // cgbn_store(_env, &result.X, X3);
-  // cgbn_store(_env, &result.Y, Y3);
-  // cgbn_store(_env, &result.Z, Z3);
   result.X = X3;
   result.Y = Y3;
   result.Z = Z3;
@@ -415,7 +411,7 @@ __global__ void pippengerMSMG1_unit1(Scalar* inputScalarArray, BN254G1* inputBas
                 }
             }
             if (id == 0) {
-                return;
+                continue;
             }
             BN254G1Compute original, to_add, res;
             //TODO lianke : this may concurrency bug?
@@ -433,8 +429,10 @@ __global__ void pippengerMSMG1_unit1(Scalar* inputScalarArray, BN254G1* inputBas
             cgbn_store(_env, &buckets[id].Y, res.Y);
             cgbn_store(_env, &buckets[id].Z, res.Z);
         }
-
     }
+
+    
+
 
 
     return;
@@ -466,7 +464,7 @@ __global__ void pippengerMSMG1_unit2_runningSum(BN254G1* buckets, BN254G1* resul
 }
 
 __global__ void pippengerMSMG1_unit3(BN254G1* result, int c){
-    const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
+    const int idx = (blockIdx.x * blockDim.x + threadIdx.x);
     context_t _context;
     env_t    _env(_context);
     BN254G1Compute res;
@@ -474,6 +472,7 @@ __global__ void pippengerMSMG1_unit3(BN254G1* result, int c){
     cgbn_load(_env, res.Y, &result[0].Y);
     cgbn_load(_env, res.Z, &result[0].Z);
 
+    //because c is usually very small, we do not need to parallelize this step.
     if(idx == 0){
         for (int i = 0; i < c; i++) {
             res = twice(res);
@@ -538,25 +537,29 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
 
 
     for(int k = numGroups - 1; k >= 0; k--){
+        //cout << "Group " << k ;
         BN254G1* buckets;//TODO this is partial results, should be aggregated again to obtain one G1 value.
         CUDA_CALL( cudaMalloc((void**)&buckets, sizeof(BN254G1) * batch_size); )
         CUDA_CALL(cudaMemcpy(buckets, (void**)&buketsModel[0], sizeof(BN254G1) * numBuckets, cudaMemcpyHostToDevice);)
         pippengerMSMG1_unit1 <<<blocks,threads_per_block>>>( inputScalarArrayGPU, inputBaseArrayGPU, buckets, batch_size, c, k);
+        //cout << "unit1" <<" ";
         CUDA_CALL(cudaDeviceSynchronize();)
         pippengerMSMG1_unit2_runningSum<<<1, 128>>>(buckets, resultGPU, numBuckets);
         CUDA_CALL(cudaDeviceSynchronize();)
+        //cout << "unit2" <<" ";
 
         if(k > 0){
             pippengerMSMG1_unit3 <<<1, 128>>>(resultGPU, c);
             CUDA_CALL(cudaDeviceSynchronize());
 
         }
+        CUDA_CALL(cudaFree(buckets));
+        //cout << "unit3" <<endl;
 
-        CUDA_CALL( cudaMemcpy((void**)&outputArray, resultGPU,  sizeof(BN254G1), cudaMemcpyDeviceToHost); )
-        CUDA_CALL(cudaDeviceSynchronize());
-        printMem(outputArray[0].X);
     }
 
+    CUDA_CALL( cudaMemcpy((void**)&outputArray, resultGPU,  sizeof(BN254G1), cudaMemcpyDeviceToHost); )
+    CUDA_CALL(cudaDeviceSynchronize());
     cudaError_t error = cudaGetLastError();
     if(error != cudaSuccess)
     {
@@ -564,16 +567,8 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
         exit(-1);
     }
     //this outputArray should only contain one BN254G1 element.
-    CUDA_CALL( cudaMemcpy((void**)&outputArray, resultGPU,  sizeof(BN254G1), cudaMemcpyDeviceToHost); )
-    CUDA_CALL(cudaDeviceSynchronize());
 
-    // cout << "gonna print output" <<endl;
-    // printMem(outputArray[0].X);
-    // printMem(outputArray[0].Y);
-    // printMem(outputArray[0].Z);
 
-    //TODO lianke free CUDA memory
-    //CUDA_CALL(cudaDeviceSynchronize());
     // CUDA_CALL(cudaFree(inputScalarArrayGPU));
     // CUDA_CALL(cudaFree(inputBaseArrayGPU));
 
