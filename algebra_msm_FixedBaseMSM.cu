@@ -29,6 +29,8 @@ if ( cudaSuccess != result )            \
     std::cerr << "CUDA error " << result << " in " << __FILE__ << ":" << __LINE__ << ": " << cudaGetErrorString( result ) << " (" << #call << ")" << std::endl;  \
 }
 
+#define REVERSE_BYTES(n) ((n << 24) | (((n>>16)<<24)>>16) | \
+                    (((n<<16)>>24)<<16) | (n>>24))
 
 #define CHECK_BIT(var, pos) (((var) >> (pos)) & 1)
 
@@ -737,6 +739,14 @@ BN254G2Compute add(BN254G2Compute a, BN254G2Compute b) {
 
 
 
+__device__ void swap_helper(uint32_t& a, uint32_t& b){
+  //reverse byte order because java and cpp side endian order is different.
+  a = REVERSE_BYTES(a);
+  b = REVERSE_BYTES(b);
+  uint32_t tmp = a;
+  a = b;
+  b = tmp;
+}
 
 
 __global__ void fixedbase_MSM_unit_processing_G1(Scalar* inputScalarArray, BN254G1* inputBaseArray, BN254G1* outputBN254Array, int outerc, int windowSize, int tableInnerSize, int batch_size){
@@ -751,8 +761,6 @@ __global__ void fixedbase_MSM_unit_processing_G1(Scalar* inputScalarArray, BN254
     if(idx >= batch_size){
       return;
     }
-
-
 
     for (int outer = 0; outer < outerc; ++outer) {
         int inner = 0;
@@ -773,6 +781,12 @@ __global__ void fixedbase_MSM_unit_processing_G1(Scalar* inputScalarArray, BN254
     cgbn_store(_env, &outputBN254Array[idx].X, res.X);
     cgbn_store(_env, &outputBN254Array[idx].Y, res.Y);
     cgbn_store(_env, &outputBN254Array[idx].Z, res.Z);
+
+    for(int i = 0; i < MSM_params_t::BITS/64 ; i++){
+      swap_helper(outputBN254Array[idx].X._limbs[i], outputBN254Array[idx].X._limbs[MSM_params_t::BITS/32 - 1 - i]);
+      swap_helper(outputBN254Array[idx].Y._limbs[i], outputBN254Array[idx].Y._limbs[MSM_params_t::BITS/32  - 1 - i]);
+      swap_helper(outputBN254Array[idx].Z._limbs[i], outputBN254Array[idx].Z._limbs[MSM_params_t::BITS/32  - 1 - i]);
+    }
 
     return;
 }
@@ -821,6 +835,16 @@ __global__ void fixedbase_MSM_unit_processing_G2(Scalar* inputScalarArray, BN254
     cgbn_store(_env, &outputBN254Array[idx].Za, res.Z.a);
     cgbn_store(_env, &outputBN254Array[idx].Zb, res.Z.b);
 
+
+    for(int i = 0; i < MSM_params_t::BITS/64 ; i++){
+      swap_helper(outputBN254Array[idx].Xa._limbs[i], outputBN254Array[idx].Xa._limbs[MSM_params_t::BITS/32 - 1 - i]);
+      swap_helper(outputBN254Array[idx].Ya._limbs[i], outputBN254Array[idx].Ya._limbs[MSM_params_t::BITS/32  - 1 - i]);
+      swap_helper(outputBN254Array[idx].Za._limbs[i], outputBN254Array[idx].Za._limbs[MSM_params_t::BITS/32  - 1 - i]);
+
+      swap_helper(outputBN254Array[idx].Xb._limbs[i], outputBN254Array[idx].Xb._limbs[MSM_params_t::BITS/32 - 1 - i]);
+      swap_helper(outputBN254Array[idx].Yb._limbs[i], outputBN254Array[idx].Yb._limbs[MSM_params_t::BITS/32  - 1 - i]);
+      swap_helper(outputBN254Array[idx].Zb._limbs[i], outputBN254Array[idx].Zb._limbs[MSM_params_t::BITS/32  - 1 - i]);
+    }
 
     return;
 }
@@ -1020,7 +1044,6 @@ void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1* outputArray
 
     fixedbase_MSM_unit_processing_G1 <<<blocks,threads_per_block, 32 * 1024>>>( inputScalarArrayGPU, inputBaseArrayGPU, outputBN254ArrayGPU, outerc, windowSize, inner_len, batch_size);
     CUDA_CALL(cudaDeviceSynchronize());
-   //TODO lianke: reverse the endian on GPU to save some time for java side.
 
     cudaError_t error = cudaGetLastError();
     if(error != cudaSuccess)
@@ -1139,6 +1162,13 @@ void  fixed_double_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1 baseG
     CUDA_CALL(cudaFree(inputBase2ArrayGPU));
     CUDA_CALL(cudaFree(outputBN254G2ArrayGPU));
 }
+
+
+
+
+
+
+
 
 /*
  * Class:     algebra_msm_FixedBaseMSM
@@ -1296,6 +1326,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
 
   start = std::chrono::steady_clock::now();
 
+
   for(int i = 0; i < batch_size; i++){
     env->SetByteArrayRegion(resultByteArray, i * (sizeof(BN254G1) +sizeof(BN254G2)), sizeof(BN254G1) ,   reinterpret_cast<const jbyte*>(&outputBN254G1ArrayCPU[i]));
     env->SetByteArrayRegion(resultByteArray, i * (sizeof(BN254G1) +sizeof(BN254G2)) + sizeof(BN254G1), sizeof(BN254G2) ,   reinterpret_cast<const jbyte*>(&outputBN254G2ArrayCPU[i]));
@@ -1313,7 +1344,16 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
 
 
 
-
+//helper function not used 
+void print_binary(uint32_t input){
+  std::bitset<32> tmp(input);
+  for(int j = 0; j < 4; j++){
+    for(int k =7; k >= 0; k--){
+      std::cout <<tmp[8*j + k];
+    }
+    std:: cout << "|";
+  }
+}
 
 
 __global__ void test_twice(BN254G1 baseOuter, BN254G1* output){

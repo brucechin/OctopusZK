@@ -143,7 +143,7 @@ public class DistributedzkSNARKTest implements Serializable {
     @Test
     public void DistributedBN254aProofSystemTest() {
         final int numInputs = 1023;
-        final int numConstraints = 1024000;
+        final int numConstraints = 10240;
         final BN254aFr fieldFactory = new BN254aFr(1);
         final BN254aG1 g1Factory = BN254aG1Parameters.ONE;
         final BN254aG2 g2Factory = BN254aG2Parameters.ONE;

@@ -86,8 +86,8 @@ public class DistributedSetup {
         final int windowSizeG1 = FixedBaseMSM.getWindowSize(scalarCountG1 / numPartitions, generatorG1);
         final int numWindowsG1 = (scalarSizeG1 % windowSizeG1 == 0) ? scalarSizeG1 / windowSizeG1 : scalarSizeG1 / windowSizeG1+ 1;
         final int innerLimitG1 = (int) Math.pow(2, windowSizeG1);
-        final List<List<G1T>> windowTableG1 = FixedBaseMSM
-                .getWindowTable(generatorG1, scalarSizeG1, windowSizeG1);
+        // final List<List<G1T>> windowTableG1 = FixedBaseMSM
+        //         .getWindowTable(generatorG1, scalarSizeG1, windowSizeG1);
         config.endLog("Generating G1 MSM Window Table");
 
         config.beginLog("Generating G2 MSM Window Table");
@@ -95,8 +95,10 @@ public class DistributedSetup {
         final int scalarSizeG2 = generatorG2.bitSize();
         final long scalarCountG2 = numNonZeroBt;
         final int windowSizeG2 = FixedBaseMSM.getWindowSize(scalarCountG2 / numPartitions, generatorG2);
-        final List<List<G2T>> windowTableG2 = FixedBaseMSM
-                .getWindowTable(generatorG2, scalarSizeG2, windowSizeG2);
+        final int numWindowsG2 = (scalarSizeG2 % windowSizeG2 == 0) ? scalarSizeG2 / windowSizeG2 : scalarSizeG2 / windowSizeG2 + 1;
+        final int innerLimitG2 = (int) Math.pow(2, windowSizeG2);
+        // final List<List<G2T>> windowTableG2 = FixedBaseMSM
+        //         .getWindowTable(generatorG2, scalarSizeG2, windowSizeG2);
         config.endLog("Generating G2 MSM Window Table");
 
         config.beginLog("Generating R1CS proving key");
@@ -134,12 +136,14 @@ public class DistributedSetup {
 
         config.beginLog("Computing query B");
         final JavaPairRDD<Long, Tuple2<G1T, G2T>> queryB = FixedBaseMSM.distributedDoubleBatchMSM(
+                numWindowsG1, innerLimitG1,
+                numWindowsG2, innerLimitG2,
                 scalarSizeG1,
                 windowSizeG1,
-                windowTableG1,
+                generatorG1,
                 scalarSizeG2,
                 windowSizeG2,
-                windowTableG2,
+                generatorG2,
                 qap.Bt(),
                 config.sparkContext()).cache();
         queryB.count();

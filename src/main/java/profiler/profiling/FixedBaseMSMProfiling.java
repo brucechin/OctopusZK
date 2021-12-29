@@ -32,8 +32,7 @@ public class FixedBaseMSMProfiling {
         config.beginRuntimeMetadata("Size (inputs)", size);
 
         final int windowSizeG1 = FixedBaseMSM.getWindowSize((int) size, generatorG1);
-        // final List<List<BN254aG1>> multiplesOfBase = FixedBaseMSM
-        //         .getWindowTable(generatorG1, scalarSize, windowSize);
+
         final int numWindowsG1 = (scalarSizeG1 % windowSizeG1 == 0) ? scalarSizeG1 / windowSizeG1 : scalarSizeG1 / windowSizeG1+ 1;
         final int innerLimitG1 = (int) Math.pow(2, windowSizeG1);
         config.beginLog("FixedBaseMSM(previously generating random data for execution)");
@@ -102,7 +101,7 @@ public class FixedBaseMSMProfiling {
                 generatorG1,
                 scalars,
                 config.sparkContext()).persist(config.storageLevel());
-        //result.count();
+        result.count();
         config.endRuntime("FixedBaseMSM");
         config.endLog("FixedBaseMSM");
 

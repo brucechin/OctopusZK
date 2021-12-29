@@ -81,51 +81,51 @@ public class DistributedFixedBaseMSMTest implements Serializable {
     //     }
     // }
 
-    @Test
-    public void DistributedDoubleMSMTest() {
-        final BN254aG1 base1 = BN254aG1Parameters.ONE.twice();
-        final BN254aG2 base2 = BN254aG2Parameters.ONE.twice();
+    // @Test
+    // public void DistributedDoubleMSMTest() {
+    //     final BN254aG1 base1 = BN254aG1Parameters.ONE.twice();
+    //     final BN254aG2 base2 = BN254aG2Parameters.ONE.twice();
 
-        final int scalarSize = 4;
-        final int windowSize = 2;
-        final List<List<BN254aG1>> multiplesOfBase1 = FixedBaseMSM
-                .getWindowTable(base1, scalarSize, windowSize);
-        final List<List<BN254aG2>> multiplesOfBase2 = FixedBaseMSM
-                .getWindowTable(base2, scalarSize, windowSize);
+    //     final int scalarSize = 4;
+    //     final int windowSize = 2;
+    //     final List<List<BN254aG1>> multiplesOfBase1 = FixedBaseMSM
+    //             .getWindowTable(base1, scalarSize, windowSize);
+    //     final List<List<BN254aG2>> multiplesOfBase2 = FixedBaseMSM
+    //             .getWindowTable(base2, scalarSize, windowSize);
 
-        final ArrayList<BN254aFr> scalars = new ArrayList<>(4);
-        scalars.add(new BN254aFr("3"));
-        scalars.add(new BN254aFr("11"));
-        scalars.add(new BN254aFr("2"));
-        scalars.add(new BN254aFr("8"));
+    //     final ArrayList<BN254aFr> scalars = new ArrayList<>(4);
+    //     scalars.add(new BN254aFr("3"));
+    //     scalars.add(new BN254aFr("11"));
+    //     scalars.add(new BN254aFr("2"));
+    //     scalars.add(new BN254aFr("8"));
 
-        final List<Tuple2<Long, Tuple2<BN254aG1, BN254aG2>>> result = FixedBaseMSM
-                .distributedDoubleBatchMSM(
-                        scalarSize,
-                        windowSize,
-                        multiplesOfBase1,
-                        scalarSize,
-                        windowSize,
-                        multiplesOfBase2,
-                        sc.parallelizePairs(Utils.convertToPairs(scalars)),
-                        sc).collect();
+    //     final List<Tuple2<Long, Tuple2<BN254aG1, BN254aG2>>> result = FixedBaseMSM
+    //             .distributedDoubleBatchMSM(
+    //                     scalarSize,
+    //                     windowSize,
+    //                     multiplesOfBase1,
+    //                     scalarSize,
+    //                     windowSize,
+    //                     multiplesOfBase2,
+    //                     sc.parallelizePairs(Utils.convertToPairs(scalars)),
+    //                     sc).collect();
 
-        final ArrayList<Tuple2<BN254aG1, BN254aG2>> answers = new ArrayList<>(4);
-        for (BN254aFr scalar : scalars) {
-            final BN254aG1 msm1 = base1.mul(scalar);
-            final BN254aG2 msm2 = base2.mul(scalar);
-            answers.add(new Tuple2<>(msm1, msm2));
-        }
+    //     final ArrayList<Tuple2<BN254aG1, BN254aG2>> answers = new ArrayList<>(4);
+    //     for (BN254aFr scalar : scalars) {
+    //         final BN254aG1 msm1 = base1.mul(scalar);
+    //         final BN254aG2 msm2 = base2.mul(scalar);
+    //         answers.add(new Tuple2<>(msm1, msm2));
+    //     }
 
-        for (Tuple2<Long, Tuple2<BN254aG1, BN254aG2>> e : result) {
-            final Tuple2<BN254aG1, BN254aG2> answer = answers.get(e._1.intValue());
+    //     for (Tuple2<Long, Tuple2<BN254aG1, BN254aG2>> e : result) {
+    //         final Tuple2<BN254aG1, BN254aG2> answer = answers.get(e._1.intValue());
 
-            System.out.println(e._2._1 + " == " + answer._1);
-            System.out.println(e._2._2 + " == " + answer._2);
-            System.out.println(BN254aFq.FqParameters.modulus());
-            System.out.println(e._2._1.Z.element().FpParameters.modulus());
-            assert (e._2._1.equals(answer._1));
-            assert (e._2._2.equals(answer._2));
-        }
-    }
+    //         System.out.println(e._2._1 + " == " + answer._1);
+    //         System.out.println(e._2._2 + " == " + answer._2);
+    //         System.out.println(BN254aFq.FqParameters.modulus());
+    //         System.out.println(e._2._1.Z.element().FpParameters.modulus());
+    //         assert (e._2._1.equals(answer._1));
+    //         assert (e._2._2.equals(answer._2));
+    //     }
+    // }
 }
