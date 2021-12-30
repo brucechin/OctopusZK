@@ -425,15 +425,14 @@ __global__ void pippengerMSMG1_unit1(Scalar* inputScalarArray, BN254G1* inputBas
     // if (id == 0) {
     //     return;
     // }
-    if(k == numGroups - 1){
-        printf("id=%d\n", id);
-    }
+
 
     int one = 1;
-    // bucketIndex[idx] = atomicAdd(&bucketCounter[id], one);
-    atomicAdd((int*)&bucketCounter[id], one);
+    //TODO lianke this atomicAdd is wrong
+    bucketIndex[idx] = atomicAdd(&(bucketCounter[id]), one);
     inputBucketMappingLocation[idx] = id;
-    
+
+
 
 
     // BN254G1Compute original, to_add, res;
@@ -648,8 +647,8 @@ void test_prefix_sum(int size){
     CUDA_CALL( cudaMalloc((void**)&inputGPU, sizeof(int) * size);)
     CUDA_CALL(cudaMemcpy(inputGPU, &inputCPU[0], sizeof(int) * size, cudaMemcpyHostToDevice);)
     int threads_per_block = 128;
-    int num_blocks_prefix_sum = (size + threads_per_block)/threads_per_block;
-    test_atomicAdd<<<num_blocks_prefix_sum * 2, threads_per_block>>> (inputGPU, size);
+    int num_blocks_prefix_sum = (size + threads_per_block - 1)/threads_per_block;
+    test_atomicAdd<<<num_blocks_prefix_sum * 16, threads_per_block>>> (inputGPU, size);
     // for(int stride = 1; stride <= size/2; stride = stride *2){
     //     prefix_sum_first_step<<< num_blocks_prefix_sum, threads_per_block>>>(inputGPU, size, stride);
     //     CUDA_CALL(cudaDeviceSynchronize();)
@@ -727,18 +726,6 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
         int num_blocks_unit1 = (batch_size + threads_per_block - 1) / threads_per_block;
         pippengerMSMG1_unit1 <<<num_blocks_unit1,threads_per_block>>>( inputScalarArrayGPU, inputBaseArrayGPU, inputBucketMappingLocation, bucketCounter, bucketIndex, batch_size, c, k, numGroups);
         CUDA_CALL(cudaDeviceSynchronize();)
-
-        int num_blocks_prefix_sum = (numBuckets + threads_per_block - 1)/threads_per_block;
-        for(int stride = 1; stride <= numBuckets/2; stride = stride *2){
-            prefix_sum_first_step<<< num_blocks_prefix_sum, threads_per_block>>>(bucketCounter, numBuckets, stride);
-            CUDA_CALL(cudaDeviceSynchronize();)
-        }
-        for(int stride = numBuckets/4; stride > 0; stride /= 2){
-            prefix_sum_second_step<<< num_blocks_prefix_sum, threads_per_block>>>(bucketCounter, numBuckets, stride);
-            CUDA_CALL(cudaDeviceSynchronize();)
-        }
-
-
         if(k == numGroups - 1){
             cout << "\nbucketCount" <<endl;
             vector_print<<<1, 128>>>(bucketCounter, numBuckets);    
@@ -752,6 +739,23 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
             CUDA_CALL(cudaDeviceSynchronize();)
 
         }
+        int num_blocks_prefix_sum = (numBuckets + threads_per_block - 1)/threads_per_block;
+        for(int stride = 1; stride <= numBuckets/2; stride = stride *2){
+            prefix_sum_first_step<<< num_blocks_prefix_sum, threads_per_block>>>(bucketCounter, numBuckets, stride);
+            CUDA_CALL(cudaDeviceSynchronize();)
+        }
+        for(int stride = numBuckets/4; stride > 0; stride /= 2){
+            prefix_sum_second_step<<< num_blocks_prefix_sum, threads_per_block>>>(bucketCounter, numBuckets, stride);
+            CUDA_CALL(cudaDeviceSynchronize();)
+        }
+        if(k == numGroups - 1){
+            cout << "\nbucketCount after prefix sum" <<endl;
+            vector_print<<<1, 128>>>(bucketCounter, numBuckets);    
+            CUDA_CALL(cudaDeviceSynchronize();)
+
+        }
+
+
         //now bucketCounter is prefix-sumed version. write into bucketsBeforeAggregate
         int num_blocks_write_together = (batch_size + threads_per_block - 1)/threads_per_block;
         pippengerMSMG1_unit2_write_together<<<num_blocks_write_together, threads_per_block>>>(inputBaseArrayGPU, bucketsBeforeAggregate, inputBucketMappingLocation, bucketCounter, bucketIndex, batch_size);
@@ -861,7 +865,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
     memset(resultCPU, 0, sizeof(BN254G1));
     pippengerMSMG1(bigScalarArray, multiplesOfBasePtrArray, resultCPU);
     
-    //test_prefix_sum(2048);
+    //test_prefix_sum(128);
 
 
     jbyteArray resultByteArray = env->NewByteArray((jsize)sizeof(BN254G1));
