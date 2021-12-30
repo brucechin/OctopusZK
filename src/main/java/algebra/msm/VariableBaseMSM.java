@@ -274,45 +274,44 @@ public class VariableBaseMSM {
         GroupT jni_res = bases.get(0).zero();
         jni_res.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
 
-        // System.out.println("VariableBaseMSM output=" + jni_res.toString());
+        System.out.println("CUDA output=" + jni_res.toString());
 
 
         // lianke: below is the original code used for verify the JNI cpp side code computation is correct
 
-    //     final List<Tuple2<BigInteger, GroupT>> filteredInput = new ArrayList<>();
+        final List<Tuple2<BigInteger, GroupT>> filteredInput = new ArrayList<>();
 
-    //     GroupT acc = bases.get(0).zero();
+        GroupT acc = bases.get(0).zero();
 
 
-    //     int numBits = 0;
-    //     for (int i = 0; i < bases.size(); i++) {
-    //         final BigInteger scalar = scalars.get(i).toBigInteger();
-    //         // if (scalar.equals(BigInteger.ZERO)) {
-    //         //     continue;
-    //         // }
+        int numBits = 0;
+        for (int i = 0; i < bases.size(); i++) {
+            final BigInteger scalar = scalars.get(i).toBigInteger();
+            // if (scalar.equals(BigInteger.ZERO)) {
+            //     continue;
+            // }
 
-    //         final GroupT base = bases.get(i);
+            final GroupT base = bases.get(i);
 
-    //         // if (scalar.equals(BigInteger.ONE)) {
-    //         //     acc = acc.add(base);
-    //         // } else {
-    //             filteredInput.add(new Tuple2<>(scalar, base));
-    //             //System.out.println("java side filteredInput add <scalar,base> index:" + i + "\n"  +  byteToString(scalar.toByteArray()) + ",\n " + byteToString(base.toBigInteger().toByteArray()));
-    //             numBits = Math.max(numBits, scalar.bitLength());
-    //         // }
-    //     }
+            // if (scalar.equals(BigInteger.ONE)) {
+            //     acc = acc.add(base);
+            // } else {
+                filteredInput.add(new Tuple2<>(scalar, base));
+                //System.out.println("java side filteredInput add <scalar,base> index:" + i + "\n"  +  byteToString(scalar.toByteArray()) + ",\n " + byteToString(base.toBigInteger().toByteArray()));
+                numBits = Math.max(numBits, scalar.bitLength());
+            // }
+        }
 
-    // //    System.out.println("java side filteredInput size : " + filteredInput.size() + " number of bits " + numBits + " current acc is " + byteToString(acc.toBigInteger().toByteArray()));
 
-    //    if (!filteredInput.isEmpty()) {
-    //         acc = acc.add(pippengerMSM(filteredInput, numBits));
-    //     }
+       if (!filteredInput.isEmpty()) {
+            acc = acc.add(pippengerMSM(filteredInput, 254));
+        }
 
-    //     System.out.println("java output = " + acc.toString());
+        System.out.println("java output = " + acc.toString());
     
 
 
-        return jni_res;
+        return acc;
     }
 
 

@@ -376,9 +376,7 @@ BN254G1Compute twice(BN254G1Compute a)
   cgbn_add(_env, Z3, Y1Z1, Y1Z1);
   cgbn_rem(_env, Z3, Z3, modulus);
 
-  // cgbn_store(_env, &result.X, X3);
-  // cgbn_store(_env, &result.Y, Y3);
-  // cgbn_store(_env, &result.Z, Z3);
+
   //print_bn_t(X3, 1);
   result.X = X3;
   result.Y = Y3;
