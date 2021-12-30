@@ -409,15 +409,11 @@ __device__ void printMemGPU(Scalar input)
 }
 
 
-__global__ void pippengerMSMG1_unit1(Scalar* inputScalarArray, BN254G1* inputBaseArray, BN254G1* buckets, int* inputBucketMappingLocation,  int* bucketCounter, int* bucketIndex, int batch_size, int c, int k){
-    const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
-    const int offset = (blockIdx.x * blockDim.x + threadIdx.x) % MSM_params_t::TPI;
+__global__ void pippengerMSMG1_unit1(Scalar* inputScalarArray, BN254G1* inputBaseArray, int* inputBucketMappingLocation,  int* bucketCounter, int* bucketIndex, int batch_size, int c, int k, int numGroups){
+    const int idx = (blockIdx.x * blockDim.x + threadIdx.x);
 
-    context_t _context;
-    env_t    _env(_context);
-    //TODO lianke we need to figure out how to fix the concurrency problem.
     if(idx >= batch_size){
-      return;
+        return;
     }
 
     int id = 0;
@@ -426,14 +422,18 @@ __global__ void pippengerMSMG1_unit1(Scalar* inputScalarArray, BN254G1* inputBas
             id |= 1 << j;
         }
     }
-    if (id == 0) {
-        return;
+    // if (id == 0) {
+    //     return;
+    // }
+    if(k == numGroups - 1){
+        printf("id=%d\n", id);
     }
 
-    if(offset == 0){
-        bucketIndex[idx] = atomicAdd(&bucketCounter[id], 1);
-        inputBucketMappingLocation[idx] = id;
-    }
+    int one = 1;
+    // bucketIndex[idx] = atomicAdd(&bucketCounter[id], one);
+    atomicAdd((int*)&bucketCounter[id], one);
+    inputBucketMappingLocation[idx] = id;
+    
 
 
     // BN254G1Compute original, to_add, res;
@@ -485,6 +485,63 @@ __global__ void pippengerMSMG1_unit1(Scalar* inputScalarArray, BN254G1* inputBas
     //     }
     // }
 
+    return;
+}
+
+__global__ void pippengerMSMG1_unit2_write_together(BN254G1* inputBaseArray, BN254G1* outputBaseArray, int* inputBucketMappingLocation,  int* bucketCounter, int* bucketIndex, int batch_size){
+    const int idx = (blockIdx.x * blockDim.x + threadIdx.x);
+    context_t _context;
+    env_t    _env(_context);
+    
+    if(idx >= batch_size){
+      return;
+    }
+
+    int outputIndex;
+    if(inputBucketMappingLocation[idx] == 0){
+        outputIndex = bucketIndex[idx];
+    }else{
+        outputIndex = bucketCounter[inputBucketMappingLocation[idx] - 1] + bucketIndex[idx];
+    }
+
+    outputBaseArray[outputIndex] = inputBaseArray[idx];
+    return;
+}
+
+__global__ void pippengerMSMG1_unit2_reduce_to_buckets(BN254G1* outputBaseArray, BN254G1* outputBuckets,  int* bucketCounter, int numBuckets, BN254G1* zero){
+    const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
+    context_t _context;
+    env_t    _env(_context);
+    
+    if(idx >= numBuckets){
+      return;
+    }
+
+    int left, right; 
+    if(idx == 0){
+        return ; //when bucketID = 0, skip.
+    }else{
+        left = bucketCounter[idx - 1];
+        right = bucketCounter[idx];
+    }
+
+    BN254G1Compute res;
+    cgbn_load(_env, res.X, &zero[0].X);
+    cgbn_load(_env, res.Y, &zero[0].Y);
+    cgbn_load(_env, res.Z, &zero[0].Z);
+
+    for(; left < right; left++){
+        BN254G1Compute to_add; 
+        cgbn_load(_env, to_add.X, &outputBaseArray[left].X);
+        cgbn_load(_env, to_add.Y, &outputBaseArray[left].Y);
+        cgbn_load(_env, to_add.Z, &outputBaseArray[left].Z);
+
+        res = add(res, to_add);
+    }
+
+    cgbn_store(_env, &outputBuckets[idx].X, res.X);
+    cgbn_store(_env, &outputBuckets[idx].Y, res.Y);
+    cgbn_store(_env, &outputBuckets[idx].Z, res.Z);
     return;
 }
 
@@ -578,6 +635,13 @@ __global__ void prefix_sum_second_step(int* input, int size, int stride){
     }
 }
 
+__global__ void test_atomicAdd(int* input, int size){
+    const int idx = (blockIdx.x * blockDim.x + threadIdx.x);
+
+    int one = 1;
+    atomicAdd((int*)&input[idx % size], one);
+}
+
 void test_prefix_sum(int size){
     vector<int> inputCPU(size, 1);
     int* inputGPU;
@@ -585,14 +649,15 @@ void test_prefix_sum(int size){
     CUDA_CALL(cudaMemcpy(inputGPU, &inputCPU[0], sizeof(int) * size, cudaMemcpyHostToDevice);)
     int threads_per_block = 128;
     int num_blocks_prefix_sum = (size + threads_per_block)/threads_per_block;
-    for(int stride = 1; stride <= size/2; stride = stride *2){
-        prefix_sum_first_step<<< num_blocks_prefix_sum, threads_per_block>>>(inputGPU, size, stride);
-        CUDA_CALL(cudaDeviceSynchronize();)
-    }
-    for(int stride = size/4; stride > 0; stride /= 2){
-        prefix_sum_second_step<<< num_blocks_prefix_sum, threads_per_block>>>(inputGPU, size, stride);
-        CUDA_CALL(cudaDeviceSynchronize();)
-    }
+    test_atomicAdd<<<num_blocks_prefix_sum * 2, threads_per_block>>> (inputGPU, size);
+    // for(int stride = 1; stride <= size/2; stride = stride *2){
+    //     prefix_sum_first_step<<< num_blocks_prefix_sum, threads_per_block>>>(inputGPU, size, stride);
+    //     CUDA_CALL(cudaDeviceSynchronize();)
+    // }
+    // for(int stride = size/4; stride > 0; stride /= 2){
+    //     prefix_sum_second_step<<< num_blocks_prefix_sum, threads_per_block>>>(inputGPU, size, stride);
+    //     CUDA_CALL(cudaDeviceSynchronize();)
+    // }
     vector_print<<<1, 128>>> (inputGPU, size);
     CUDA_CALL(cudaDeviceSynchronize();)
 
@@ -646,20 +711,24 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
         int* bucketCounter;
         int* bucketIndex;
         int* inputBucketMappingLocation;
+        BN254G1* bucketsBeforeAggregate;
         CUDA_CALL( cudaMalloc((void**)&bucketCounter, sizeof(int) * numBuckets);)
         CUDA_CALL( cudaMemset(bucketCounter, 0, numBuckets * sizeof(int));)
         CUDA_CALL( cudaMalloc((void**)&bucketIndex, sizeof(int) * batch_size);)
         CUDA_CALL( cudaMemset(bucketIndex, 0, batch_size  * sizeof(int));)
         CUDA_CALL( cudaMalloc((void**)&inputBucketMappingLocation, sizeof(int) * batch_size);)
         CUDA_CALL( cudaMemset(inputBucketMappingLocation, 0, batch_size  * sizeof(int));)
+        CUDA_CALL(cudaMalloc((void**)&bucketsBeforeAggregate, sizeof(BN254G1) * batch_size);)
+        CUDA_CALL( cudaMemset(bucketsBeforeAggregate, 0, sizeof(BN254G1) * batch_size);)
 
         BN254G1* buckets;
         CUDA_CALL( cudaMalloc((void**)&buckets, sizeof(BN254G1) * numBuckets); )
         CUDA_CALL(cudaMemcpy(buckets, (void**)&buketsModel[0], sizeof(BN254G1) * numBuckets, cudaMemcpyHostToDevice);)
-        pippengerMSMG1_unit1 <<<blocks,threads_per_block>>>( inputScalarArrayGPU, inputBaseArrayGPU, buckets, inputBucketMappingLocation, bucketCounter, bucketIndex, batch_size, c, k);
+        int num_blocks_unit1 = (batch_size + threads_per_block - 1) / threads_per_block;
+        pippengerMSMG1_unit1 <<<num_blocks_unit1,threads_per_block>>>( inputScalarArrayGPU, inputBaseArrayGPU, inputBucketMappingLocation, bucketCounter, bucketIndex, batch_size, c, k, numGroups);
         CUDA_CALL(cudaDeviceSynchronize();)
 
-        int num_blocks_prefix_sum = (numBuckets + threads_per_block)/threads_per_block;
+        int num_blocks_prefix_sum = (numBuckets + threads_per_block - 1)/threads_per_block;
         for(int stride = 1; stride <= numBuckets/2; stride = stride *2){
             prefix_sum_first_step<<< num_blocks_prefix_sum, threads_per_block>>>(bucketCounter, numBuckets, stride);
             CUDA_CALL(cudaDeviceSynchronize();)
@@ -668,35 +737,44 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
             prefix_sum_second_step<<< num_blocks_prefix_sum, threads_per_block>>>(bucketCounter, numBuckets, stride);
             CUDA_CALL(cudaDeviceSynchronize();)
         }
-        //now bucketCounter is prefix-sumed version.
+
+
+        if(k == numGroups - 1){
+            cout << "\nbucketCount" <<endl;
+            vector_print<<<1, 128>>>(bucketCounter, numBuckets);    
+            CUDA_CALL(cudaDeviceSynchronize();)
+            cout << "\nbucketIndex" <<endl;
+            vector_print<<<1, 128>>>(bucketIndex, batch_size);  
+            CUDA_CALL(cudaDeviceSynchronize();)
+
+            cout <<"\nbucket mapping" <<endl;
+            vector_print<<<1, 128>>>(inputBucketMappingLocation, batch_size);
+            CUDA_CALL(cudaDeviceSynchronize();)
+
+        }
+        //now bucketCounter is prefix-sumed version. write into bucketsBeforeAggregate
+        int num_blocks_write_together = (batch_size + threads_per_block - 1)/threads_per_block;
+        pippengerMSMG1_unit2_write_together<<<num_blocks_write_together, threads_per_block>>>(inputBaseArrayGPU, bucketsBeforeAggregate, inputBucketMappingLocation, bucketCounter, bucketIndex, batch_size);
+        CUDA_CALL(cudaDeviceSynchronize();)
+
+        //reduce the bucketsBeforeAggregate, because they have been write to ajacent positions.
+        int num_blocks_reduce_buckets = (numBuckets + instance_per_block - 1)/instance_per_block;
+        pippengerMSMG1_unit2_reduce_to_buckets<<<num_blocks_reduce_buckets, threads_per_block>>>(bucketsBeforeAggregate, buckets, bucketCounter, numBuckets, zeroGPU);
+        CUDA_CALL(cudaDeviceSynchronize();)
+
+
         
+        pippengerMSMG1_unit2_runningSum<<<1, 128>>>(buckets, resultGPU, zeroGPU, numBuckets);
+        CUDA_CALL(cudaDeviceSynchronize();)
 
+        if(k > 0){
+            pippengerMSMG1_unit3 <<<1, 128>>>(resultGPU, c);
+            CUDA_CALL(cudaDeviceSynchronize());
 
-        // if(k == 0){
-        //     cout << "bucket Counter=";
-        //     vector_print<<<1, 128>>> (bucketCounter, numBuckets);
-        //     CUDA_CALL(cudaDeviceSynchronize();)
-        //     cout << "\n\n bucket index=";
-        //     vector_print<<<1, 128>>> (bucketIndex, batch_size);
-        //     CUDA_CALL(cudaDeviceSynchronize();)
-
-        //     cout << "\n\n input to bucket mapping=";
-        //     vector_print<<<1, 128>>> (inputBucketMappingLocation, batch_size);
-        //     cout << "\n\n";
-        // }
-
-        
-        // pippengerMSMG1_unit2_runningSum<<<1, 128>>>(buckets, resultGPU, zeroGPU, numBuckets);
-        // CUDA_CALL(cudaDeviceSynchronize();)
-
-        // if(k > 0){
-        //     pippengerMSMG1_unit3 <<<1, 128>>>(resultGPU, c);
-        //     CUDA_CALL(cudaDeviceSynchronize());
-
-        // }
-        CUDA_CALL(cudaFree(buckets));
-        CUDA_CALL(cudaFree(bucketCounter));
-        CUDA_CALL(cudaFree(bucketIndex));
+        }
+        // CUDA_CALL(cudaFree(buckets));
+        // CUDA_CALL(cudaFree(bucketCounter));
+        // CUDA_CALL(cudaFree(bucketIndex));
 
     }
 
@@ -781,11 +859,10 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
 
     BN254G1* resultCPU = new BN254G1[1];
     memset(resultCPU, 0, sizeof(BN254G1));
-    //pippengerMSMG1(bigScalarArray, multiplesOfBasePtrArray, resultCPU);
-    //test_prefix_sum(128);
-    test_prefix_sum(2048);
+    pippengerMSMG1(bigScalarArray, multiplesOfBasePtrArray, resultCPU);
+    
+    //test_prefix_sum(2048);
 
-    //test_prefix_sum(1000);
 
     jbyteArray resultByteArray = env->NewByteArray((jsize)sizeof(BN254G1));
 
@@ -834,6 +911,7 @@ __global__ void pippengerMSMG1_overall(Scalar* inputScalarArray, BN254G1* inputB
                 if (id == 0) {
                     continue;
                 }
+
                 BN254G1Compute original, to_add, tmp_res;
                 cgbn_load(_env, tmp_res.X, &zero[0].X);
                 cgbn_load(_env, tmp_res.Y, &zero[0].Y);
