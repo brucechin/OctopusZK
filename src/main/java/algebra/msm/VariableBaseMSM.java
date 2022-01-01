@@ -308,10 +308,9 @@ public class VariableBaseMSM {
         }
 
         System.out.println("java output = " + acc.toString());
-    
+        System.out.println("java == CUDA? " + acc.equals(jni_res));
 
-
-        return acc;
+        return jni_res;
     }
 
 

@@ -5,7 +5,7 @@ GMP_HOME='/home/lianke/gmp-6.2.1'
 sudo rm lib*.so
 
 #nvcc  -O3 -Xcompiler -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=sm_75 algebra_msm_FixedBaseMSM.cu -o libAlgebraMSMFixedBaseMSM.so 
-nvcc  -Xcompiler  -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=sm_75  algebra_msm_VariableBaseMSM.cu -o libAlgebraMSMVariableBaseMSM.so 
+nvcc  -O3 -Xcompiler  -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=sm_75  algebra_msm_VariableBaseMSM.cu -o libAlgebraMSMVariableBaseMSM.so 
 #nvcc  -Xcompiler  -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=sm_75 algebra_fft_FFTAuxiliary.cu -o libAlgebraFFTAuxiliary.so
 
 sudo cp lib*.so /usr/lib/
