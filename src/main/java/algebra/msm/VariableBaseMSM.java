@@ -19,6 +19,7 @@ import org.apache.spark.api.java.JavaRDD;
 import scala.Tuple2;
 import java.util.Arrays;
 import java.io.*;
+import org.apache.commons.collections.IteratorUtils;
 
 public class VariableBaseMSM {
 
@@ -172,10 +173,7 @@ public class VariableBaseMSM {
         //TOD lianke: this for loop could mean we call the CUDA kernel for numGroups times.
         for (int k = numGroups - 1; k >= 0; k--) {
 
-
-            //TODO lianke: this buckets should be a global array shared by all CUDA processes.
             final ArrayList<GroupT> buckets = new ArrayList<>(bucketsModel);
-            //TODO lianke: this for loop should be CUDA implemented.
             for (int i = 0; i < length; i++) {
                 int id = 0;
                 for (int j = 0; j < c; j++) {
@@ -206,7 +204,6 @@ public class VariableBaseMSM {
                     result = result.twice();
                 }
             }
-            //System.out.println("k=" +k + " result=" + result.toString());
         }
 
         return result;
@@ -231,8 +228,6 @@ public class VariableBaseMSM {
 
         assert (bases.size() == scalars.size());
 
-
-        //serialMSM is only called for  BN254G1 curve.
 
         ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
         for (FieldT scalar : scalars) {
@@ -281,6 +276,59 @@ public class VariableBaseMSM {
 
         return jni_res;
     }
+
+
+    public static <
+        GroupT extends AbstractGroup<GroupT>,
+        FieldT extends AbstractFieldElementExpanded<FieldT>>
+    GroupT serialMSMPartition(List<Tuple2<FieldT, GroupT>> input) throws Exception {
+
+
+
+    ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
+    ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
+
+    for (Tuple2<FieldT, GroupT> in : input) {
+        bigScalarStream.write(bigIntegerToByteArrayHelperCGBN(in._1.toBigInteger()));
+
+        ArrayList<BigInteger> three_values = in._2.BN254G1ToBigInteger();
+        outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
+        outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
+        outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
+    }
+
+    byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
+    byte[] baseByteArrayXYZ = outputStream.toByteArray();
+
+    byte[] resArray = variableBaseSerialMSMNativeHelper(baseByteArrayXYZ, bigScalarByteArray, input.size());
+
+    int size_of_bigint_cpp_side = 64;
+
+    byte[] converted_back_X = new byte[64];
+    byte[] converted_back_Y = new byte[64];
+    byte[] converted_back_Z = new byte[64];
+
+    for(int j =0; j < size_of_bigint_cpp_side; j++){
+        converted_back_X[j] = resArray[size_of_bigint_cpp_side - j - 1];
+    }
+    for(int j =0; j < size_of_bigint_cpp_side; j++){
+        converted_back_Y[j] = resArray[2*size_of_bigint_cpp_side - j - 1];
+    }
+    for(int j =0; j < size_of_bigint_cpp_side; j++){
+        converted_back_Z[j] = resArray[3*size_of_bigint_cpp_side - j - 1];
+    }
+    BigInteger bi_X = new BigInteger(converted_back_X);
+    BigInteger bi_Y = new BigInteger(converted_back_Y);
+    BigInteger bi_Z = new BigInteger(converted_back_Z);       
+    GroupT jni_res = input.get(0)._2.zero();
+    jni_res.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
+
+    //System.out.println("CUDA output=" + jni_res.toString());
+
+
+    return jni_res;
+    }
+
 
 
     public static native <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
@@ -400,6 +448,114 @@ public class VariableBaseMSM {
 
         return new Tuple2<>(jni_res1, jni_res2);
 
+    }
+
+
+
+    public static <
+        T1 extends AbstractGroup<T1>,
+        T2 extends AbstractGroup<T2>,
+        FieldT extends AbstractFieldElementExpanded<FieldT>>
+    Tuple2<T1, T2> doubleMSMPartition(List<Tuple2<FieldT, Tuple2<T1, T2>>> input) throws Exception {
+
+
+
+    final int size = input.size();
+    assert (size > 0);
+
+
+
+    ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
+
+    ByteArrayOutputStream outputStreamBase1 = new ByteArrayOutputStream( );
+    ByteArrayOutputStream outputStreamBase2 = new ByteArrayOutputStream( );
+
+    for (Tuple2<FieldT, Tuple2<T1, T2>> in : input) {
+        bigScalarStream.write(bigIntegerToByteArrayHelperCGBN(in._1.toBigInteger()));
+
+        ArrayList<BigInteger> three_values = in._2._1.BN254G1ToBigInteger();
+        outputStreamBase1.write(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
+        outputStreamBase1.write(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
+        outputStreamBase1.write(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
+
+        ArrayList<BigInteger> six_values = in._2._2.BN254G2ToBigInteger();
+        outputStreamBase2.write(bigIntegerToByteArrayHelperCGBN(six_values.get(0)));
+        outputStreamBase2.write(bigIntegerToByteArrayHelperCGBN(six_values.get(1)));
+        outputStreamBase2.write(bigIntegerToByteArrayHelperCGBN(six_values.get(2)));   
+        outputStreamBase2.write(bigIntegerToByteArrayHelperCGBN(six_values.get(3)));
+        outputStreamBase2.write(bigIntegerToByteArrayHelperCGBN(six_values.get(4)));
+        outputStreamBase2.write(bigIntegerToByteArrayHelperCGBN(six_values.get(5)));   
+    }
+    byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
+    byte[] baseByteArrayBase1 = outputStreamBase1.toByteArray();
+    byte[] baseByteArrayBase2 = outputStreamBase2.toByteArray();
+
+    byte[] resArray = variableBaseDoubleMSMNativeHelper(baseByteArrayBase1, baseByteArrayBase2, bigScalarByteArray, input.size());
+
+
+    int size_of_bigint_cpp_side = 64;
+
+
+    byte[] converted_back_X = new byte[64];
+    byte[] converted_back_Y = new byte[64];
+    byte[] converted_back_Z = new byte[64];
+
+    for(int j =0; j < size_of_bigint_cpp_side; j++){
+        converted_back_X[j] = resArray[size_of_bigint_cpp_side - j - 1];
+    }
+    for(int j =0; j < size_of_bigint_cpp_side; j++){
+        converted_back_Y[j] = resArray[2*size_of_bigint_cpp_side - j - 1];
+    }
+    for(int j =0; j < size_of_bigint_cpp_side; j++){
+        converted_back_Z[j] = resArray[3*size_of_bigint_cpp_side - j - 1];
+    }
+    BigInteger bi_X = new BigInteger(converted_back_X);
+    BigInteger bi_Y = new BigInteger(converted_back_Y);
+    BigInteger bi_Z = new BigInteger(converted_back_Z);       
+    T1 jni_res1 = input.get(0)._2._1.zero();
+    jni_res1.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
+
+
+
+
+    byte[] converted_back_Xa = new byte[64];
+    byte[] converted_back_Ya = new byte[64];
+    byte[] converted_back_Za = new byte[64];
+    byte[] converted_back_Xb = new byte[64];
+    byte[] converted_back_Yb = new byte[64];
+    byte[] converted_back_Zb = new byte[64];
+
+    for(int j =0; j < size_of_bigint_cpp_side; j++){
+        converted_back_Xa[j] = resArray[4*size_of_bigint_cpp_side - j - 1];
+    }
+    for(int j =0; j < size_of_bigint_cpp_side; j++){
+        converted_back_Xb[j] = resArray[5*size_of_bigint_cpp_side - j - 1];
+    }
+    for(int j =0; j < size_of_bigint_cpp_side; j++){
+        converted_back_Ya[j] = resArray[6*size_of_bigint_cpp_side - j - 1];
+    }
+
+    for(int j =0; j < size_of_bigint_cpp_side; j++){
+        converted_back_Yb[j] = resArray[7*size_of_bigint_cpp_side - j - 1];
+    }
+    for(int j =0; j < size_of_bigint_cpp_side; j++){
+        converted_back_Za[j] = resArray[8*size_of_bigint_cpp_side - j - 1];
+    }
+    for(int j =0; j < size_of_bigint_cpp_side; j++){
+        converted_back_Zb[j] = resArray[9*size_of_bigint_cpp_side - j - 1];
+    }
+
+    BigInteger bi_Xa = new BigInteger(converted_back_Xa);
+    BigInteger bi_Ya = new BigInteger(converted_back_Ya);
+    BigInteger bi_Za = new BigInteger(converted_back_Za);    
+    BigInteger bi_Xb = new BigInteger(converted_back_Xb);
+    BigInteger bi_Yb = new BigInteger(converted_back_Yb);
+    BigInteger bi_Zb = new BigInteger(converted_back_Zb);      
+    T2 jni_res2 = input.get(0)._2._2.zero();
+    jni_res2.setBigIntegerBN254G2(bi_Xa, bi_Xb, bi_Ya, bi_Yb, bi_Za, bi_Zb);
+
+    return new Tuple2<>(jni_res1, jni_res2);
+
 
 
 
@@ -444,28 +600,14 @@ public class VariableBaseMSM {
     public static <
             GroupT extends AbstractGroup<GroupT>,
             FieldT extends AbstractFieldElementExpanded<FieldT>>
-    GroupT distributedMSM(final JavaRDD<Tuple2<FieldT, GroupT>> input) {
+    GroupT distributedMSM(final JavaRDD<Tuple2<FieldT, GroupT>> input) throws Exception{
 
         return input.mapPartitions(partition -> {
-            final List<Tuple2<BigInteger, GroupT>> pairs = new ArrayList<>();
+            
+            List<Tuple2<FieldT, GroupT>> partition_list = IteratorUtils.toList(partition);
+            GroupT res =  serialMSMPartition(partition_list);
+            return Collections.singletonList(res).iterator();
 
-            int numBits = 0;
-            while (partition.hasNext()) {
-                final Tuple2<FieldT, GroupT> pair = partition.next();
-
-                final BigInteger scalar = pair._1.toBigInteger();
-                if (scalar.equals(BigInteger.ZERO)) {
-                    continue;
-                }
-
-                pairs.add(new Tuple2<>(scalar, pair._2));
-                numBits = Math.max(numBits, scalar.bitLength());
-            }
-
-            return
-                    pairs.isEmpty() ?
-                            Collections.emptyListIterator() :
-                            Collections.singletonList(pippengerMSM(pairs, numBits)).iterator();
         }).reduce(GroupT::add);
     }
 
@@ -476,19 +618,9 @@ public class VariableBaseMSM {
     Tuple2<G1T, G2T> distributedDoubleMSM(final JavaRDD<Tuple2<FieldT, Tuple2<G1T, G2T>>> input) {
 
         return input.mapPartitions(partition -> {
-            final List<Tuple2<BigInteger, Tuple2<G1T, G2T>>> pairs = new ArrayList<>();
-            while (partition.hasNext()) {
-                Tuple2<FieldT, Tuple2<G1T, G2T>> pair = partition.next();
-                final BigInteger scalar = pair._1.toBigInteger();
-                if (scalar.equals(BigInteger.ZERO)) {
-                    continue;
-                }
-                pairs.add(new Tuple2<>(scalar, pair._2));
-            }
-            return
-                    pairs.isEmpty() ?
-                            Collections.emptyListIterator() :
-                            Collections.singletonList(doubleMSM(pairs)).iterator();
+            List<Tuple2<FieldT, Tuple2<G1T, G2T>>> partition_list = IteratorUtils.toList(partition);
+            Tuple2<G1T, G2T> res =  doubleMSMPartition(partition_list);
+            return Collections.singletonList(res).iterator();
         }).reduce((e1, e2) -> new Tuple2<>(e1._1.add(e2._1), e1._2.add(e2._2)));
     }
 

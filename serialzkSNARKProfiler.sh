@@ -1,8 +1,8 @@
 
 for TOTAL_CORES in 16; do
-  for SIZE in `seq 20 20`; do
+  for SIZE in `seq 23 23`; do
 
-    export APP=zksnark
+    export APP=fmsm-g1
     export MEMORY=64G
     export MULTIPLIER=1
 

@@ -21,7 +21,6 @@ import algebra.fields.Fp2;
  * If the order is not provided for the constructor, the group behaves as the integer group Z.
  */
 public class AdditiveIntegerGroup extends AbstractGroup<AdditiveIntegerGroup> {
-    //TODO i need to implement this AdditiveIntegerGroup in cpp
     protected BigInteger number;
     private final AbstractAdditiveIntegerGroupParameters GroupParameters;
     private final ArrayList<Integer> fixedBaseWindowTable = new ArrayList<>(0);

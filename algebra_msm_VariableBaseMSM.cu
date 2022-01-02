@@ -17,7 +17,6 @@
 
 #include <bitset>
 
-//TODO lianke: G1 and G2 MSM window table generation can be moved to cpp side too.
 using namespace std;
 
 #define CUDA_CALL( call )               \
@@ -1112,7 +1111,6 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
     CUDA_CALL(cudaSetDevice(0));
     printf("finish CUDA device set\n");
 
-    //TODO lianke: sometimes get stuck in memcpy.
     Scalar *inputScalarArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputScalarArrayGPU, sizeof(Scalar) * batch_size); )
     CUDA_CALL( cudaMemcpy(inputScalarArrayGPU, (void**)&bigScalarArray[0], sizeof(Scalar) * batch_size, cudaMemcpyHostToDevice); )
@@ -1258,7 +1256,6 @@ void  pippengerMSMG2(std::vector<Scalar> & bigScalarArray, std::vector<BN254G2> 
     CUDA_CALL(cudaSetDevice(0));
     printf("finish CUDA device set\n");
 
-    //TODO lianke: sometimes get stuck in memcpy.
     Scalar *inputScalarArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputScalarArrayGPU, sizeof(Scalar) * batch_size); )
     CUDA_CALL( cudaMemcpy(inputScalarArrayGPU, (void**)&bigScalarArray[0], sizeof(Scalar) * batch_size, cudaMemcpyHostToDevice); )

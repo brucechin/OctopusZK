@@ -30,7 +30,7 @@ public class DistributedProver {
             final Assignment<FieldT> primary,
             final JavaPairRDD<Long, FieldT> oneFullAssignment,
             final FieldT fieldFactory,
-            final Configuration config) {
+            final Configuration config) throws Exception{
         if (config.debugFlag()) {
             assert (provingKey.r1cs().isSatisfied(primary, oneFullAssignment));
         }

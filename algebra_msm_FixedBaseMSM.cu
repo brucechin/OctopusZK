@@ -19,7 +19,6 @@
 
 #include <bitset>
 
-//TODO lianke: G1 and G2 MSM window table generation can be moved to cpp side too.
 using namespace std;
 
 #define CUDA_CALL( call )               \
@@ -1004,6 +1003,9 @@ void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1* outputArray
     size_t instance_per_block = (threads_per_block / MSM_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
     //printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
+    //TODO set device ID
+    int num_gpus = 1;
+    CUDA_CALL(cudaGetDeviceCount(&num_gpus));
     CUDA_CALL(cudaSetDevice(0));
     Scalar *inputScalarArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputScalarArrayGPU, sizeof(Scalar) * batch_size); )
@@ -1074,6 +1076,8 @@ void  fixed_double_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1 baseG
     size_t instance_per_block = (threads_per_block / MSM_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
     //printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
+    int num_gpus = 1;
+    CUDA_CALL(cudaGetDeviceCount(&num_gpus));
     CUDA_CALL(cudaSetDevice(0));
     Scalar *inputScalarArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputScalarArrayGPU, sizeof(Scalar) * batch_size); )

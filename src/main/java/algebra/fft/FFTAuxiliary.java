@@ -63,17 +63,6 @@ public class FFTAuxiliary {
 
     }
 
-    public static byte[] bigIntegerToByteArrayHelperGPU(BigInteger bigint){
-        byte[] temp = bigint.toByteArray();
-
-        byte[] res = new byte[(temp.length + 3)/ 4 * 4];
-        int new_len = (temp.length + 3) / 4 * 4;
-        for(int i = 0; i < temp.length; i++){
-            res[temp.length - i - 1] = temp[i];
-        }
-        return res;
-
-    }
 
     public static byte[] bigIntegerToByteArrayHelperCGBN(BigInteger bigint){
         byte[] temp = bigint.toByteArray();
@@ -102,7 +91,7 @@ public class FFTAuxiliary {
         if (n == 1) {
             return;
         }
-        System.out.println("on java side, serialRadix2FFT omega and input class type is "+ omega.getClass().getName());
+        //System.out.println("on java side, serialRadix2FFT omega and input class type is "+ omega.getClass().getName());
 
         assert (n == (1 << logn));
 

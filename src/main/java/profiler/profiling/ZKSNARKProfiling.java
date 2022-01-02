@@ -40,11 +40,12 @@ public class ZKSNARKProfiling {
         final R1CSRelation<BN254aFr> r1cs = construction._1();
         final Assignment<BN254aFr> primary = construction._2();
         final Assignment<BN254aFr> auxiliary = construction._3();
-
+        //above R1CS construction is not counted into the setup and proving time during benchmark.
         config.setContext("Setup-Serial");
         config.beginRuntimeMetadata("Size (inputs)", numConstraints);
 
         config.beginLog(config.context());
+        config.beginLog("Finished random R1CS generation for benchmark purpose. benchmark data generation is not counted into the setup and proving time.");
         config.beginRuntime("Setup");
         final CRS<BN254aFr, BN254aG1, BN254aG2, BN254aGT> CRS =
                 SerialSetup.generate(r1cs, fieldFactory, g1Factory, g2Factory, pairing, config);
@@ -101,6 +102,8 @@ public class ZKSNARKProfiling {
         config.beginRuntimeMetadata("Size (inputs)", numConstraints);
 
         config.beginLog(config.context());
+        config.beginLog("Finished random R1CS generation for benchmark purpose. benchmark data generation is not counted into the setup and proving time.");
+
         config.beginRuntime("Setup");
         final CRS<BN254bFr, BN254bG1, BN254bG2, BN254bGT> CRS =
                 SerialSetup.generate(r1cs, fieldFactory, g1Factory, g2Factory, pairing, config);
@@ -152,11 +155,14 @@ public class ZKSNARKProfiling {
         final R1CSRelationRDD<BN254aFr> r1cs = construction._1();
         final Assignment<BN254aFr> primary = construction._2();
         final JavaPairRDD<Long, BN254aFr> fullAssignment = construction._3();
+        //above R1CS construction is not counted into the setup and proving time during benchmark.
 
         config.setContext("Setup");
         config.beginRuntimeMetadata("Size (inputs)", numConstraints);
 
         config.beginLog(config.context());
+        config.beginLog("Finished random R1CS generation for benchmark purpose. benchmark data generation is not counted into the setup and proving time.");
+
         config.beginRuntime("Setup");
         final CRS<BN254aFr, BN254aG1, BN254aG2, BN254aGT> CRS =
                 DistributedSetup.generate(r1cs, fieldFactory, g1Factory, g2Factory, pairing, config);
@@ -214,6 +220,8 @@ public class ZKSNARKProfiling {
 
         config.beginLog(config.context());
         config.beginRuntime("Setup");
+        config.beginLog("Finished random R1CS generation for benchmark purpose. benchmark data generation is not counted into the setup and proving time.");
+
         final CRS<BN254bFr, BN254bG1, BN254bG2, BN254bGT> CRS =
                 DistributedSetup.generate(r1cs, fieldFactory, g1Factory, g2Factory, pairing, config);
         config.endLog(config.context());

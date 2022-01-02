@@ -29,6 +29,7 @@ public class VariableBaseMSMProfiling {
 
         config.setContext("VariableBaseMSMG1-Serial");
         config.beginRuntimeMetadata("Size (inputs)", size);
+        config.beginLog("Finished random R1CS generation for benchmark purpose. benchmark data generation is not counted into the setup and proving time.");
 
         config.beginLog("VariableBaseMSM");
         config.beginRuntime("VariableBaseMSM");
@@ -53,6 +54,7 @@ public class VariableBaseMSMProfiling {
 
         config.setContext("VariableBaseMSMG2-Serial");
         config.beginRuntimeMetadata("Size (inputs)", size);
+        config.beginLog("Finished random R1CS generation for benchmark purpose. benchmark data generation is not counted into the setup and proving time.");
 
         config.beginLog("VariableBaseMSM");
         config.beginRuntime("VariableBaseMSM");
@@ -65,12 +67,13 @@ public class VariableBaseMSMProfiling {
 
     public static void distributedVariableBaseMSMG1Profiling(
             final Configuration config,
-            final long size) {
+            final long size) throws Exception{
         final JavaRDD<Tuple2<BN254aFr, BN254aG1>> input = VariableBaseMSMGenerator
                 .generateG1Data(config, size);
 
         config.setContext("VariableBaseMSMG1");
         config.beginRuntimeMetadata("Size (inputs)", size);
+        config.beginLog("Finished random R1CS generation for benchmark purpose. benchmark data generation is not counted into the setup and proving time.");
 
         config.beginLog("BosCosterVariableBaseMSM");
         config.beginRuntime("BosCosterVariableBaseMSM");
@@ -83,12 +86,13 @@ public class VariableBaseMSMProfiling {
 
     public static void distributedVariableBaseMSMG2Profiling(
             final Configuration config,
-            final long size) {
+            final long size) throws Exception{
         final JavaRDD<Tuple2<BN254aFr, BN254aG2>> input = VariableBaseMSMGenerator
                 .generateG2Data(config, size);
 
         config.setContext("VariableBaseMSMG2");
         config.beginRuntimeMetadata("Size (inputs)", size);
+        config.beginLog("Finished random R1CS generation for benchmark purpose. benchmark data generation is not counted into the setup and proving time.");
 
         config.beginLog("BosCosterVariableBaseMSM");
         config.beginRuntime("BosCosterVariableBaseMSM");

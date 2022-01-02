@@ -271,9 +271,11 @@ public class FixedBaseMSM {
         
 
         for(int i = 0; i < scalars.size(); i++){
+            //TODO lianke: simply store the byte array in the proving key.
             byte[] converted_back_X = Arrays.copyOfRange(resultByteArray, 3*i*size_of_bigint_cpp_side, (3*i+1)*size_of_bigint_cpp_side);
             byte[] converted_back_Y = Arrays.copyOfRange(resultByteArray, (3*i +1)*size_of_bigint_cpp_side, (3*i+2)*size_of_bigint_cpp_side);
             byte[] converted_back_Z = Arrays.copyOfRange(resultByteArray, (3*i +2)*size_of_bigint_cpp_side, (3*i+3)*size_of_bigint_cpp_side);
+
 
             BigInteger bi_X = new BigInteger(converted_back_X);
             BigInteger bi_Y = new BigInteger(converted_back_Y);

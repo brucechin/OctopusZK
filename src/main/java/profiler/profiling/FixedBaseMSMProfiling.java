@@ -30,6 +30,7 @@ public class FixedBaseMSMProfiling {
 
         config.setContext("FixedBaseMSMG1-Serial");
         config.beginRuntimeMetadata("Size (inputs)", size);
+        config.beginLog("Finished random R1CS generation for benchmark purpose. benchmark data generation is not counted into the setup and proving time.");
 
         final int windowSizeG1 = FixedBaseMSM.getWindowSize((int) size, generatorG1);
 
@@ -86,6 +87,7 @@ public class FixedBaseMSMProfiling {
 
         config.setContext("FixedBaseMSMG1");
         config.beginRuntimeMetadata("Size (inputs)", size);
+        config.beginLog("Finished random R1CS generation for benchmark purpose. benchmark data generation is not counted into the setup and proving time.");
 
 
         final int windowSizeG1 = FixedBaseMSM

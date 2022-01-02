@@ -90,7 +90,7 @@ public class DistributedVariableBaseMSMTest implements Serializable {
     }
 
     @Test
-    public void DistributedMSMTest() {
+    public void DistributedMSMTest() throws Exception{
         final LargeFpParameters FpParameters = new LargeFpParameters();
         ArrayList<Tuple2<Fp, AdditiveIntegerGroup>> input = new ArrayList<>(4);
         input.add(new Tuple2<>(new Fp("3", FpParameters), new AdditiveIntegerGroup(5, GroupParameters)));
@@ -107,7 +107,7 @@ public class DistributedVariableBaseMSMTest implements Serializable {
     }
 
     @Test
-    public void DistributedMSMDuplicatesTest() {
+    public void DistributedMSMDuplicatesTest() throws Exception{
         final LargeFpParameters FpParameters = new LargeFpParameters();
         ArrayList<Tuple2<Fp, AdditiveIntegerGroup>> input = new ArrayList<>(4);
         input.add(new Tuple2<>(new Fp("3", FpParameters), new AdditiveIntegerGroup(5, GroupParameters)));
