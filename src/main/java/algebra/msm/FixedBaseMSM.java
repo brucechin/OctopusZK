@@ -425,8 +425,7 @@ public class FixedBaseMSM {
             final int scalarSize2,
             final int windowSize2,
             final G2T baseG2,
-            final List<FieldT> scalars, 
-            final int taskID) throws Exception {
+            final List<FieldT> scalars) throws Exception {
 
 
         System.out.println("doubleBatchMSM info:");
@@ -473,7 +472,7 @@ public class FixedBaseMSM {
 
         byte[] resultByteArray = doubleBatchMSMNativeHelper(outerc1, windowSize1, outerc2, windowSize2,
                                         out_size1, in_size1, out_size2, in_size2, scalars.size(),
-                                        baseByteArrayXYZ, baseByteArrayXYZABC, bigScalarByteArray, taskID);
+                                        baseByteArrayXYZ, baseByteArrayXYZABC, bigScalarByteArray, 0);
 
 
         final List<Tuple2<G1T, G2T>> jni_res = new ArrayList<>(scalars.size());
