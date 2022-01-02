@@ -1,5 +1,5 @@
 sudo apt-get update 
-sudo apt-get install -y maven openjdk-8-jdk g++ lzip scala git 
+sudo apt-get install -y maven openjdk-8-jdk g++ lzip scala git m4
 sudo apt install -y nvidia-driver-470 nvidia-cuda-toolkit
 
 #install GMP

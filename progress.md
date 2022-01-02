@@ -54,3 +54,9 @@ offload the windowTable generation to GPU side. because i found that during dist
 3. java side serialize the windowtable to byteArray
 4. cpp side read and reconstruct the windowtable.
 such an improvement is good for scalability. next step is to implement this feature for G2 curve. also we need to reverse the result endian on GPU side to further reduce the overhead on java side, because java side is just so slow...
+
+
+# 2021.1.1
+
+finish variable base MSM G1 and G2 implementation. port to distributed MSM and FFT. Support multi GPU allocation. spark is sometime stuck and i need to figure it out.
+TODO: add more profiling println info for checking. 

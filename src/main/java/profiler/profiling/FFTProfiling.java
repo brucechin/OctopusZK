@@ -27,7 +27,7 @@ public class FFTProfiling {
 
         config.beginLog("FFT");
         config.beginRuntime("FFT");
-        domain.radix2FFT(serial);
+        domain.radix2FFT(serial, 0);
         config.endRuntime("FFT");
         config.endLog("FFT");
 

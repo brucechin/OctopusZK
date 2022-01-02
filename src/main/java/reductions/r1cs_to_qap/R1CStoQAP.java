@@ -162,15 +162,15 @@ public class R1CStoQAP {
 
         // Perform radix-2 inverse FFT to determine the coefficients of A and B.
         config.beginLog("Perform radix-2 inverse FFT to determine the coefficients of A and B.");
-        domain.radix2InverseFFT(A);
-        domain.radix2InverseFFT(B);
+        domain.radix2InverseFFT(A, 0);
+        domain.radix2InverseFFT(B, 0);
         //TODO LIANKE this radix-2 inverse FFT takes up 20% of the total time
         config.endLog("Perform radix-2 inverse FFT to determine the coefficients of A and B.");
 
         // Compute evaluation of polynomials A and B on set T.
         config.beginLog("Compute evaluation of polynomials A and B on set T.");
-        domain.radix2CosetFFT(A, multiplicativeGenerator);
-        domain.radix2CosetFFT(B, multiplicativeGenerator);
+        domain.radix2CosetFFT(A, multiplicativeGenerator, 0);
+        domain.radix2CosetFFT(B, multiplicativeGenerator, 0);
         //TODO LIANKE this radix-2 coset FFT takes up 20% of the total time
         config.endLog("Compute evaluation of polynomials A and B on set T.");
 
@@ -196,13 +196,13 @@ public class R1CStoQAP {
 
         // Perform radix-2 inverse FFT to determine the coefficients of C.
         config.beginLog("Perform radix-2 inverse FFT to determine the coefficients of C.");
-        domain.radix2InverseFFT(C);
+        domain.radix2InverseFFT(C, 0);
         //TODO LIANKE this radix-2 inverse FFT takes up 10% of the total time
         config.endLog("Perform radix-2 inverse FFT to determine the coefficients of C.");
 
         // Compute evaluation of polynomials C on set T.
         config.beginLog("Compute evaluation of polynomials C on set T.");
-        domain.radix2CosetFFT(C, multiplicativeGenerator);
+        domain.radix2CosetFFT(C, multiplicativeGenerator, 0);
         //TODO LIANKE this radix-2 coset FFT takes up 10% of the total time
         config.endLog("Compute evaluation of polynomials C on set T.");
 
@@ -224,7 +224,7 @@ public class R1CStoQAP {
 
         // Compute coefficients of polynomial H.
         config.beginLog("Compute coefficients of polynomial H.");
-        domain.radix2CosetInverseFFT(coefficientsH, multiplicativeGenerator);
+        domain.radix2CosetInverseFFT(coefficientsH, multiplicativeGenerator, 0);
         coefficientsH.add(zero);
         //TODO LIANKE this radix-2 inverse FFT takes up 10% of the total time
         config.endLog("Compute coefficients of polynomial H.");

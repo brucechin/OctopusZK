@@ -16,6 +16,7 @@ import common.MathUtils;
 import common.Utils;
 import org.apache.spark.api.java.JavaPairRDD;
 import scala.Tuple2;
+import org.apache.spark.TaskContext;
 
 import java.util.ArrayList;
 
@@ -45,10 +46,12 @@ public class Prover<FieldT extends AbstractFieldElementExpanded<FieldT>> {
         /* Evaluate inputSize inputPolynomials(i) in a domain of size D. */
         final JavaPairRDD<Long, ArrayList<FieldT>> evaluatedInputPolynomials = Common
                 .getInputPolynomials(circuit, input, numInputs).mapValues(element -> {
+                    TaskContext tc = TaskContext.get();
+                    long taskID = tc.taskAttemptId();
                     final SerialFFT<FieldT> domain = new SerialFFT<>(proofSize, element.get(0));
 
                     ArrayList<FieldT> paddedElement = Utils.padArray(element, proofSize);
-                    domain.radix2FFT(paddedElement);
+                    domain.radix2FFT(paddedElement, (int)taskID);
                     return paddedElement;
                 });
 

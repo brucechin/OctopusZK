@@ -20,6 +20,7 @@ import scala.Tuple2;
 import java.util.Arrays;
 import java.io.*;
 import org.apache.commons.collections.IteratorUtils;
+import org.apache.spark.TaskContext;
 
 public class VariableBaseMSM {
 
@@ -216,7 +217,7 @@ public class VariableBaseMSM {
     byte[] variableBaseSerialMSMNativeHelper(
             final byte[] basesXYZ,
             final byte[] scalars,
-            final int batch_size);
+            final int batch_size, final int taskID);
 
     public static <
             GroupT extends AbstractGroup<GroupT>,
@@ -228,6 +229,7 @@ public class VariableBaseMSM {
 
         assert (bases.size() == scalars.size());
 
+        long start = System.currentTimeMillis();
 
         ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
         for (FieldT scalar : scalars) {
@@ -247,8 +249,11 @@ public class VariableBaseMSM {
 
         }
         byte[] baseByteArrayXYZ = outputStream.toByteArray();
+        long finish = System.currentTimeMillis();
 
-        byte[] resArray = variableBaseSerialMSMNativeHelper(baseByteArrayXYZ, bigScalarByteArray, bases.size());
+        long timeElapsed = finish - start;
+        System.out.println("SerialVarMSM JAVA side prepare data time elapsed: " + timeElapsed + " ms");
+        byte[] resArray = variableBaseSerialMSMNativeHelper(baseByteArrayXYZ, bigScalarByteArray, bases.size(), 0);
         
         int size_of_bigint_cpp_side = 64;
         
@@ -281,7 +286,7 @@ public class VariableBaseMSM {
     public static <
         GroupT extends AbstractGroup<GroupT>,
         FieldT extends AbstractFieldElementExpanded<FieldT>>
-    GroupT serialMSMPartition(List<Tuple2<FieldT, GroupT>> input) throws Exception {
+    GroupT serialMSMPartition(List<Tuple2<FieldT, GroupT>> input, final int taskID) throws Exception {
 
 
 
@@ -300,7 +305,7 @@ public class VariableBaseMSM {
     byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
     byte[] baseByteArrayXYZ = outputStream.toByteArray();
 
-    byte[] resArray = variableBaseSerialMSMNativeHelper(baseByteArrayXYZ, bigScalarByteArray, input.size());
+    byte[] resArray = variableBaseSerialMSMNativeHelper(baseByteArrayXYZ, bigScalarByteArray, input.size(), taskID);
 
     int size_of_bigint_cpp_side = 64;
 
@@ -336,7 +341,7 @@ public class VariableBaseMSM {
             final byte[] bases1,
             final byte[] bases2,
             final byte[] scalars,
-            final int batch_size1);
+            final int batch_size1, final int taskID);
 
     public static <
             T1 extends AbstractGroup<T1>,
@@ -353,6 +358,7 @@ public class VariableBaseMSM {
         assert (size > 0);
 
 
+        long start = System.currentTimeMillis();
 
         ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
         for (FieldT scalar : scalars) {
@@ -381,8 +387,11 @@ public class VariableBaseMSM {
         }
         byte[] baseByteArrayBase1 = outputStreamBase1.toByteArray();
         byte[] baseByteArrayBase2 = outputStreamBase2.toByteArray();
+        long finish = System.currentTimeMillis();
 
-        byte[] resArray = variableBaseDoubleMSMNativeHelper(baseByteArrayBase1, baseByteArrayBase2, bigScalarByteArray, bases.size());
+        long timeElapsed = finish - start;
+        System.out.println("doubleVarMSM JAVA side prepare data time elapsed: " + timeElapsed + " ms");
+        byte[] resArray = variableBaseDoubleMSMNativeHelper(baseByteArrayBase1, baseByteArrayBase2, bigScalarByteArray, bases.size(), 0);
 
 
         int size_of_bigint_cpp_side = 64;
@@ -456,7 +465,7 @@ public class VariableBaseMSM {
         T1 extends AbstractGroup<T1>,
         T2 extends AbstractGroup<T2>,
         FieldT extends AbstractFieldElementExpanded<FieldT>>
-    Tuple2<T1, T2> doubleMSMPartition(List<Tuple2<FieldT, Tuple2<T1, T2>>> input) throws Exception {
+    Tuple2<T1, T2> doubleMSMPartition(List<Tuple2<FieldT, Tuple2<T1, T2>>> input, final int taskID) throws Exception {
 
 
 
@@ -490,7 +499,7 @@ public class VariableBaseMSM {
     byte[] baseByteArrayBase1 = outputStreamBase1.toByteArray();
     byte[] baseByteArrayBase2 = outputStreamBase2.toByteArray();
 
-    byte[] resArray = variableBaseDoubleMSMNativeHelper(baseByteArrayBase1, baseByteArrayBase2, bigScalarByteArray, input.size());
+    byte[] resArray = variableBaseDoubleMSMNativeHelper(baseByteArrayBase1, baseByteArrayBase2, bigScalarByteArray, input.size(), taskID);
 
 
     int size_of_bigint_cpp_side = 64;
@@ -603,9 +612,10 @@ public class VariableBaseMSM {
     GroupT distributedMSM(final JavaRDD<Tuple2<FieldT, GroupT>> input) throws Exception{
 
         return input.mapPartitions(partition -> {
-            
+            TaskContext tc = TaskContext.get();
+            long taskID = tc.taskAttemptId();
             List<Tuple2<FieldT, GroupT>> partition_list = IteratorUtils.toList(partition);
-            GroupT res =  serialMSMPartition(partition_list);
+            GroupT res =  serialMSMPartition(partition_list, (int) taskID);
             return Collections.singletonList(res).iterator();
 
         }).reduce(GroupT::add);
@@ -618,8 +628,10 @@ public class VariableBaseMSM {
     Tuple2<G1T, G2T> distributedDoubleMSM(final JavaRDD<Tuple2<FieldT, Tuple2<G1T, G2T>>> input) {
 
         return input.mapPartitions(partition -> {
+            TaskContext tc = TaskContext.get();
+            long taskID = tc.taskAttemptId();
             List<Tuple2<FieldT, Tuple2<G1T, G2T>>> partition_list = IteratorUtils.toList(partition);
-            Tuple2<G1T, G2T> res =  doubleMSMPartition(partition_list);
+            Tuple2<G1T, G2T> res =  doubleMSMPartition(partition_list, (int) taskID);
             return Collections.singletonList(res).iterator();
         }).reduce((e1, e2) -> new Tuple2<>(e1._1.add(e2._1), e1._2.add(e2._2)));
     }

@@ -166,19 +166,19 @@ __global__ void cuda_fft_second_step(Scalar *input_field, Scalar omega_binary, c
 
 
 
-void best_fft (std::vector<Scalar> &a, const Scalar &omg)
+void best_fft (std::vector<Scalar> &a, const Scalar &omg, int taskID)
 {
-	int cnt;
-    cudaGetDeviceCount(&cnt);
-
-    //printf("CUDA Devices: %d, input_field size: %lu, input_field count: %lu\n", cnt, sizeof(Scalar), a.size());
+    int num_gpus = 1;
+    CUDA_CALL(cudaGetDeviceCount(&num_gpus));
+    //printf("CUDA Devices number: %d, input_field size: %lu, input_field count: %lu\n", num_gpus, sizeof(Scalar), batch_size);
 
     size_t threads_per_block = 128;
     size_t instance_per_block = (threads_per_block / fft_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (a.size() + instance_per_block - 1) / instance_per_block;
 
     //printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
-    CUDA_CALL(cudaSetDevice(0));
+    //cout <<"taskID=" << taskID << "scheduled to GPU " << taskID % num_gpus<< endl;
+    CUDA_CALL(cudaSetDevice(taskID % num_gpus));
     Scalar *in; 
     CUDA_CALL( cudaMalloc((void**)&in, sizeof(Scalar) * a.size()); )
     CUDA_CALL( cudaMemcpy(in, (void**)&a[0], sizeof(Scalar) * a.size(), cudaMemcpyHostToDevice); )
@@ -219,13 +219,13 @@ void best_fft (std::vector<Scalar> &a, const Scalar &omg)
  * Signature: (Ljava/util/List;[B)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_algebra_fft_FFTAuxiliary_serialRadix2FFTNativeHelper
-  (JNIEnv * env, jclass obj, jobject inputs, jbyteArray omegaArray){
+  (JNIEnv * env, jclass obj, jobject inputs, jbyteArray omegaArray, jint taskID){
     jclass java_util_ArrayList      = static_cast<jclass>(env->NewGlobalRef(env->FindClass("java/util/ArrayList")));
     jmethodID java_util_ArrayList_size = env->GetMethodID(java_util_ArrayList, "size", "()I");
     jmethodID java_util_ArrayList_get  = env->GetMethodID(java_util_ArrayList, "get", "(I)Ljava/lang/Object;");
     jint input_len = env->CallIntMethod(inputs, java_util_ArrayList_size);
 
-
+    //TODO lianke this read in part can be optimized
     vector<Scalar> inputArray = vector<Scalar>(input_len, Scalar());
     for(int i =0; i < input_len; i++){
         jbyteArray element = (jbyteArray)env->CallObjectMethod(inputs, java_util_ArrayList_get, i);
@@ -245,13 +245,12 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_fft_FFTAuxiliary_serialRadix2FFTNative
                 bytes,
                 len);
     
-    best_fft(inputArray, omega);
+    best_fft(inputArray, omega, taskID);
 
 
+    //TODO lianke this write back part can be optimized
     jbyteArray resultByteArray = env->NewByteArray((jsize)fft_params_t::num_of_bytes * input_len);
     for(int i=0; i < input_len;i++){
-        // cout <<"cpp side output=";
-        // inputArray[i].printBinaryDebug();
         env->SetByteArrayRegion(resultByteArray, i * fft_params_t::num_of_bytes , fft_params_t::num_of_bytes,   reinterpret_cast< jbyte*>(&inputArray[i]._limbs));
     }
 
