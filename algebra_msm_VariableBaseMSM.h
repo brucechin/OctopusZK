@@ -18,10 +18,10 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
 /*
  * Class:     algebra_msm_VariableBaseMSM
  * Method:    variableBaseDoubleMSMNativeHelper
- * Signature: (Ljava/util/ArrayList;Ljava/util/ArrayList;Ljava/util/ArrayList;)[B
+ * Signature: ([B[B[BI)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseDoubleMSMNativeHelper
-  (JNIEnv *, jclass, jobject, jobject, jobject);
+  (JNIEnv *, jclass, jbyteArray, jbyteArray, jbyteArray, jint);
 
 #ifdef __cplusplus
 }

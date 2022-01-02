@@ -276,41 +276,8 @@ public class VariableBaseMSM {
         GroupT jni_res = bases.get(0).zero();
         jni_res.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
 
-        System.out.println("CUDA output=" + jni_res.toString());
+        //System.out.println("CUDA output=" + jni_res.toString());
 
-
-        // lianke: below is the original code used for verify the JNI cpp side code computation is correct
-
-    //     final List<Tuple2<BigInteger, GroupT>> filteredInput = new ArrayList<>();
-
-    //     GroupT acc = bases.get(0).zero();
-
-
-    //     int numBits = 0;
-    //     for (int i = 0; i < bases.size(); i++) {
-    //         final BigInteger scalar = scalars.get(i).toBigInteger();
-    //         // if (scalar.equals(BigInteger.ZERO)) {
-    //         //     continue;
-    //         // }
-
-    //         final GroupT base = bases.get(i);
-
-    //         // if (scalar.equals(BigInteger.ONE)) {
-    //         //     acc = acc.add(base);
-    //         // } else {
-    //             filteredInput.add(new Tuple2<>(scalar, base));
-    //             //System.out.println("java side filteredInput add <scalar,base> index:" + i + "\n"  +  byteToString(scalar.toByteArray()) + ",\n " + byteToString(base.toBigInteger().toByteArray()));
-    //             numBits = Math.max(numBits, scalar.bitLength());
-    //         // }
-    //     }
-
-
-    //    if (!filteredInput.isEmpty()) {
-    //         acc = acc.add(pippengerMSM(filteredInput, 254));
-    //     }
-
-    //     System.out.println("java output = " + acc.toString());
-    //     System.out.println("java == CUDA? " + acc.equals(jni_res));
 
         return jni_res;
     }
@@ -320,13 +287,14 @@ public class VariableBaseMSM {
     byte[] variableBaseDoubleMSMNativeHelper(
             final byte[] bases1,
             final byte[] bases2,
-            final byte[] scalars);
+            final byte[] scalars,
+            final int batch_size1);
 
     public static <
             T1 extends AbstractGroup<T1>,
             T2 extends AbstractGroup<T2>,
             FieldT extends AbstractFieldElementExpanded<FieldT>>
-    Tuple2<T1, T2> doubleMSM(final List<FieldT> scalars, final List<Tuple2<T1, T2>> bases) {
+    Tuple2<T1, T2> doubleMSM(final List<FieldT> scalars, final List<Tuple2<T1, T2>> bases) throws Exception {
         // System.out.println("variableBaseDoubleMSM info:");
         // System.out.println("variableBaseDoubleMSM base size :" + bases.size() + " type:" +bases.get(0)._1.getClass().getName() + " " +bases.get(0)._2.getClass().getName()  );
         // System.out.println("variableBaseDoubleMSM scalars size :" + scalars.size() + " type:"+scalars.get(0).getClass().getName());
@@ -338,70 +306,99 @@ public class VariableBaseMSM {
 
 
 
-        // ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
-        // for (FieldT scalar : scalars) {
-        //     bigScalars.add(bigIntegerToByteArrayHelper(scalar.toBigInteger()));
-        // }
-        // ArrayList<byte[]> basesArray1 = new ArrayList<byte[]>();
-        // ArrayList<byte[]> basesArray2 = new ArrayList<byte[]>();
-
-        // for (Tuple2<T1, T2> base : bases){
-        //     basesArray1.add(bigIntegerToByteArrayHelper(base._1.toBigInteger()));
-        //     basesArray2.add(bigIntegerToByteArrayHelper(base._2.toBigInteger()));
-        // }
-
-        // byte[] resArray = variableBaseDoubleMSMNativeHelper(basesArray1, basesArray2, bigScalars);
+        ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
+        for (FieldT scalar : scalars) {
+            bigScalarStream.write(bigIntegerToByteArrayHelperCGBN(scalar.toBigInteger()));
+        }
+        byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
 
 
-        // int size_of_bigint_cpp_side = 64;
+        ByteArrayOutputStream outputStreamBase1 = new ByteArrayOutputStream( );
+        ByteArrayOutputStream outputStreamBase2 = new ByteArrayOutputStream( );
+
+
+        for (Tuple2<T1, T2> base : bases){
+            ArrayList<BigInteger> three_values = base._1.BN254G1ToBigInteger();
+            outputStreamBase1.write(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
+            outputStreamBase1.write(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
+            outputStreamBase1.write(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
+
+            ArrayList<BigInteger> six_values = base._2.BN254G2ToBigInteger();
+            outputStreamBase2.write(bigIntegerToByteArrayHelperCGBN(six_values.get(0)));
+            outputStreamBase2.write(bigIntegerToByteArrayHelperCGBN(six_values.get(1)));
+            outputStreamBase2.write(bigIntegerToByteArrayHelperCGBN(six_values.get(2)));   
+            outputStreamBase2.write(bigIntegerToByteArrayHelperCGBN(six_values.get(3)));
+            outputStreamBase2.write(bigIntegerToByteArrayHelperCGBN(six_values.get(4)));
+            outputStreamBase2.write(bigIntegerToByteArrayHelperCGBN(six_values.get(5)));   
+        }
+        byte[] baseByteArrayBase1 = outputStreamBase1.toByteArray();
+        byte[] baseByteArrayBase2 = outputStreamBase2.toByteArray();
+
+        byte[] resArray = variableBaseDoubleMSMNativeHelper(baseByteArrayBase1, baseByteArrayBase2, bigScalarByteArray, bases.size());
+
+
+        int size_of_bigint_cpp_side = 64;
+
+
+        byte[] converted_back_X = new byte[64];
+        byte[] converted_back_Y = new byte[64];
+        byte[] converted_back_Z = new byte[64];
+
+        for(int j =0; j < size_of_bigint_cpp_side; j++){
+            converted_back_X[j] = resArray[size_of_bigint_cpp_side - j - 1];
+        }
+        for(int j =0; j < size_of_bigint_cpp_side; j++){
+            converted_back_Y[j] = resArray[2*size_of_bigint_cpp_side - j - 1];
+        }
+        for(int j =0; j < size_of_bigint_cpp_side; j++){
+            converted_back_Z[j] = resArray[3*size_of_bigint_cpp_side - j - 1];
+        }
+        BigInteger bi_X = new BigInteger(converted_back_X);
+        BigInteger bi_Y = new BigInteger(converted_back_Y);
+        BigInteger bi_Z = new BigInteger(converted_back_Z);       
+        T1 jni_res1 = bases.get(0)._1.zero();
+        jni_res1.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
 
 
 
 
-        // lianke: below is the original code used for verify the JNI cpp side code computation is correct
+        byte[] converted_back_Xa = new byte[64];
+        byte[] converted_back_Ya = new byte[64];
+        byte[] converted_back_Za = new byte[64];
+        byte[] converted_back_Xb = new byte[64];
+        byte[] converted_back_Yb = new byte[64];
+        byte[] converted_back_Zb = new byte[64];
 
-        final ArrayList<Tuple2<BigInteger, T1>> converted1 = new ArrayList<>(size);
-        final ArrayList<Tuple2<BigInteger, T2>> converted2 = new ArrayList<>(size);
-
-        T1 acc1 = bases.get(0)._1.zero();
-        T2 acc2 = bases.get(0)._2.zero();
-        int numBits = 0;
-
-        for (int i = 0; i < size; i++) {
-            final Tuple2<T1, T2> value = bases.get(i);
-            final BigInteger scalar = scalars.get(i).toBigInteger();
-            if (scalar.equals(BigInteger.ZERO)) {
-                continue;
-            }
-
-            // Mixed addition
-            if (scalar.equals(BigInteger.ONE)) {
-                acc1 = acc1.add(value._1);
-                acc2 = acc2.add(value._2);
-            } else {
-                converted1.add(new Tuple2<>(scalar, value._1));
-                converted2.add(new Tuple2<>(scalar, value._2));
-                numBits = Math.max(numBits, scalar.bitLength());
-            }
+        for(int j =0; j < size_of_bigint_cpp_side; j++){
+            converted_back_Xa[j] = resArray[4*size_of_bigint_cpp_side - j - 1];
+        }
+        for(int j =0; j < size_of_bigint_cpp_side; j++){
+            converted_back_Xb[j] = resArray[5*size_of_bigint_cpp_side - j - 1];
+        }
+        for(int j =0; j < size_of_bigint_cpp_side; j++){
+            converted_back_Ya[j] = resArray[6*size_of_bigint_cpp_side - j - 1];
         }
 
+        for(int j =0; j < size_of_bigint_cpp_side; j++){
+            converted_back_Yb[j] = resArray[7*size_of_bigint_cpp_side - j - 1];
+        }
+        for(int j =0; j < size_of_bigint_cpp_side; j++){
+            converted_back_Za[j] = resArray[8*size_of_bigint_cpp_side - j - 1];
+        }
+        for(int j =0; j < size_of_bigint_cpp_side; j++){
+            converted_back_Zb[j] = resArray[9*size_of_bigint_cpp_side - j - 1];
+        }
 
-        T1 true_res1 = converted1.isEmpty() ? acc1 : acc1.add(VariableBaseMSM.pippengerMSM(converted1, numBits));
-        T2 true_res2 =  converted2.isEmpty() ? acc2 : acc2.add(VariableBaseMSM.pippengerMSM(converted2, numBits));
-       
-        // System.out.println("java side final acc1 :" + byteToString(true_res1.toBigInteger().toByteArray()));
-        // System.out.println("java side final acc2 :" + byteToString(true_res2.toBigInteger().toByteArray()));
+        BigInteger bi_Xa = new BigInteger(converted_back_Xa);
+        BigInteger bi_Ya = new BigInteger(converted_back_Ya);
+        BigInteger bi_Za = new BigInteger(converted_back_Za);    
+        BigInteger bi_Xb = new BigInteger(converted_back_Xb);
+        BigInteger bi_Yb = new BigInteger(converted_back_Yb);
+        BigInteger bi_Zb = new BigInteger(converted_back_Zb);      
+        T2 jni_res2 = bases.get(0)._2.zero();
+        jni_res2.setBigIntegerBN254G2(bi_Xa, bi_Xb, bi_Ya, bi_Yb, bi_Za, bi_Zb);
 
-        // if(!true_res1.toBigInteger().equals(res1.toBigInteger())){
-        //     System.out.println("error in first VariableBaseMSM .doubleMSM JNI computation");
-        //     System.out.println(true_res1.toBigInteger() + " " + res1.toBigInteger());
-        // }
-
-        // if(!true_res2.toBigInteger().equals(res2.toBigInteger())){
-        //     System.out.println("error in second VariableBaseMSM .doubleMSM JNI computation");
-        //     System.out.println(true_res2.toBigInteger() + " " + res2.toBigInteger());
-        // }
-        return new Tuple2<>(true_res1, true_res2);
+        return new Tuple2<>(jni_res1, jni_res2);
 
 
 
