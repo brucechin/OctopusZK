@@ -77,6 +77,7 @@ public class DistributedSetup {
 
         final long numNonZeroAt = qap.At().filter(e -> !e._2.isZero()).count();
         final long numNonZeroBt = qap.Bt().filter(e -> !e._2.isZero()).count();
+        System.out.println("numNonzeroAt=" + numNonZeroAt + " numNonZeroBt=" + numNonZeroBt);
         config.endLog("Computing query densities");
 
         config.beginLog("Generating G1 MSM Window Table");
@@ -86,8 +87,7 @@ public class DistributedSetup {
         final int windowSizeG1 = FixedBaseMSM.getWindowSize(scalarCountG1 / numPartitions, generatorG1);
         final int numWindowsG1 = (scalarSizeG1 % windowSizeG1 == 0) ? scalarSizeG1 / windowSizeG1 : scalarSizeG1 / windowSizeG1+ 1;
         final int innerLimitG1 = (int) Math.pow(2, windowSizeG1);
-        // final List<List<G1T>> windowTableG1 = FixedBaseMSM
-        //         .getWindowTable(generatorG1, scalarSizeG1, windowSizeG1);
+
         config.endLog("Generating G1 MSM Window Table");
 
         config.beginLog("Generating G2 MSM Window Table");
@@ -97,8 +97,7 @@ public class DistributedSetup {
         final int windowSizeG2 = FixedBaseMSM.getWindowSize(scalarCountG2 / numPartitions, generatorG2);
         final int numWindowsG2 = (scalarSizeG2 % windowSizeG2 == 0) ? scalarSizeG2 / windowSizeG2 : scalarSizeG2 / windowSizeG2 + 1;
         final int innerLimitG2 = (int) Math.pow(2, windowSizeG2);
-        // final List<List<G2T>> windowTableG2 = FixedBaseMSM
-        //         .getWindowTable(generatorG2, scalarSizeG2, windowSizeG2);
+
         config.endLog("Generating G2 MSM Window Table");
 
         config.beginLog("Generating R1CS proving key");
@@ -119,7 +118,7 @@ public class DistributedSetup {
                 deltaABC,
                 config.sparkContext()).cache();
         deltaABCG1.count();
-        //qap.Ct().unpersist();
+        qap.Ct().unpersist();
         config.endLog("Encoding deltaABC for R1CS proving key");
 
         config.beginLog("Computing query A");
@@ -131,7 +130,7 @@ public class DistributedSetup {
                 qap.At(),
                 config.sparkContext()).cache();
         queryA.count();
-        //qap.At().unpersist();
+        qap.At().unpersist();
         config.endLog("Computing query A");
 
         config.beginLog("Computing query B");
@@ -147,7 +146,7 @@ public class DistributedSetup {
                 qap.Bt(),
                 config.sparkContext()).cache();
         queryB.count();
-        //qap.Bt().unpersist();
+        qap.Bt().unpersist();
         config.endLog("Computing query B");
 
         config.beginLog("Computing query H");
@@ -162,7 +161,7 @@ public class DistributedSetup {
                 inverseDeltaHtZt,
                 config.sparkContext()).cache();//persist(config.storageLevel());
         queryH.count();
-        // qap.Ht().unpersist();
+        qap.Ht().unpersist();
         config.endLog("Computing query H");
 
         config.endLog("Generating R1CS proving key");
@@ -184,7 +183,7 @@ public class DistributedSetup {
                 .union(gammaABCG1).reduceByKey(G1T::add);
         final List<G1T> UVWGammaG1 = Utils
                 .convertFromPair(fullGammaABCG1.collect(), numInputs);
-        //ABC.unpersist();
+        ABC.unpersist();
         config.endLog("Computing gammaABC for R1CS verification key");
         config.endRuntime("Verification Key");
 

@@ -59,9 +59,9 @@ public class DistributedProver {
         // }
 
         // Unpersist the R1CS constraints RDDs and free up memory.
-        // provingKey.r1cs().constraints().A().unpersist();
-        // provingKey.r1cs().constraints().B().unpersist();
-        // provingKey.r1cs().constraints().C().unpersist();
+        provingKey.r1cs().constraints().A().unpersist();
+        provingKey.r1cs().constraints().B().unpersist();
+        provingKey.r1cs().constraints().C().unpersist();
 
         // Choose two random field elements for prover zero-knowledge.
         final FieldT r = fieldFactory.random(config.seed(), config.secureSeed());
@@ -80,16 +80,33 @@ public class DistributedProver {
         config.beginRuntime("Proof");
 
         config.beginLog("Computing evaluation to query A: summation of variable_i*A_i(t)");
+        System.out.println("queryA len=" + provingKey.queryA().count());
+        System.out.println("queryB len=" + provingKey.queryB().count());
+        System.out.println("deltaABCG1 len=" + provingKey.deltaABCG1().count());
+        System.out.println("queryH len=" + provingKey.queryH().count());
+        System.out.println("oneFullAssignment len=" + oneFullAssignment.count());
+
         final JavaRDD<Tuple2<FieldT, G1T>> computationA = oneFullAssignment
                 .join(provingKey.queryA(), numPartitions).values();
         final G1T evaluationAt = VariableBaseMSM.distributedMSM(computationA);
+        System.out.println("eval At=" +evaluationAt.toString());
         provingKey.queryA().unpersist();
         config.endLog("Computing evaluation to query A: summation of variable_i*A_i(t)");
 
         config.beginLog("Computing evaluation to query B: summation of variable_i*B_i(t)");
+
+        long start = System.currentTimeMillis();
         final JavaRDD<Tuple2<FieldT, Tuple2<G1T, G2T>>> computationB = oneFullAssignment
                 .join(provingKey.queryB(), numPartitions).values();
+        computationB.count();
+        long finish = System.currentTimeMillis();
+        long timeElapsed = finish - start;
+        System.out.println("Spark join queryB and oneFullAssignment took: " + timeElapsed + " ms");
+
+        
         final Tuple2<G1T, G2T> evaluationBt = VariableBaseMSM.distributedDoubleMSM(computationB);
+        System.out.println("eval Bt=" +evaluationBt.toString());
+
         provingKey.queryB().unpersist();
         config.endLog("Computing evaluation to query B: summation of variable_i*B_i(t)");
 
@@ -98,6 +115,8 @@ public class DistributedProver {
         final JavaRDD<Tuple2<FieldT, G1T>> deltaABCAuxiliary = oneFullAssignment
                 .join(provingKey.deltaABCG1(), numPartitions).values();
         G1T evaluationABC = VariableBaseMSM.distributedMSM(deltaABCAuxiliary);
+        System.out.println("eval ABC=" +evaluationABC.toString());
+
         provingKey.deltaABCG1().unpersist();
         oneFullAssignment.unpersist();
         config.endLog("Computing evaluation to deltaABC");
@@ -106,7 +125,9 @@ public class DistributedProver {
         final JavaRDD<Tuple2<FieldT, G1T>> computationH = qapWitness.coefficientsH()
                 .join(provingKey.queryH(), numPartitions).values();
         final G1T evaluationHtZt = VariableBaseMSM.distributedMSM(computationH);
-        //provingKey.queryH().unpersist();
+        System.out.println("evaluationHtZt=" + evaluationHtZt.toString());
+
+        provingKey.queryH().unpersist();
         evaluationABC = evaluationABC.add(evaluationHtZt); // H(t)*Z(t)/delta
         config.endLog("Computing evaluation to query H");
 

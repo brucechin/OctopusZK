@@ -62,7 +62,7 @@ public class DistributedzkSNARKTest implements Serializable {
 
         sc = new JavaSparkContext(conf);
 
-        config = new Configuration(8, 16, 64, 16, sc, StorageLevel.MEMORY_ONLY());
+        config = new Configuration(16, 16, 400, 16, sc, StorageLevel.MEMORY_ONLY());
         config.setRuntimeFlag(false);
         config.setDebugFlag(false);
     }
@@ -112,38 +112,11 @@ public class DistributedzkSNARKTest implements Serializable {
         assertTrue(isValid);
     }
 
-    // @Test
-    // public void DistributedFakeProofSystemTest() {
-    //     final int numInputs = 1023;
-    //     final int numConstraints = 1000024;
-
-    //     FakeInitialize.init();
-    //     final Fp fieldFactory = new FakeFqParameters().ONE();
-    //     final FakeG1 fakeG1Factory = new FakeG1Parameters().ONE();
-    //     final FakeG2 fakeG2Factory = new FakeG2Parameters().ONE();
-    //     final FakePairing fakePairing = new FakePairing();
-
-    //     final Tuple3<R1CSRelationRDD<Fp>, Assignment<Fp>, JavaPairRDD<Long, Fp>> construction =
-    //             R1CSConstruction.parallelConstruct(numConstraints, numInputs, fieldFactory, config);
-    //     final R1CSRelationRDD<Fp> r1cs = construction._1();
-    //     final Assignment<Fp> primary = construction._2();
-    //     final JavaPairRDD<Long, Fp> fullAssignment = construction._3();
-
-    //     final CRS<Fp, FakeG1, FakeG2, FakeGT> CRS = DistributedSetup.generate(r1cs, fieldFactory,
-    //             fakeG1Factory, fakeG2Factory, fakePairing, config);
-    //     final Proof<FakeG1, FakeG2> proof = DistributedProver.prove(CRS.provingKeyRDD(), primary,
-    //             fullAssignment, fieldFactory, config);
-    //     final boolean isValid = Verifier.verify(CRS.verificationKey(), primary, proof,
-    //             fakePairing, config);
-
-    //     System.out.println(isValid);
-    //     assertTrue(isValid);
-    // }
 
     @Test
     public void DistributedBN254aProofSystemTest() throws Exception{
         final int numInputs = 1023;
-        final int numConstraints = 10240;
+        final int numConstraints = 1000000;
         final BN254aFr fieldFactory = new BN254aFr(1);
         final BN254aG1 g1Factory = BN254aG1Parameters.ONE;
         final BN254aG2 g2Factory = BN254aG2Parameters.ONE;

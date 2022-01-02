@@ -1,5 +1,5 @@
 JAVA_HOME='/usr/lib/jvm/java-8-openjdk-amd64'
-GMP_HOME='~/OctopusZK/gmp-6.2.1'
+GMP_HOME='./gmp-6.2.1'
 CUDA_HOME='/usr/local/cuda-11.1/bin'
 GPU_ARCH_CODE=sm_60
 

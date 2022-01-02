@@ -393,7 +393,6 @@ public class FixedBaseMSM {
                 return res.iterator();
             }
         );
-        //true_result.count();
         long finish = System.currentTimeMillis();
         long timeElapsed = finish - start;
         System.out.println("Spark processing time elapsed: " + timeElapsed + " ms");
