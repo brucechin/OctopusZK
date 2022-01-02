@@ -101,6 +101,147 @@ typedef struct {
   Fp2 Z;
 } BN254G2Compute;
 
+void printMem(Scalar input)
+{
+    for(int i = 0; i < MSM_params_t::BITS/32; i++){
+      std::cout << input._limbs[i] << "|";
+    }
+    printf("finished\n");
+}
+
+__global__ void vector_print(int* input, int size){
+    const int idx = (blockIdx.x * blockDim.x + threadIdx.x);
+    if(idx == 0){
+        for(int i = 0; i < size; i++) {
+            printf("%d|", input[i]);
+        }
+    }
+}
+
+__global__ void prefix_sum_first_step(int* input, int size, int stride){
+    const int idx = (blockIdx.x * blockDim.x + threadIdx.x);
+    int index = (idx + 1) * stride * 2 -1;
+    if(index < size){
+        input[index] += input[index - stride];
+    }
+}
+
+__global__ void prefix_sum_second_step(int* input, int size, int stride){
+    const int idx = (blockIdx.x * blockDim.x + threadIdx.x);
+    int index = (idx + 1) *stride *2 -1;
+    if(index + stride <size){
+        input[index + stride] += input[index];
+    }
+}
+
+
+__device__ 
+Fp2 add(Fp2 input1, Fp2 input2)
+{
+  //add should be good.
+    context_t _context;
+    env_t    _env(_context);  
+    Fp2 result;
+    memset(result.a._limbs, 0, MSM_params_t::num_of_bytes);
+    memset(result.b._limbs, 0, MSM_params_t::num_of_bytes);
+    Scalar modulus_binary;
+    memcpy(modulus_binary._limbs, modulus_raw_G1, MSM_params_t::num_of_bytes);
+    bn_t modulus;
+    cgbn_load(_env, modulus, &modulus_binary);
+
+
+    cgbn_add(_env, result.a, input1.a, input2.a);
+    cgbn_rem(_env, result.a, result.a, modulus);
+
+    cgbn_add(_env, result.b, input1.b, input2.b);
+    cgbn_rem(_env, result.b, result.b, modulus);
+    return result;
+}
+
+__device__ 
+Fp2 sub(Fp2 input1, Fp2 input2)
+{
+    context_t _context;
+    env_t    _env(_context);  
+    Fp2 result;
+    memset(result.a._limbs, 0, MSM_params_t::num_of_bytes);
+    memset(result.b._limbs, 0, MSM_params_t::num_of_bytes);
+
+
+
+    Scalar modulus_binary;
+    memcpy(modulus_binary._limbs, modulus_raw_G1, MSM_params_t::num_of_bytes);
+    bn_t modulus;
+    cgbn_load(_env, modulus, &modulus_binary);
+
+
+
+    cgbn_add(_env, result.a, input1.a, modulus);
+    cgbn_sub(_env, result.a, result.a, input2.a);
+    cgbn_rem(_env, result.a, result.a, modulus);
+
+    cgbn_add(_env, result.b, input1.b, modulus);
+    cgbn_sub(_env, result.b, result.b, input2.b);
+    cgbn_rem(_env, result.b, result.b, modulus);
+    return result;
+}
+
+__device__ 
+Fp2 mul(Fp2 input1, Fp2 input2)
+{
+    context_t _context;
+    env_t    _env(_context);  
+    Fp2 result;
+    memset(result.a._limbs, 0, MSM_params_t::num_of_bytes);
+    memset(result.b._limbs, 0, MSM_params_t::num_of_bytes);
+
+    Scalar modulus_binary;
+    memcpy(modulus_binary._limbs, modulus_raw_G1, MSM_params_t::num_of_bytes);
+    bn_t modulus;
+    cgbn_load(_env, modulus, &modulus_binary);
+
+    Scalar residue_binary;
+    memcpy(residue_binary._limbs, Fp2_nonresidue_raw, MSM_params_t::num_of_bytes);
+    bn_t residue;
+    cgbn_load(_env, residue, &residue_binary);
+
+
+
+
+    bn_t c0c0, c1c1, tmp1;
+
+    cgbn_mul(_env, c0c0, input1.a, input2.a);
+    cgbn_rem(_env, c0c0, c0c0, modulus);
+    cgbn_mul(_env, c1c1, input1.b, input2.b);
+    cgbn_rem(_env, c1c1, c1c1, modulus);
+
+
+    cgbn_mul(_env, tmp1, residue, c1c1);
+    cgbn_rem(_env, tmp1, tmp1, modulus);
+    cgbn_add(_env, tmp1, tmp1, c0c0);
+    cgbn_rem(_env, tmp1, tmp1, modulus);
+
+
+    bn_t tmp2, tmp3;
+
+    cgbn_add(_env, tmp2, input1.a, input1.b);
+    cgbn_rem(_env, tmp2, tmp2, modulus);
+    cgbn_add(_env, tmp3, input2.a, input2.b);
+    cgbn_rem(_env, tmp3, tmp3, modulus);
+    cgbn_mul(_env, tmp2, tmp2, tmp3);
+    cgbn_rem(_env, tmp2, tmp2, modulus);
+    cgbn_add(_env, tmp2, tmp2, modulus);
+    cgbn_add(_env, tmp2, tmp2, modulus);
+    cgbn_sub(_env, tmp2, tmp2, c0c0);
+    cgbn_sub(_env, tmp2, tmp2, c1c1);
+    cgbn_rem(_env, tmp2, tmp2, modulus);
+
+    result.a = tmp1;
+    result.b = tmp2;
+    return result;
+}
+
+
 __device__ 
 bool testBit(Scalar input, int n)
 {
@@ -108,7 +249,6 @@ bool testBit(Scalar input, int n)
     int byte_offset = n % 32;
     return CHECK_BIT(input._limbs[byte_index], byte_offset);
 }
-
 
 __device__ 
 bool isZero(BN254G1Compute input)
@@ -242,7 +382,6 @@ BN254G1Compute twice(BN254G1Compute a)
   return result;
 
 }
-
 
 __device__ 
 BN254G1Compute add(BN254G1Compute a, BN254G1Compute b) {
@@ -397,6 +536,182 @@ BN254G1Compute add(BN254G1Compute a, BN254G1Compute b) {
 
 }
 
+__device__ 
+BN254G2Compute twice(BN254G2Compute a)
+{
+  if(isZero(a)){
+    return a;
+  }
+
+  BN254G2Compute result;
+  memset(result.X.a._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.X.b._limbs, 0, MSM_params_t::num_of_bytes);
+
+  memset(result.Y.a._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.Y.b._limbs, 0, MSM_params_t::num_of_bytes);
+
+  memset(result.Z.a._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.Z.b._limbs, 0, MSM_params_t::num_of_bytes);
+
+  Fp2 a_x, a_y, a_z;
+  a_x = a.X;
+  a_y = a.Y;
+  a_z = a.Z;
+
+
+  Fp2 A,B,C,D,E,F,X3,Y3,Z3, eightC;
+
+
+  A = mul(a_x, a_x);
+  B = mul(a_y, a_y);
+
+  C = mul(B, B);
+
+ // D = 2 * ((X1 + B)^2 - A - C)
+  D = add(a_x, B);
+  D = mul(D, D);
+  D = sub(D, A);
+  D = sub(D, C);
+  D = add(D, D);
+
+  // E = 3 * A
+  E = add(A, A);
+  E = add(E, A);
+
+  // F = E^2
+  F = mul(E, E);
+
+   // X3 = F - 2 D
+  X3 = sub(F, D);
+  X3 = sub(X3, D);
+
+
+
+  eightC = add(C, C);
+  eightC = add(eightC, eightC);
+  eightC = add(eightC, eightC);
+
+  // Y3 = E * (D - X3) - 8 * C
+  Y3 = sub(D, X3);
+  Y3 = mul(E, Y3);
+  Y3 = sub(Y3, eightC);
+
+
+  // Z3 = 2 * Y1 * Z1
+  Z3 = mul(a_y, a_z);
+  Z3 = add(Z3, Z3);
+
+  result.X = X3;
+  result.Y = Y3;
+  result.Z = Z3;
+
+  return result;
+
+}
+
+__device__ 
+BN254G2Compute add(BN254G2Compute a, BN254G2Compute b) {
+  // Handle special cases having to do with O
+
+  if (isZero(a)) {
+      return b;
+  }
+
+  if (isZero(b)) {
+      return a;
+  }
+
+  context_t _context;
+  env_t    _env(_context);
+
+  BN254G2Compute result;
+  memset(result.X.a._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.X.b._limbs, 0, MSM_params_t::num_of_bytes);
+
+  memset(result.Y.a._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.Y.b._limbs, 0, MSM_params_t::num_of_bytes);
+
+  memset(result.Z.a._limbs, 0, MSM_params_t::num_of_bytes);
+  memset(result.Z.b._limbs, 0, MSM_params_t::num_of_bytes);
+
+  Fp2 a_x, a_y, a_z, b_x, b_y, b_z;
+  a_x = a.X; 
+  a_y = a.Y; 
+  a_z = a.Z;
+  b_x = b.X;
+  b_y = b.Y;
+  b_z = b.Z;
+
+  Fp2 Z1Z1, Z2Z2, U1, U2, Z1_cubed, Z2_cubed, S1, S2;
+  
+  Z1Z1 = mul(a_z, a_z);
+  Z2Z2 = mul(b_z, b_z);
+
+  U1 = mul(a_x, Z2Z2);
+  U2 = mul(b_x, Z1Z1);
+
+  Z1_cubed = mul(a_z, Z1Z1);
+  Z2_cubed = mul(b_z, Z2Z2);
+
+  S1 = mul(a_y, Z2_cubed);
+  S2 = mul(b_y, Z1_cubed);
+
+
+  if (cgbn_equals(_env, U1.a, U2.a) && cgbn_equals(_env, U1.b, U2.b)
+    && cgbn_equals(_env, S1.a, S2.a) && cgbn_equals(_env, S1.b, S2.b)
+    ) {
+      // Double case; nothing above can be reused.
+      return twice(a);
+  }
+
+  Fp2 H, S2_minus_S1, I, J, r, V, X3, S1_J, Y3, Z3;
+  
+  // H = U2-U1
+  H = sub(U2, U1);
+  S2_minus_S1 = sub(S2, S1);
+
+  // I = (2 * H)^2
+  I = add(H, H);
+  I = mul(I, I);
+
+  // J = H * I
+  J = mul(H, I);
+
+  // r = 2 * (S2-S1)
+  r = add(S2_minus_S1, S2_minus_S1);
+
+  // V = U1 * I
+  V = mul(U1, I);
+
+  // X3 = r^2 - J - 2 * V
+  X3 = mul(r, r);
+  X3 = sub(X3, J);
+  X3 = sub(X3, V);
+  X3 = sub(X3, V);
+
+  // Y3 = r * (V-X3)-2 * S1_J
+  S1_J = mul(S1, J);
+  Y3 = sub(V, X3);
+  Y3 = mul(r, Y3);
+  Y3 = sub(Y3, S1_J);
+  Y3 = sub(Y3, S1_J);
+
+  // Z3 = ((Z1+Z2)^2-Z1Z1-Z2Z2) * H
+
+  Z3 = add(a_z, b_z);
+  Z3 = mul(Z3, Z3);
+  Z3 = sub(Z3, Z1Z1);
+  Z3 = sub(Z3, Z2Z2);
+  Z3 = mul(Z3, H);
+
+  result.X = X3;
+  result.Y = Y3;
+  result.Z = Z3;
+
+  return result;
+
+}
+
 
 
 __device__ void printMemGPU(Scalar input)
@@ -408,47 +723,23 @@ __device__ void printMemGPU(Scalar input)
 }
 
 
-__global__ void pippengerMSMG1_unit1(Scalar* inputScalarArray, BN254G1* inputBaseArray, BN254G1* buckets, int* inputBucketMappingLocation, int* bucketCounter, int* bucketIndex,  int batch_size, int c, int k, int numGroups){
+__global__ void pippengerMSM_unit1(Scalar* inputScalarArray,  int* inputBucketMappingLocation, int* bucketCounter, int* bucketIndex,  int batch_size, int c, int k, int numGroups){
     const int idx = (blockIdx.x * blockDim.x + threadIdx.x);
 
     if(idx >= batch_size){
         return;
     }
 
-    // int id = 0;
-    // for (int j = 0; j < c; j++) {
-    //     if (testBit(inputScalarArray[idx], k * c + j)) {
-    //         id |= 1 << j;
-    //     }
-    // }
-    // // if (id == 0) {
-    // //     return;
-    // // }
-    // int one = 1;
-    // //TODO lianke this atomicAdd is wrong
-    // bucketIndex[idx] = atomicAdd((bucketCounter + id), one);
-    
-    // // if(k == numGroups - 1){
-    // //     printf("addr %p, %p\n", (void*)&(bucketCounter[id]), (void*)(bucketCounter + id));
-    // // }
-    // inputBucketMappingLocation[idx] = id;
-
-
-
-    if(idx == 0) {
-        for(int i = 0; i < batch_size; i++){
-            int id = 0;
-            for (int j = 0; j < c; j++) {
-                if (testBit(inputScalarArray[i], k * c + j)) {
-                    id |= 1 << j;
-                }
-            }
-            int one = 1;
-            bucketIndex[i] = atomicAdd((bucketCounter + id), one);
-            inputBucketMappingLocation[i] = id;
+    int id = 0;
+    for (int j = 0; j < c; j++) {
+        if (testBit(inputScalarArray[idx], k * c + j)) {
+            id |= 1 << j;
         }
     }
 
+    int one = 1;
+    bucketIndex[idx] = atomicAdd((bucketCounter + id), one);
+    inputBucketMappingLocation[idx] = id;
 
     return;
 }
@@ -510,7 +801,6 @@ __global__ void pippengerMSMG1_unit2_reduce_to_buckets(BN254G1* outputBaseArray,
     return;
 }
 
-
 __global__ void prefix_sum_G1_reverse_first_step(BN254G1* buckets, int size, int stride){
     const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
     int index = idx * stride * 2 ;
@@ -556,7 +846,6 @@ __global__ void prefix_sum_G1_reverse_second_step(BN254G1* buckets, BN254G1* res
     
 }
 
-
 __global__ void pippengerMSMG1_unit2_final_add(BN254G1* result, BN254G1* buckets){
     const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
     context_t _context;
@@ -574,38 +863,6 @@ __global__ void pippengerMSMG1_unit2_final_add(BN254G1* result, BN254G1* buckets
         cgbn_store(_env, &result[0].Y, res.Y);
         cgbn_store(_env, &result[0].Z, res.Z); 
     }
-}
-
-
-__global__ void pippengerMSMG1_unit2_runningSum(BN254G1* buckets, BN254G1* result, BN254G1* zero, int numBuckets){
-    const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
-    context_t _context;
-    env_t    _env(_context);
-
-
-//TODO lianke there is a two-pass O(logN) solution.
-    if(idx == 0){
-        BN254G1Compute res, runningSum;
-        cgbn_load(_env, runningSum.X, &zero[0].X);
-        cgbn_load(_env, runningSum.Y, &zero[0].Y);
-        cgbn_load(_env, runningSum.Z, &zero[0].Z);
-        cgbn_load(_env, res.X, &result[0].X);
-        cgbn_load(_env, res.Y, &result[0].Y);
-        cgbn_load(_env, res.Z, &result[0].Z);
-        for(int i = numBuckets - 1; i > 0; i--){
-            BN254G1Compute to_add;
-            cgbn_load(_env, to_add.X, &buckets[i].X);
-            cgbn_load(_env, to_add.Y, &buckets[i].Y);
-            cgbn_load(_env, to_add.Z, &buckets[i].Z);
-            runningSum = add(runningSum, to_add);
-            res = add(res, runningSum);
-        }   
-
-        cgbn_store(_env, &result[0].X, res.X);
-        cgbn_store(_env, &result[0].Y, res.Y);
-        cgbn_store(_env, &result[0].Z, res.Z);
-    }
-
 }
 
 __global__ void pippengerMSMG1_unit3(BN254G1* result, int c){
@@ -634,155 +891,8 @@ __global__ void pippengerMSMG1_unit3(BN254G1* result, int c){
 
 
 
-void printMem(Scalar input)
-{
-    for(int i = 0; i < MSM_params_t::BITS/32; i++){
-      std::cout << input._limbs[i] << "|";
-    }
-    printf("finished\n");
-}
-
-__global__ void vector_print(int* input, int size){
-    const int idx = (blockIdx.x * blockDim.x + threadIdx.x);
-    if(idx == 0){
-        for(int i = 0; i < size; i++) {
-            printf("%d|", input[i]);
-        }
-    }
-}
-
-__global__ void prefix_sum_first_step(int* input, int size, int stride){
-    const int idx = (blockIdx.x * blockDim.x + threadIdx.x);
-    int index = (idx + 1) * stride * 2 -1;
-    if(index < size){
-        input[index] += input[index - stride];
-    }
-}
-
-__global__ void prefix_sum_second_step(int* input, int size, int stride){
-    const int idx = (blockIdx.x * blockDim.x + threadIdx.x);
-    int index = (idx + 1) *stride *2 -1;
-    if(index + stride <size){
-        input[index + stride] += input[index];
-    }
-}
 
 
-__global__ void test_atomicAdd(int* input, int size){
-    const int idx = (blockIdx.x * blockDim.x + threadIdx.x);
-
-    int one = 1;
-    atomicAdd((int*)&input[idx % size], one);
-}
-
-void test_prefix_sum(int size){
-    vector<int> inputCPU(size, 1);
-    int* inputGPU;
-    CUDA_CALL( cudaMalloc((void**)&inputGPU, sizeof(int) * size);)
-    CUDA_CALL(cudaMemcpy(inputGPU, &inputCPU[0], sizeof(int) * size, cudaMemcpyHostToDevice);)
-    int threads_per_block = 128;
-    int num_blocks_prefix_sum = (size + threads_per_block - 1)/threads_per_block;
-    //test_atomicAdd<<<num_blocks_prefix_sum * 16, threads_per_block>>> (inputGPU, size);
-    for(int stride = 1; stride <= size/2; stride = stride *2){
-        prefix_sum_first_step<<< num_blocks_prefix_sum, threads_per_block>>>(inputGPU, size, stride);
-        CUDA_CALL(cudaDeviceSynchronize();)
-    }
-    for(int stride = size/4; stride > 0; stride /= 2){
-        prefix_sum_second_step<<< num_blocks_prefix_sum, threads_per_block>>>(inputGPU, size, stride);
-        CUDA_CALL(cudaDeviceSynchronize();)
-    }
-    vector_print<<<1, 128>>> (inputGPU, size);
-    CUDA_CALL(cudaDeviceSynchronize();)
-
-}
-
-
-
-
-
-__global__ void pippengerMSMG1_overall(Scalar* inputScalarArray, BN254G1* inputBaseArray, BN254G1* buckets, BN254G1* result, BN254G1* zero, int batch_size, int c, int numGroups, int numBuckets){
-    const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
-    const int offset = (blockIdx.x * blockDim.x + threadIdx.x) % MSM_params_t::TPI;
-
-    context_t _context;
-    env_t    _env(_context);
-    
-    if(idx >= batch_size){
-      return;
-    }
-    if(idx == 0){
-        //lianke: this all in one serial on GPU implementation is verified as correct version. please implement a O(logN) version.
-        BN254G1Compute res;
-        cgbn_load(_env, res.X, &result[0].X);
-        cgbn_load(_env, res.Y, &result[0].Y);
-        cgbn_load(_env, res.Z, &result[0].Z);
-
-        for(int k = numGroups - 1; k>=0;k--){
-
-            BN254G1* bucketsThisIter = (BN254G1*)malloc(numBuckets *sizeof(BN254G1));
-            memcpy(bucketsThisIter, buckets, numBuckets * sizeof(BN254G1));
-            for(int i = 0; i < batch_size; i++){
-                int id = 0;
-                for (int j = 0; j < c; j++) {
-                    if (testBit(inputScalarArray[i], k * c + j)) {
-                        id |= 1 << j;
-                    }
-                }
-                if (id == 0) {
-                    continue;
-                }
-
-                BN254G1Compute original, to_add, tmp_res;
-                cgbn_load(_env, tmp_res.X, &zero[0].X);
-                cgbn_load(_env, tmp_res.Y, &zero[0].Y);
-                cgbn_load(_env, tmp_res.Z, &zero[0].Z);
-                cgbn_load(_env, original.X, &bucketsThisIter[id].X);
-                cgbn_load(_env, original.Y, &bucketsThisIter[id].Y);
-                cgbn_load(_env, original.Z, &bucketsThisIter[id].Z);
-
-                cgbn_load(_env, to_add.X, &inputBaseArray[i].X);
-                cgbn_load(_env, to_add.Y, &inputBaseArray[i].Y);
-                cgbn_load(_env, to_add.Z, &inputBaseArray[i].Z);
-                
-                tmp_res = add(original, to_add);
-
-                cgbn_store(_env, &bucketsThisIter[id].X, tmp_res.X);
-                cgbn_store(_env, &bucketsThisIter[id].Y, tmp_res.Y);
-                cgbn_store(_env, &bucketsThisIter[id].Z, tmp_res.Z);
-            }
-
-
-            BN254G1Compute  runningSum;
-            cgbn_load(_env, runningSum.X, &zero[0].X);
-            cgbn_load(_env, runningSum.Y, &zero[0].Y);
-            cgbn_load(_env, runningSum.Z, &zero[0].Z);
-
-            for(int i = numBuckets - 1; i > 0; i--){
-                BN254G1Compute to_add;
-                cgbn_load(_env, to_add.X, &bucketsThisIter[i].X);
-                cgbn_load(_env, to_add.Y, &bucketsThisIter[i].Y);
-                cgbn_load(_env, to_add.Z, &bucketsThisIter[i].Z);
-                runningSum = add(runningSum, to_add);
-                res = add(res, runningSum);
-            }   
-
-            if(k > 0){
-                for (int i = 0; i < c; i++) {
-                    res = twice(res);
-                } 
-            }
-
-            
-
-        }
-
-        cgbn_store(_env, &result[0].X, res.X);
-        cgbn_store(_env, &result[0].Y, res.Y);
-        cgbn_store(_env, &result[0].Z, res.Z);
-    }
-
-    return;
-}
 
 
 
@@ -796,7 +906,6 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
     size_t threads_per_block = 128;
     size_t instance_per_block = (threads_per_block / MSM_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
-    printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
     CUDA_CALL(cudaSetDevice(0));
     printf("finish CUDA device set\n");
 
@@ -809,8 +918,6 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
     CUDA_CALL( cudaMalloc((void**)&inputBaseArrayGPU, sizeof(BN254G1) * batch_size); )
     CUDA_CALL( cudaMemcpy(inputBaseArrayGPU, (void**)&multiplesOfBasePtrArray[0], sizeof(BN254G1) * batch_size, cudaMemcpyHostToDevice); )
     CUDA_CALL(cudaDeviceSynchronize());
-
-    printf("finish memcpy to GPU\n");
 
     int numBits = 254;//BN254 specific value;
     int length = batch_size;
@@ -829,17 +936,9 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
     CUDA_CALL( cudaMalloc((void**)&zeroGPU, sizeof(BN254G1)); )
     CUDA_CALL( cudaMemcpy(zeroGPU, &zero, sizeof(BN254G1), cudaMemcpyHostToDevice); )
     CUDA_CALL(cudaDeviceSynchronize());
-    printf("finish init\n");
-
-    // BN254G1* buckets;
-    // CUDA_CALL( cudaMalloc((void**)&buckets, sizeof(BN254G1) * numBuckets); )
-    // CUDA_CALL(cudaMemcpy(buckets, &buketsModel[0], sizeof(BN254G1) * numBuckets, cudaMemcpyHostToDevice);)
-    // int num_blocks_unit1_TPI = (batch_size + instance_per_block - 1)/ instance_per_block;
-    // pippengerMSMG1_overall<<<num_blocks_unit1_TPI, threads_per_block>>>(inputScalarArrayGPU, inputBaseArrayGPU, buckets, resultGPU, zeroGPU, batch_size, c, numGroups, numBuckets);
-    
 
     for(int k = numGroups - 1; k >= 0; k--){
-        printf("k=%d\n", k);
+        printf("k=%d ", k);
         int* bucketCounter;
         int* bucketIndex;
         int* inputBucketMappingLocation;
@@ -857,17 +956,9 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
         CUDA_CALL( cudaMalloc((void**)&buckets, sizeof(BN254G1) * numBuckets); )
         CUDA_CALL(cudaMemcpy(buckets, (void**)&buketsModel[0], sizeof(BN254G1) * numBuckets, cudaMemcpyHostToDevice);)
         int num_blocks_unit1 = (batch_size + threads_per_block - 1) / threads_per_block;
-        pippengerMSMG1_unit1 <<<num_blocks_unit1,threads_per_block>>>( inputScalarArrayGPU, inputBaseArrayGPU,buckets, inputBucketMappingLocation, bucketCounter, bucketIndex,  batch_size, c, k, numGroups);
+        pippengerMSM_unit1 <<<num_blocks_unit1,threads_per_block>>>( inputScalarArrayGPU, inputBucketMappingLocation, bucketCounter, bucketIndex,  batch_size, c, k, numGroups);
         CUDA_CALL(cudaDeviceSynchronize();)
 
-        // if(k == numGroups - 1){
-        //     cout << "\nbucketCount" <<endl;
-        //     vector_print<<<1, 128>>>(bucketCounter, numBuckets);    
-        //     CUDA_CALL(cudaDeviceSynchronize();)
-        //     cout << "\nbucketIndex" <<endl;
-        //     vector_print<<<1, 128>>>(bucketIndex, batch_size);  
-        //     CUDA_CALL(cudaDeviceSynchronize();)
-        // }
 
         int num_blocks_prefix_sum = (numBuckets + threads_per_block - 1)/threads_per_block;
         for(int stride = 1; stride <= numBuckets/2; stride = stride *2){
@@ -880,7 +971,6 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
             CUDA_CALL(cudaDeviceSynchronize();)
         }
         
-
 
         //now bucketCounter is prefix-sumed version. write into bucketsBeforeAggregate
         int num_blocks_write_together = (batch_size + threads_per_block - 1)/threads_per_block;
@@ -922,14 +1012,14 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
         CUDA_CALL(cudaDeviceSynchronize());
 
 
-
         if(k > 0){
             pippengerMSMG1_unit3 <<<1, 128>>>(resultGPU, c);
             CUDA_CALL(cudaDeviceSynchronize());
         }
-        // CUDA_CALL(cudaFree(buckets));
-        // CUDA_CALL(cudaFree(bucketCounter));
-        // CUDA_CALL(cudaFree(bucketIndex));
+        CUDA_CALL(cudaFree(buckets));
+        CUDA_CALL(cudaFree(bucketCounter));
+        CUDA_CALL(cudaFree(bucketIndex));
+        CUDA_CALL(cudaFree(bucketsBeforeAggregate));
 
     }
 
@@ -943,9 +1033,8 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
     }
     //this outputArray should only contain one BN254G1 element.
 
-
-    // CUDA_CALL(cudaFree(inputScalarArrayGPU));
-    // CUDA_CALL(cudaFree(inputBaseArrayGPU));
+    CUDA_CALL(cudaFree(inputScalarArrayGPU));
+    CUDA_CALL(cudaFree(inputBaseArrayGPU));
 
 }
 
@@ -958,55 +1047,35 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
  * Signature: (Ljava/util/ArrayList;Ljava/util/ArrayList;)Lalgebra/groups/AbstractGroup;
  */
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerialMSMNativeHelper
-  (JNIEnv * env, jclass obj, jobject multiplesOfBaseX, jobject multiplesOfBaseY, jobject multiplesOfBaseZ, jobject scalars){
+  (JNIEnv * env, jclass obj,  jbyteArray multiplesOfBaseXYZ, jbyteArray bigScalarsArrayInput, jint batch_size){
     jclass java_util_ArrayList      = static_cast<jclass>(env->NewGlobalRef(env->FindClass("java/util/ArrayList")));
     jmethodID java_util_ArrayList_size = env->GetMethodID(java_util_ArrayList, "size", "()I");
     jmethodID java_util_ArrayList_get  = env->GetMethodID(java_util_ArrayList, "get", "(I)Ljava/lang/Object;");
 
 
-    jint batch_size = env->CallIntMethod(scalars, java_util_ArrayList_size);
-    // jint scalars_size = env->CallIntMethod(scalars, java_util_ArrayList_size);
-    //two arrays sizes should be the same
-
     vector<Scalar> bigScalarArray = vector<Scalar>(batch_size, Scalar());
     vector<BN254G1> multiplesOfBasePtrArray = vector<BN254G1>(batch_size, BN254G1());
 
 
+    int len = 32; //254-bit BN254.
+
+    char* baseByteArrayXYZ = (char*)env->GetByteArrayElements(multiplesOfBaseXYZ, NULL);
     for(int i =0; i < batch_size; i++){
-        jbyteArray element = (jbyteArray)env->CallObjectMethod(scalars, java_util_ArrayList_get, i);
-        char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-        int len = env->GetArrayLength(element);
-        char* tmp = (char*)&bigScalarArray[i]._limbs;
-        memcpy(tmp, bytes, len);
-    }
-
-    for(int i = 0; i < batch_size;i++){
-        jbyteArray element = (jbyteArray)env->CallObjectMethod(multiplesOfBaseX, java_util_ArrayList_get, i);
-        char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-        int len = env->GetArrayLength(element);
         char* tmp = (char*)multiplesOfBasePtrArray[i].X._limbs;
-        memcpy(tmp, bytes,len);
-
-        
+        memcpy(tmp, &baseByteArrayXYZ[i * 3 * len],len);
+        char* tmp2 = (char*)multiplesOfBasePtrArray[i].Y._limbs;
+        memcpy(tmp2,  &baseByteArrayXYZ[(i *3 +1) * len],len);
+        char* tmp3 = (char*)multiplesOfBasePtrArray[i].Z._limbs;
+        memcpy(tmp3, &baseByteArrayXYZ[(i*3 +2) * len],len);
     }
 
-    for(int i = 0; i < batch_size;i++){
-        jbyteArray element = (jbyteArray)env->CallObjectMethod(multiplesOfBaseY, java_util_ArrayList_get, i) ;
-        char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-        int len = env->GetArrayLength(element);
-        char* tmp = (char*)multiplesOfBasePtrArray[i].Y._limbs;
-        memcpy(tmp, bytes,len);
-        
+
+    char* scalarBytes = (char*)env->GetByteArrayElements(bigScalarsArrayInput, NULL);
+    for(int i =0; i < batch_size; i++){
+        char* tmp = (char*)&bigScalarArray[i]._limbs;
+        memcpy(tmp, &scalarBytes[i * len ], len);
     }
 
-    for(int i = 0; i < batch_size;i++){
-        jbyteArray element = (jbyteArray)env->CallObjectMethod(multiplesOfBaseZ, java_util_ArrayList_get, i);
-        char* bytes = (char*)env->GetByteArrayElements(element, NULL);
-        int len = env->GetArrayLength(element);
-        char* tmp = (char*)multiplesOfBasePtrArray[i].Z._limbs;
-        memcpy(tmp, bytes,len);
-        
-    }
 
     //lianke: we know in advance that the numBits will be at most 254. we hard encode it.
 
@@ -1015,7 +1084,6 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
     pippengerMSMG1(bigScalarArray, multiplesOfBasePtrArray, resultCPU);
 
     jbyteArray resultByteArray = env->NewByteArray((jsize)sizeof(BN254G1));
-
 
     env->SetByteArrayRegion(resultByteArray, 0 , sizeof(BN254G1) ,   reinterpret_cast<const jbyte*>(&resultCPU[0]));
 
@@ -1044,4 +1112,31 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
 
 
 
+//old unit testcases
+__global__ void test_atomicAdd(int* input, int size){
+    const int idx = (blockIdx.x * blockDim.x + threadIdx.x);
 
+    int one = 1;
+    atomicAdd((int*)&input[idx % size], one);
+}
+
+void test_prefix_sum(int size){
+    vector<int> inputCPU(size, 1);
+    int* inputGPU;
+    CUDA_CALL( cudaMalloc((void**)&inputGPU, sizeof(int) * size);)
+    CUDA_CALL(cudaMemcpy(inputGPU, &inputCPU[0], sizeof(int) * size, cudaMemcpyHostToDevice);)
+    int threads_per_block = 128;
+    int num_blocks_prefix_sum = (size + threads_per_block - 1)/threads_per_block;
+    //test_atomicAdd<<<num_blocks_prefix_sum * 16, threads_per_block>>> (inputGPU, size);
+    for(int stride = 1; stride <= size/2; stride = stride *2){
+        prefix_sum_first_step<<< num_blocks_prefix_sum, threads_per_block>>>(inputGPU, size, stride);
+        CUDA_CALL(cudaDeviceSynchronize();)
+    }
+    for(int stride = size/4; stride > 0; stride /= 2){
+        prefix_sum_second_step<<< num_blocks_prefix_sum, threads_per_block>>>(inputGPU, size, stride);
+        CUDA_CALL(cudaDeviceSynchronize();)
+    }
+    vector_print<<<1, 128>>> (inputGPU, size);
+    CUDA_CALL(cudaDeviceSynchronize();)
+
+}

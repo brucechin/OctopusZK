@@ -153,6 +153,7 @@ public class R1CStoQAP {
 
         // Account for all other constraints: A and B.
         config.beginLog("Compute evaluation of polynomial A and B on set S.");
+        //TODO lianke this evaluation part is costy
         for (int i = 0; i < r1cs.numConstraints(); i++) {
             A.set(i, r1cs.constraints(i).A().evaluate(oneFullAssignment).add(A.get(i)));
             B.set(i, r1cs.constraints(i).B().evaluate(oneFullAssignment));

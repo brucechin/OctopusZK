@@ -92,7 +92,7 @@ public class DistributedzkSNARKTest implements Serializable {
             BNFrT fieldFactory,
             BNG1T g1Factory,
             BNG2T g2Factory,
-            BNPairingT pairing) {
+            BNPairingT pairing) throws Exception{
         final Tuple3<R1CSRelationRDD<BNFrT>, Assignment<BNFrT>, JavaPairRDD<Long, BNFrT>> construction =
                 R1CSConstruction.parallelConstruct(numConstraints, numInputs, fieldFactory, config);
         final R1CSRelationRDD<BNFrT> r1cs = construction._1();
@@ -141,7 +141,7 @@ public class DistributedzkSNARKTest implements Serializable {
     // }
 
     @Test
-    public void DistributedBN254aProofSystemTest() {
+    public void DistributedBN254aProofSystemTest() throws Exception{
         final int numInputs = 1023;
         final int numConstraints = 10240;
         final BN254aFr fieldFactory = new BN254aFr(1);

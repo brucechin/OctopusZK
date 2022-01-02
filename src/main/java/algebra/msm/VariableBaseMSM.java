@@ -18,6 +18,7 @@ import java.util.PriorityQueue;
 import org.apache.spark.api.java.JavaRDD;
 import scala.Tuple2;
 import java.util.Arrays;
+import java.io.*;
 
 public class VariableBaseMSM {
 
@@ -115,15 +116,15 @@ public class VariableBaseMSM {
 
     public static byte[] bigIntegerToByteArrayHelperCGBN(BigInteger bigint){
         byte[] temp = bigint.toByteArray();
-
-        byte[] res = new byte[(temp.length + 3)/ 4 * 4];
+        //byte[] res = new byte[(temp.length + 3)/ 4 * 4];
+        byte[] res = new byte[32]; //254-bit BN254 biginteger is enough to be saved in 32bytes.
         for(int i = 0; i < temp.length; i++){
             res[temp.length - i - 1] = temp[i];
         }
+        
         return res;
 
     }
-
     public static byte[] bigIntegerToByteArrayHelper(BigInteger bigint){
         byte[] temp = bigint.toByteArray();
 
@@ -216,15 +217,14 @@ public class VariableBaseMSM {
 
     public static native <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
     byte[] variableBaseSerialMSMNativeHelper(
-            final ArrayList<byte[]> basesX,
-            final ArrayList<byte[]> basesY,
-            final ArrayList<byte[]> basesZ,
-            final ArrayList<byte[]> scalars);
+            final byte[] basesXYZ,
+            final byte[] scalars,
+            final int batch_size);
 
     public static <
             GroupT extends AbstractGroup<GroupT>,
             FieldT extends AbstractFieldElementExpanded<FieldT>>
-    GroupT serialMSM(final List<FieldT> scalars, final List<GroupT> bases) {
+    GroupT serialMSM(final List<FieldT> scalars, final List<GroupT> bases) throws Exception {
         // System.out.println("variableBaseSerialMSM info:");
         // System.out.println("variableBaseSerialMSM base size :" + bases.size() + " type:" +bases.get(0).getClass().getName());
         // System.out.println("variableBaseSerialMSM scalars size :" + scalars.size() + " type:"+scalars.get(0).getClass().getName());
@@ -234,24 +234,26 @@ public class VariableBaseMSM {
 
         //serialMSM is only called for  BN254G1 curve.
 
-        ArrayList<byte[]> bigScalars = new ArrayList<byte[]>();
+        ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
         for (FieldT scalar : scalars) {
-            bigScalars.add(bigIntegerToByteArrayHelperCGBN(scalar.toBigInteger()));
+            bigScalarStream.write(bigIntegerToByteArrayHelperCGBN(scalar.toBigInteger()));
         }
-        ArrayList<byte[]> basesArrayX = new ArrayList<byte[]>();
-        ArrayList<byte[]> basesArrayY = new ArrayList<byte[]>();
-        ArrayList<byte[]> basesArrayZ = new ArrayList<byte[]>();
+        byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
+
+
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
 
         for (GroupT base : bases){
             ArrayList<BigInteger> three_values = base.BN254G1ToBigInteger();
-
-            basesArrayX.add(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
-            basesArrayY.add(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
-            basesArrayZ.add(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
+            outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
+            outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
+            outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
 
         }
+        byte[] baseByteArrayXYZ = outputStream.toByteArray();
 
-        byte[] resArray = variableBaseSerialMSMNativeHelper(basesArrayX, basesArrayY, basesArrayZ, bigScalars);
+        byte[] resArray = variableBaseSerialMSMNativeHelper(baseByteArrayXYZ, bigScalarByteArray, bases.size());
         
         int size_of_bigint_cpp_side = 64;
         
@@ -279,36 +281,36 @@ public class VariableBaseMSM {
 
         // lianke: below is the original code used for verify the JNI cpp side code computation is correct
 
-        final List<Tuple2<BigInteger, GroupT>> filteredInput = new ArrayList<>();
+    //     final List<Tuple2<BigInteger, GroupT>> filteredInput = new ArrayList<>();
 
-        GroupT acc = bases.get(0).zero();
-
-
-        int numBits = 0;
-        for (int i = 0; i < bases.size(); i++) {
-            final BigInteger scalar = scalars.get(i).toBigInteger();
-            // if (scalar.equals(BigInteger.ZERO)) {
-            //     continue;
-            // }
-
-            final GroupT base = bases.get(i);
-
-            // if (scalar.equals(BigInteger.ONE)) {
-            //     acc = acc.add(base);
-            // } else {
-                filteredInput.add(new Tuple2<>(scalar, base));
-                //System.out.println("java side filteredInput add <scalar,base> index:" + i + "\n"  +  byteToString(scalar.toByteArray()) + ",\n " + byteToString(base.toBigInteger().toByteArray()));
-                numBits = Math.max(numBits, scalar.bitLength());
-            // }
-        }
+    //     GroupT acc = bases.get(0).zero();
 
 
-       if (!filteredInput.isEmpty()) {
-            acc = acc.add(pippengerMSM(filteredInput, 254));
-        }
+    //     int numBits = 0;
+    //     for (int i = 0; i < bases.size(); i++) {
+    //         final BigInteger scalar = scalars.get(i).toBigInteger();
+    //         // if (scalar.equals(BigInteger.ZERO)) {
+    //         //     continue;
+    //         // }
 
-        System.out.println("java output = " + acc.toString());
-        System.out.println("java == CUDA? " + acc.equals(jni_res));
+    //         final GroupT base = bases.get(i);
+
+    //         // if (scalar.equals(BigInteger.ONE)) {
+    //         //     acc = acc.add(base);
+    //         // } else {
+    //             filteredInput.add(new Tuple2<>(scalar, base));
+    //             //System.out.println("java side filteredInput add <scalar,base> index:" + i + "\n"  +  byteToString(scalar.toByteArray()) + ",\n " + byteToString(base.toBigInteger().toByteArray()));
+    //             numBits = Math.max(numBits, scalar.bitLength());
+    //         // }
+    //     }
+
+
+    //    if (!filteredInput.isEmpty()) {
+    //         acc = acc.add(pippengerMSM(filteredInput, 254));
+    //     }
+
+    //     System.out.println("java output = " + acc.toString());
+    //     System.out.println("java == CUDA? " + acc.equals(jni_res));
 
         return jni_res;
     }
@@ -316,9 +318,9 @@ public class VariableBaseMSM {
 
     public static native <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
     byte[] variableBaseDoubleMSMNativeHelper(
-            final ArrayList<byte[]> bases1,
-            final ArrayList<byte[]> bases2,
-            final ArrayList<byte[]> scalars);
+            final byte[] bases1,
+            final byte[] bases2,
+            final byte[] scalars);
 
     public static <
             T1 extends AbstractGroup<T1>,
@@ -352,31 +354,6 @@ public class VariableBaseMSM {
 
 
         // int size_of_bigint_cpp_side = 64;
-        // BigInteger modulus = new BigInteger("1532495540865888858358347027150309183618765510462668801");
-        // byte[] converted_back1 = new byte[size_of_bigint_cpp_side];
-        // for(int j = 63; j >= 3; j-=4){
-        //     converted_back1[j] = resArray[j - 3];
-        //     converted_back1[j-1] = resArray[j - 2];
-        //     converted_back1[j-2] = resArray[j - 1];
-        //     converted_back1[j-3] = resArray[j];
-        // }
-        // BigInteger bi = new BigInteger(converted_back1);
-        // BigInteger output1 = bi.mod(modulus);
-        // T1 res1 = bases.get(0)._1.zero();
-        // res1.setBigInteger(output1);
-
-        // byte[] converted_back2 = new byte[size_of_bigint_cpp_side];
-        // for(int j = 63; j >= 3; j-=4){
-        //     converted_back2[j] = resArray[64 + j - 3];
-        //     converted_back2[j-1] = resArray[64 + j - 2];
-        //     converted_back2[j-2] = resArray[64 + j - 1];
-        //     converted_back2[j-3] = resArray[64 + j];
-        // }
-        // BigInteger bi2 = new BigInteger(converted_back2);
-        // BigInteger output2 = bi2.mod(modulus);
-        // T2 res2 = bases.get(0)._2.zero();
-        // res2.setBigInteger(output2);
-
 
 
 

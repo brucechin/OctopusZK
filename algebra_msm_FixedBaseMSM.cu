@@ -135,7 +135,6 @@ void print_bn_t(bn_t &number, int instance_id_) {
   
 }
 
-//TODO this three Fp2 functions may have bugs
 __device__ 
 Fp2 add(Fp2 input1, Fp2 input2)
 {
@@ -1186,10 +1185,6 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   vector<Scalar> bigScalarArray = vector<Scalar>(batch_size, Scalar());
   vector<BN254G1> multiplesOfBasePtrArray = vector<BN254G1>(out_len * inner_len, BN254G1());
   BN254G1 baseElement = multiplesOfBasePtrArray[1];
-
-  //cout << "CUDA side base out and inner len :" << out_len << " " << inner_len <<endl;
-
-  //cout << "CUDA side base outerc and windowSize :" << outerc << " " << windowSize <<endl;
 
   auto start = std::chrono::steady_clock::now();
   int len = 32; //254-bit BN254.

@@ -15,7 +15,7 @@ import java.util.ArrayList;
 
 public class VariableBaseMSMProfiling {
 
-    public static void serialVariableBaseMSMG1Profiling(final Configuration config, final long size) {
+    public static void serialVariableBaseMSMG1Profiling(final Configuration config, final long size) throws Exception{
         final BN254aG1 groupFactory = new BN254aG1Parameters().ONE();
         final BN254aFr fieldFactory = new BN254aFr(2L);
 
@@ -39,7 +39,7 @@ public class VariableBaseMSMProfiling {
         config.writeRuntimeLog(config.context());
     }
 
-    public static void serialVariableBaseMSMG2Profiling(final Configuration config, final long size) {
+    public static void serialVariableBaseMSMG2Profiling(final Configuration config, final long size) throws Exception{
         final BN254aG2 groupFactory = new BN254aG2Parameters().ONE();
         final BN254aFr fieldFactory = new BN254aFr(2L);
 

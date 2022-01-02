@@ -38,7 +38,7 @@ public class Profiler {
         System.out.format("\n[Profiler] - End Serial %s - %d size\n", SparkUtils.appName(app), size);
     }
 
-    public static void distributedApp(final String app, final Configuration config, final long size) {
+    public static void distributedApp(final String app, final Configuration config, final long size) throws Exception{
         System.out.format(
                 "\n[Profiler] - Start Distributed %s - %d executors - %d partitions - %d size\n\n",
                 SparkUtils.appName(app),

@@ -27,7 +27,7 @@ public class Verifier {
             final Assignment<FieldT> primaryInput,
             final Proof<G1T, G2T> proof,
             final PairingT pairing,
-            final Configuration config) {
+            final Configuration config) throws Exception{
         // Assert first element == FieldT.one().
         final FieldT firstElement = primaryInput.get(0);
         assert (firstElement.equals(firstElement.one()));
