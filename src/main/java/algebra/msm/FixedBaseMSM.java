@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.Arrays;
 import java.io.*;
 import org.apache.spark.SparkEnv;
+import org.apache.spark.TaskContext;
+
 public class FixedBaseMSM {
 
     /**
@@ -104,7 +106,7 @@ public class FixedBaseMSM {
             final int out_len, final int inner_len, final int batch_size, final int scalarSize,
             final byte[] multiplesOfBaseBN254XYZ,
             final byte[] bigScalarsArrays,
-            int BNType);//1 is G1, 2 is G2.
+            int BNType, int taskID);//1 is G1, 2 is G2.
 
     public static String byteToString(byte[] b) {
         byte[] masks = { -128, 64, 32, 16, 8, 4, 2, 1 };
@@ -263,7 +265,7 @@ public class FixedBaseMSM {
         long finish = System.currentTimeMillis();
         long timeElapsed = finish - start;
         System.out.println("data transfer preparation time elapsed: " + timeElapsed + " ms");
-        byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, scalars.size(), scalarSize, baseByteArrayXYZ, bigScalarByteArray, 1);
+        byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, scalars.size(), scalarSize, baseByteArrayXYZ, bigScalarByteArray, 1, 0);
         
         start = System.currentTimeMillis();
         int size_of_bigint_cpp_side = 64;
@@ -304,7 +306,8 @@ public class FixedBaseMSM {
             final int windowSize,
             final int out_size, final int in_size,
             final T baseElement,
-            final List<Tuple2< Long, FieldT>> scalars) throws Exception {
+            final List<Tuple2< Long, FieldT>> scalars, 
+            final int taskID) throws Exception {
         
             long start = System.currentTimeMillis();
 
@@ -333,7 +336,7 @@ public class FixedBaseMSM {
             long finish = System.currentTimeMillis();
             long timeElapsed = finish - start;
             System.out.println("data transfer preparation time elapsed: " + timeElapsed + " ms");
-            byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, scalars.size(), scalarSize, baseByteArrayXYZ, bigScalarByteArray, 1);
+            byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, scalars.size(), scalarSize, baseByteArrayXYZ, bigScalarByteArray, 1, (int)taskID);
             
             start = System.currentTimeMillis();
             int size_of_bigint_cpp_side = 64;
@@ -383,8 +386,10 @@ public class FixedBaseMSM {
         long start = System.currentTimeMillis();
         JavaPairRDD<Long, GroupT> true_result = scalars.mapPartitionsToPair(
             partition ->  {
+                TaskContext tc = TaskContext.get();
+                long taskID = tc.taskAttemptId();
                 List<Tuple2<Long, FieldT>> scalar_partition = IteratorUtils.toList(partition);
-                List<Tuple2<Long, GroupT>> res =  batchMSMPartition(scalarSize, windowSize, out_size, in_size, baseBroadcast.getValue(), scalar_partition);
+                List<Tuple2<Long, GroupT>> res =  batchMSMPartition(scalarSize, windowSize, out_size, in_size, baseBroadcast.getValue(), scalar_partition, (int)taskID);
                 return res.iterator();
             }
         );
@@ -406,7 +411,8 @@ public class FixedBaseMSM {
             final int batch_size,
             final byte[] multiplesOfBaseBN254G1XYZ,
             final byte[] multiplesOfBaseBN254G2XYZABC,
-            final byte[] bigScalarsArrays);
+            final byte[] bigScalarsArrays,
+            final int taskID);
 
     public static <G1T extends AbstractGroup<G1T>,
             G2T extends AbstractGroup<G2T>,
@@ -419,7 +425,8 @@ public class FixedBaseMSM {
             final int scalarSize2,
             final int windowSize2,
             final G2T baseG2,
-            final List<FieldT> scalars) throws Exception {
+            final List<FieldT> scalars, 
+            final int taskID) throws Exception {
 
 
         System.out.println("doubleBatchMSM info:");
@@ -466,7 +473,7 @@ public class FixedBaseMSM {
 
         byte[] resultByteArray = doubleBatchMSMNativeHelper(outerc1, windowSize1, outerc2, windowSize2,
                                         out_size1, in_size1, out_size2, in_size2, scalars.size(),
-                                        baseByteArrayXYZ, baseByteArrayXYZABC, bigScalarByteArray);
+                                        baseByteArrayXYZ, baseByteArrayXYZABC, bigScalarByteArray, taskID);
 
 
         final List<Tuple2<G1T, G2T>> jni_res = new ArrayList<>(scalars.size());
@@ -528,7 +535,8 @@ public class FixedBaseMSM {
         final int scalarSize2,
         final int windowSize2,
         final G2T baseG2,
-        final List<Tuple2<Long, FieldT>> scalars) throws Exception{
+        final List<Tuple2<Long, FieldT>> scalars, 
+        final int taskID) throws Exception{
 
 
             long start = System.currentTimeMillis();
@@ -568,7 +576,7 @@ public class FixedBaseMSM {
     
             byte[] resultByteArray = doubleBatchMSMNativeHelper(outerc1, windowSize1, outerc2, windowSize2,
                                             out_size1, in_size1, out_size2, in_size2, scalars.size(),
-                                            baseByteArrayXYZ, baseByteArrayXYZABC, bigScalarByteArray);
+                                            baseByteArrayXYZ, baseByteArrayXYZABC, bigScalarByteArray, taskID);
     
     
             final List<Tuple2< Long, Tuple2<G1T, G2T>>> jni_res = new ArrayList<>(scalars.size());
@@ -640,10 +648,12 @@ public class FixedBaseMSM {
         final Broadcast<G2T> baseBroadcast2 = sc.broadcast(baseG2);
         return scalars.mapPartitionsToPair(
             partition ->  {
+                    TaskContext tc = TaskContext.get();
+                    long taskID = tc.taskAttemptId();
                     List<Tuple2<Long, FieldT>> scalar_partition = IteratorUtils.toList(partition);
                     List<Tuple2<Long, Tuple2<G1T, G2T>>> res =  doubleBatchMSMPartition(out_size1, in_size1, out_size2, in_size2,
                                                                 scalarSize1, windowSize1, baseBroadcast1.getValue(), 
-                                                                scalarSize2, windowSize2, baseBroadcast2.getValue(), scalar_partition);
+                                                                scalarSize2, windowSize2, baseBroadcast2.getValue(), scalar_partition, (int)taskID );
                     return res.iterator();
             }
         );

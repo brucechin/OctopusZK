@@ -992,21 +992,20 @@ __global__ void calculateBaseOuterG2Helper(BN254G2* outerArray, BN254G2 baseOute
 
 
 
-void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1* outputArray,  BN254G1 baseG1, int outerc, int scalarSize, int windowSize, int out_len, int inner_len)
+void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1* outputArray,  BN254G1 baseG1, int outerc, int scalarSize, int windowSize, int out_len, int inner_len, int taskID)
 {
-	int cnt;
-    cudaGetDeviceCount(&cnt);
+    int num_gpus = 1;
+    CUDA_CALL(cudaGetDeviceCount(&num_gpus));
     size_t batch_size = bigScalarArray.size();
 
-    //printf("CUDA Devices: %d, input_field size: %lu, input_field count: %lu\n", cnt, sizeof(Scalar), batch_size);
+    printf("CUDA Devices number: %d, input_field size: %lu, input_field count: %lu\n", num_gpus, sizeof(Scalar), batch_size);
     size_t threads_per_block = 128;
     size_t instance_per_block = (threads_per_block / MSM_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
     //printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
-    //TODO set device ID
-    int num_gpus = 1;
-    CUDA_CALL(cudaGetDeviceCount(&num_gpus));
-    CUDA_CALL(cudaSetDevice(0));
+
+    cout <<"taskID=" << taskID << "scheduled to GPU " << taskID % num_gpus<< endl;
+    CUDA_CALL(cudaSetDevice(taskID % num_gpus));
     Scalar *inputScalarArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputScalarArrayGPU, sizeof(Scalar) * batch_size); )
     CUDA_CALL( cudaMemcpy(inputScalarArrayGPU, (void**)&bigScalarArray[0], sizeof(Scalar) * batch_size, cudaMemcpyHostToDevice); )
@@ -1067,17 +1066,16 @@ void  fixed_double_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1 baseG
                             int outerc1, int windowSize1, int outerc2, int windowSize2, 
                             int out_len1, int inner_len1 , int out_len2, int inner_len2)
 {
-	  int cnt;
-    cudaGetDeviceCount(&cnt);
+    int num_gpus = 1;
+    CUDA_CALL(cudaGetDeviceCount(&num_gpus));
     size_t batch_size = bigScalarArray.size();
 
-    //printf("CUDA Devices: %d, input_field size: %lu, input_field count: %lu\n", cnt, sizeof(Scalar), batch_size);
+    printf("CUDA Devices number: %d, input_field size: %lu, input_field count: %lu\n", num_gpus, sizeof(Scalar), batch_size);
     size_t threads_per_block = 128;
     size_t instance_per_block = (threads_per_block / MSM_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
     //printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
-    int num_gpus = 1;
-    CUDA_CALL(cudaGetDeviceCount(&num_gpus));
+
     CUDA_CALL(cudaSetDevice(0));
     Scalar *inputScalarArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputScalarArrayGPU, sizeof(Scalar) * batch_size); )
@@ -1178,7 +1176,7 @@ void  fixed_double_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1 baseG
  */
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   (JNIEnv *env, jclass obj, jint outerc, jint windowSize, jint out_len, jint inner_len, jint batch_size, jint scalarSize, 
-  jbyteArray multiplesOfBaseXYZ,  jbyteArray bigScalarsArrayInput,  jint BNType)
+  jbyteArray multiplesOfBaseXYZ,  jbyteArray bigScalarsArrayInput,  jint BNType, jint taskID)
 {
 
   jclass java_util_ArrayList      = static_cast<jclass>(env->NewGlobalRef(env->FindClass("java/util/ArrayList")));
@@ -1222,7 +1220,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   std::cout << "C++ read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
 
 
-  fixed_batch_MSM(bigScalarArray, outputBN254ArrayCPU, baseElement ,outerc, scalarSize, windowSize, out_len, inner_len);
+  fixed_batch_MSM(bigScalarArray, outputBN254ArrayCPU, baseElement ,outerc, scalarSize, windowSize, out_len, inner_len, taskID);
   end = std::chrono::steady_clock::now();
 
 
