@@ -1004,7 +1004,7 @@ void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1* outputArray
     size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
     //printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
 
-    cout <<"taskID=" << taskID << "scheduled to GPU " << taskID % num_gpus<< endl;
+    cout <<"FixedBatchMSM taskID=" << taskID << "scheduled to GPU " << taskID % num_gpus<< endl;
     CUDA_CALL(cudaSetDevice(taskID % num_gpus));
     Scalar *inputScalarArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputScalarArrayGPU, sizeof(Scalar) * batch_size); )
@@ -1064,7 +1064,7 @@ void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1* outputArray
 void  fixed_double_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1 baseG1, BN254G2 baseG2, 
                             BN254G1* outputArrayG1, BN254G2* outputArrayG2,
                             int outerc1, int windowSize1, int outerc2, int windowSize2, 
-                            int out_len1, int inner_len1 , int out_len2, int inner_len2)
+                            int out_len1, int inner_len1 , int out_len2, int inner_len2, int taskID)
 {
     int num_gpus = 1;
     CUDA_CALL(cudaGetDeviceCount(&num_gpus));
@@ -1076,7 +1076,8 @@ void  fixed_double_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1 baseG
     size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
     //printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
 
-    CUDA_CALL(cudaSetDevice(0));
+    cout <<"FixedDoubleBatchMSM taskID=" << taskID << "scheduled to GPU " << taskID % num_gpus<< endl;
+    CUDA_CALL(cudaSetDevice(taskID % num_gpus));
     Scalar *inputScalarArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputScalarArrayGPU, sizeof(Scalar) * batch_size); )
     CUDA_CALL( cudaMemcpy(inputScalarArrayGPU, (void**)&bigScalarArray[0], sizeof(Scalar) * batch_size, cudaMemcpyHostToDevice); )
@@ -1246,7 +1247,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeHelper
   (JNIEnv * env, jclass obj, jint outerc1, jint windowSize1, jint outerc2, jint windowSize2, 
   jint out_len1, jint inner_len1, jint out_len2, jint inner_len2, jint batch_size, 
-   jbyteArray multiplesOfBaseXYZ, jbyteArray multiplesOfBaseXYZABC, jbyteArray bigScalarsArrayInput
+   jbyteArray multiplesOfBaseXYZ, jbyteArray multiplesOfBaseXYZABC, jbyteArray bigScalarsArrayInput, jint taskID
 ){
 
   jclass java_util_ArrayList      = static_cast<jclass>(env->NewGlobalRef(env->FindClass("java/util/ArrayList")));
@@ -1317,7 +1318,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
   fixed_double_batch_MSM(bigScalarArray, baseElementG1, baseElementG2, 
                           outputBN254G1ArrayCPU, outputBN254G2ArrayCPU,
                           outerc1, windowSize1, outerc2, windowSize2,
-                          out_len1, inner_len1, out_len2, inner_len2);
+                          out_len1, inner_len1, out_len2, inner_len2, taskID);
 
   start = std::chrono::steady_clock::now();
 

@@ -10,18 +10,18 @@ extern "C" {
 /*
  * Class:     algebra_msm_VariableBaseMSM
  * Method:    variableBaseSerialMSMNativeHelper
- * Signature: ([B[BI)[B
+ * Signature: ([B[BII)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerialMSMNativeHelper
-  (JNIEnv *, jclass, jbyteArray, jbyteArray, jint);
+  (JNIEnv *, jclass, jbyteArray, jbyteArray, jint, jint);
 
 /*
  * Class:     algebra_msm_VariableBaseMSM
  * Method:    variableBaseDoubleMSMNativeHelper
- * Signature: ([B[B[BI)[B
+ * Signature: ([B[B[BII)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseDoubleMSMNativeHelper
-  (JNIEnv *, jclass, jbyteArray, jbyteArray, jbyteArray, jint);
+  (JNIEnv *, jclass, jbyteArray, jbyteArray, jbyteArray, jint, jint);
 
 #ifdef __cplusplus
 }

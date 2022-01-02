@@ -10,10 +10,10 @@ extern "C" {
 /*
  * Class:     algebra_fft_FFTAuxiliary
  * Method:    serialRadix2FFTNativeHelper
- * Signature: (Ljava/util/List;[B)[B
+ * Signature: (Ljava/util/List;[BI)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_algebra_fft_FFTAuxiliary_serialRadix2FFTNativeHelper
-  (JNIEnv *, jclass, jobject, jbyteArray);
+  (JNIEnv *, jclass, jobject, jbyteArray, jint);
 
 #ifdef __cplusplus
 }

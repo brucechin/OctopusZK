@@ -1,12 +1,18 @@
 How to run this GPU-DIZK repo:
 ```$xslt
+#follow the `setup.sh` to install dependencies. please read the script.
 sh setup.sh
 mvn compile
+
+#please set some variables like the installed GMP library path, NVCC path, JAVA path and GPU compute architecture code before running `jni_compile.sh`. The NVCC compilation could be a long time.
 sh jni_compile.sh 
-#test the correctness
+
+#test proof generation correctness
 mvn test -Dtest=zk_proof_systems.zkSNARK.SerialzkSNARKTest 
-#benchmark serial zkSNARK performance 
+
+#benchmark serial zkSNARK performance(FixMSM, VarMSM, FFT, end to end)
 sh serialzkSNARKProfiler.sh 
+
 #benchmark distributed zkSNARK performance. remember to setup your Spark cluster first.
 sh distributedzkSNARKProfiler.sh
 ```

@@ -1098,18 +1098,18 @@ __global__ void pippengerMSMG2_unit3(BN254G2* result, int c){
 
 
 
-void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> &multiplesOfBasePtrArray, BN254G1* outputArray)
+void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> &multiplesOfBasePtrArray, BN254G1* outputArray, int taskID)
 {
-	int cnt;
-    cudaGetDeviceCount(&cnt);
+    int num_gpus = 1;
+    CUDA_CALL(cudaGetDeviceCount(&num_gpus));
     size_t batch_size = bigScalarArray.size();
 
-    printf("CUDA Devices: %d, input_field size: %lu, input_field count: %lu\n", cnt, sizeof(Scalar), batch_size);
+    printf("CUDA Devices number: %d, input_field size: %lu, input_field count: %lu\n", num_gpus, sizeof(Scalar), batch_size);
     size_t threads_per_block = 128;
     size_t instance_per_block = (threads_per_block / MSM_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
-    CUDA_CALL(cudaSetDevice(0));
-    printf("finish CUDA device set\n");
+    cout <<"VarBatchMSM taskID=" << taskID << "scheduled to GPU " << taskID % num_gpus<< endl;
+    CUDA_CALL(cudaSetDevice(taskID % num_gpus));
 
     Scalar *inputScalarArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputScalarArrayGPU, sizeof(Scalar) * batch_size); )
@@ -1243,18 +1243,18 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
 
 
 
-void  pippengerMSMG2(std::vector<Scalar> & bigScalarArray, std::vector<BN254G2> &multiplesOfBasePtrArray, BN254G2* outputArray)
+void  pippengerMSMG2(std::vector<Scalar> & bigScalarArray, std::vector<BN254G2> &multiplesOfBasePtrArray, BN254G2* outputArray, int taskID)
 {
-	int cnt;
-    cudaGetDeviceCount(&cnt);
+    int num_gpus = 1;
+    CUDA_CALL(cudaGetDeviceCount(&num_gpus));
     size_t batch_size = bigScalarArray.size();
 
-    printf("CUDA Devices: %d, input_field size: %lu, input_field count: %lu\n", cnt, sizeof(Scalar), batch_size);
+    printf("CUDA Devices number: %d, input_field size: %lu, input_field count: %lu\n", num_gpus, sizeof(Scalar), batch_size);
     size_t threads_per_block = 128;
     size_t instance_per_block = (threads_per_block / MSM_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
-    CUDA_CALL(cudaSetDevice(0));
-    printf("finish CUDA device set\n");
+    cout <<"VarDoubleBatchMSM taskID=" << taskID << "scheduled to GPU " << taskID % num_gpus<< endl;
+    CUDA_CALL(cudaSetDevice(taskID % num_gpus));
 
     Scalar *inputScalarArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputScalarArrayGPU, sizeof(Scalar) * batch_size); )
@@ -1395,7 +1395,7 @@ void  pippengerMSMG2(std::vector<Scalar> & bigScalarArray, std::vector<BN254G2> 
  * Signature: (Ljava/util/ArrayList;Ljava/util/ArrayList;)Lalgebra/groups/AbstractGroup;
  */
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerialMSMNativeHelper
-  (JNIEnv * env, jclass obj,  jbyteArray multiplesOfBaseXYZ, jbyteArray bigScalarsArrayInput, jint batch_size){
+  (JNIEnv * env, jclass obj,  jbyteArray multiplesOfBaseXYZ, jbyteArray bigScalarsArrayInput, jint batch_size, jint taskID){
     jclass java_util_ArrayList      = static_cast<jclass>(env->NewGlobalRef(env->FindClass("java/util/ArrayList")));
     jmethodID java_util_ArrayList_size = env->GetMethodID(java_util_ArrayList, "size", "()I");
     jmethodID java_util_ArrayList_get  = env->GetMethodID(java_util_ArrayList, "get", "(I)Ljava/lang/Object;");
@@ -1429,7 +1429,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
 
     BN254G1* resultCPU = new BN254G1[1];
     memset(resultCPU, 0, sizeof(BN254G1));
-    pippengerMSMG1(bigScalarArray, multiplesOfBasePtrArray, resultCPU);
+    pippengerMSMG1(bigScalarArray, multiplesOfBasePtrArray, resultCPU, taskID);
 
     jbyteArray resultByteArray = env->NewByteArray((jsize)sizeof(BN254G1));
 
@@ -1455,7 +1455,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
  * Signature: ([B[B[BI)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseDoubleMSMNativeHelper
-  (JNIEnv * env, jclass obj,  jbyteArray multiplesOfBaseXYZ, jbyteArray multiplesOfBaseXYZABC,  jbyteArray bigScalarsArrayInput, jint batch_size){
+  (JNIEnv * env, jclass obj,  jbyteArray multiplesOfBaseXYZ, jbyteArray multiplesOfBaseXYZABC,  jbyteArray bigScalarsArrayInput, jint batch_size, jint taskID){
     jclass java_util_ArrayList      = static_cast<jclass>(env->NewGlobalRef(env->FindClass("java/util/ArrayList")));
     jmethodID java_util_ArrayList_size = env->GetMethodID(java_util_ArrayList, "size", "()I");
     jmethodID java_util_ArrayList_get  = env->GetMethodID(java_util_ArrayList, "get", "(I)Ljava/lang/Object;");
@@ -1510,8 +1510,8 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseDouble
 
     BN254G2* resultCPUG2 = new BN254G2[1];
     memset(resultCPUG2, 0, sizeof(BN254G2));
-    pippengerMSMG1(bigScalarArray, multiplesOfBase1PtrArray, resultCPUG1);
-    pippengerMSMG2(bigScalarArray, multiplesOfBase2PtrArray, resultCPUG2);
+    pippengerMSMG1(bigScalarArray, multiplesOfBase1PtrArray, resultCPUG1, taskID);
+    pippengerMSMG2(bigScalarArray, multiplesOfBase2PtrArray, resultCPUG2, taskID);
 
     jbyteArray resultByteArray = env->NewByteArray((jsize)(sizeof(BN254G1) +sizeof(BN254G2)));
 

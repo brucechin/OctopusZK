@@ -27,7 +27,7 @@ public class Common {
 
         return getInputColumns(circuit, input, false).mapValues(column -> {
             ArrayList<FieldT> columnArray = Utils.convertFromPairs(column, numInputs);
-            domain.radix2InverseFFT(columnArray);
+            domain.radix2InverseFFT(columnArray, 0);
             return columnArray;
         });
     }

@@ -7,4 +7,5 @@ out/*
 target/
 dizk.iml
 *.so
-
+*.class
+gmp-6.2.1/

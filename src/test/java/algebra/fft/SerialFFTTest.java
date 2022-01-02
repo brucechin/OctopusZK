@@ -179,7 +179,7 @@ public class SerialFFTTest implements Serializable {
 
         ArrayList<Fp> naiveIn = new ArrayList<>(serial);
 
-        domain.radix2FFT(serial);
+        domain.radix2FFT(serial, 0);
 
         final Fp omega = FieldFactory.rootOfUnity(m);
         for (int i = 0; i < m; i++) {

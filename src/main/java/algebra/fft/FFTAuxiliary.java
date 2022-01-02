@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import org.apache.spark.TaskContext;
 
 public class FFTAuxiliary {
 
@@ -36,34 +37,6 @@ public class FFTAuxiliary {
         return builder.toString();
     }
 
-
-    public static byte[] bigIntegerToByteArrayHelper(BigInteger bigint){
-        byte[] temp = bigint.toByteArray();
-
-        byte[] res = new byte[temp.length / 4 * 4 + 4];
-        int size_diff = temp.length / 4 * 4 + 4 - temp.length;
-        int j = temp.length - 1;
-        for(; j >= 3; j-=4){
-            res[ size_diff+ j] = temp[j-3];
-            res[size_diff+ j-1] = temp[j-2];
-            res[ size_diff+j-2] = temp[j-1];
-            res[ size_diff+j-3] = temp[j];
-        }
-        if(j == 2){
-            res[2] = temp[j-2];
-            res[1] = temp[j-1];
-            res[0] = temp[j];
-        }else if(j == 1){
-            res[1] = temp[j-1];
-            res[0] = temp[j];
-        }else if(j == 0){
-            res[0] = temp[j];
-        }
-        return res;
-
-    }
-
-
     public static byte[] bigIntegerToByteArrayHelperCGBN(BigInteger bigint){
         byte[] temp = bigint.toByteArray();
 
@@ -78,14 +51,14 @@ public class FFTAuxiliary {
 
     static native <FieldT extends AbstractFieldElementExpanded<FieldT>> byte[] serialRadix2FFTNativeHelper(
         final List<byte[]> input,
-        final byte[] omega);
+        final byte[] omega, final int taskID);
     /**
      * Compute the radix-2 FFT of the vector a over the set S={omega^{0},...,omega^{m-1}}. Result is
      * stored in ArrayList input.
      */
     static <FieldT extends AbstractFieldElementExpanded<FieldT>> void serialRadix2FFT(
             final List<FieldT> input,
-            final FieldT omega) {
+            final FieldT omega, final int taskID) {
         final int n = input.size();
         final int logn = MathUtils.log2(n);
         if (n == 1) {
@@ -105,7 +78,7 @@ public class FFTAuxiliary {
 
         //System.out.println("on java side serialRadix2FFT omega=" + byteToString(omega.toBigInteger().toByteArray()));
         byte[] omegaBytes = bigIntegerToByteArrayHelperCGBN(omega.toBigInteger());
-        byte[] resultByteArray = FFTAuxiliary.serialRadix2FFTNativeHelper(inputByteArray, omegaBytes);
+        byte[] resultByteArray = FFTAuxiliary.serialRadix2FFTNativeHelper(inputByteArray, omegaBytes, taskID);
 
         int size_of_bigint_cpp_side = 64;
         for(int i = 0; i < input.size(); i++){
@@ -124,43 +97,7 @@ public class FFTAuxiliary {
 
         //--------------------------------------Java Native code--------------------------------
 
-        // below original code is used for correctness check
-        /* swapping in place (from Storer's book) */
-        // for (int k = 0; k < n; ++k) {
-        //     final int rk = MathUtils.bitreverse(k, logn);
-        //     if (k < rk) {
-        //         Collections.swap(input, k, rk);
-        //     }
-        // }
-
-
-        // int m = 1; // invariant: m = 2^{s-1}
-        // for (int s = 1; s <= logn; ++s) {
-        //     // w_m is 2^s-th root of unity now
-        //     final FieldT w_m = omega.pow(n / (2 * m));
-        //     for (int k = 0; k < n; k += 2 * m) {
-        //         FieldT w = omega.one();
-        //         for (int j = 0; j < m; ++j) {
-        //             final FieldT t = w.mul(input.get(k + j + m));
-
-        //             input.set(k + j + m, input.get(k + j).sub(t));
-
-        //             input.set(k + j, input.get(k + j).add(t));
-        //             System.out.println("before mul fr w=" + w.toBigInteger());
-        //             System.out.println("before mul fr w_m=" + w_m.toBigInteger());
-
-        //             w = w.mul(w_m);
-        //             System.out.println("after mul fr w=" + w.toBigInteger() +"\n\n\n");
-                    
-        //         }
-        //     }
-        //     m *= 2;
-        // }
-
-        // for(FieldT fr : input) {
-        //     System.out.println("fr=" + fr.toBigInteger());
-        // }
-
+    
 
     }
 
@@ -193,13 +130,15 @@ public class FFTAuxiliary {
             return new Tuple2<>(group, new Tuple2<>(index, element._2));
         }).combineByKey(combine.createGroup, combine.mergeElement, combine.mergeCombiner)
                 .mapValues(partition -> {
+                    TaskContext tc = TaskContext.get();
+                    long taskID = tc.taskAttemptId();
                     /* Compute the forward FFT, on domain size columns, for each group. */
                     ArrayList<FieldT> groupArray = Utils.convertFromPairs(partition, (int) columns);
 
                     if (inverse) {
-                        columnDomain.radix2InverseFFT(groupArray);
+                        columnDomain.radix2InverseFFT(groupArray, (int)taskID);
                     } else {
-                        columnDomain.radix2FFT(groupArray);
+                        columnDomain.radix2FFT(groupArray, (int)taskID);
                     }
 
                     return groupArray;
@@ -226,13 +165,15 @@ public class FFTAuxiliary {
             return new Tuple2<>(group, new Tuple2<>(index, element._2));
         }).combineByKey(combine.createGroup, combine.mergeElement, combine.mergeCombiner)
                 .mapValues(partition -> {
+                    TaskContext tc = TaskContext.get();
+                    long taskID = tc.taskAttemptId();
                     /* Compute the forward FFT, on domain size rows, for each group. */
                     ArrayList<FieldT> groupArray = Utils.convertFromPairs(partition, (int) rows);
 
                     if (inverse) {
-                        rowDomain.radix2InverseFFT(groupArray);
+                        rowDomain.radix2InverseFFT(groupArray, (int)taskID);
                     } else {
-                        rowDomain.radix2FFT(groupArray);
+                        rowDomain.radix2FFT(groupArray, (int)taskID);
                     }
 
                     return groupArray;

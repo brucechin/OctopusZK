@@ -55,7 +55,7 @@ public class DistributedFFTTest implements Serializable {
 
         JavaPairRDD<Long, ComplexField> inputRDD = sc.parallelizePairs(Utils.convertToPairs(input));
 
-        serialDomain.radix2FFT(input);
+        serialDomain.radix2FFT(input, 0);
         inputRDD = DistributedFFT.radix2FFT(inputRDD, rows, columns, fieldFactory);
 
         System.out.println(input.size() + ", " + inputRDD.count());
@@ -121,7 +121,7 @@ public class DistributedFFTTest implements Serializable {
         JavaPairRDD<Long, ComplexField> parallelSpark = sc
                 .parallelizePairs(Utils.convertToPairs(serial));
 
-        serialDomain.radix2CosetFFT(serial, shift);
+        serialDomain.radix2CosetFFT(serial, shift, 0);
         JavaPairRDD<Long, ComplexField> parallel = DistributedFFT
                 .radix2CosetFFT(parallelSpark, shift, rows, columns, fieldFactory);
         parallel.foreachPartition(element -> {
