@@ -48,6 +48,8 @@ public class DistributedSetup {
         final FieldT inverseDelta = delta.inverse();
 
         // A quadratic arithmetic program evaluated at t.
+        config.beginLog("Computing R1CStoQAPRelation");
+
         final QAPRelationRDD<FieldT> qap = R1CStoQAPRDD.R1CStoQAPRelation(r1cs, t, config);
 
         final int numInputs = qap.numInputs();
@@ -58,6 +60,7 @@ public class DistributedSetup {
         System.out.println("\tQAP - total input size: " + numVariables);
         System.out.println("\tQAP - pre degree: " + r1cs.numConstraints());
         System.out.println("\tQAP - degree: " + qap.degree());
+        config.endLog("Computing R1CStoQAPRelation");
 
         // The gamma inverse product component: (beta*A_i(t) + alpha*B_i(t) + C_i(t)) * gamma^{-1}
         // The delta inverse product component: (beta*A_i(t) + alpha*B_i(t) + C_i(t)) * delta^{-1}

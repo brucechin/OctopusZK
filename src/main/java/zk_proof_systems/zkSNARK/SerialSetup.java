@@ -46,12 +46,14 @@ public class SerialSetup {
         final FieldT inverseDelta = delta.inverse();
 
         // A quadratic arithmetic program evaluated at t.
+        config.beginLog("Computing R1CStoQAPRelation");
         final QAPRelation<FieldT> qap = R1CStoQAP.R1CStoQAPRelation(r1cs, t);
 
         System.out.println("\tQAP - primary input size: " + qap.numInputs());
         System.out.println("\tQAP - total input size: " + qap.numVariables());
         System.out.println("\tQAP - pre degree: " + r1cs.numConstraints());
         System.out.println("\tQAP - degree: " + qap.degree());
+        config.endLog("Computing R1CStoQAPRelation");
 
         final int numInputs = qap.numInputs();
         final int numVariables = qap.numVariables();
