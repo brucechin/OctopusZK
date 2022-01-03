@@ -60,3 +60,11 @@ such an improvement is good for scalability. next step is to implement this feat
 
 finish variable base MSM G1 and G2 implementation. port to distributed MSM and FFT. Support multi GPU allocation. spark is sometime stuck and i need to figure it out.
 TODO: add more profiling println info for checking. 
+
+# 2021.1.2
+
+found a bottleneck where in VarMSM the first iteration sometimes becomes very slow.
+
+there is a FieldT vector multiply a base value should be moved to GPU side too.
+
+when the number of constraints is small, sometimes it has verification issues. when the number of constraints is large, things are fine.

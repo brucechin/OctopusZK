@@ -299,6 +299,66 @@ public class FixedBaseMSM {
     }
 
 
+    public static native <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
+    byte[] fieldBatchMSMNativeHelper(
+            final byte[] bigScalarsArrays, int batch_size, int taskID);
+
+    //this batchMSMPartition is for distributed zkSNARK, each executor could work on multiple partition and each partition map this method.
+    public static <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
+    List<Tuple2<Long, FieldT>> batchFieldMSMPartition(
+            final FieldT baseElement,
+            final List<Tuple2< Long, FieldT>> scalars, 
+            final int taskID) throws Exception {
+        
+        final List<Tuple2<Long, FieldT>> jni_res = new ArrayList<>(scalars.size());
+        ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
+
+        for (Tuple2<Long, FieldT> scalar : scalars) {
+            bigScalarStream.write(bigIntegerToByteArrayHelperCGBN(scalar._2.toBigInteger()));
+        }
+
+        bigScalarStream.write(bigIntegerToByteArrayHelperCGBN(baseElement.toBigInteger()));
+
+        byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
+
+        byte[] resultByteArray = fieldBatchMSMNativeHelper( bigScalarByteArray, scalars.size(), taskID);
+
+        int size_of_bigint_cpp_side = 64;
+        for(int i = 0; i < scalars.size(); i++){
+            byte[] converted_back_X = Arrays.copyOfRange(resultByteArray, i*size_of_bigint_cpp_side, (i+1)*size_of_bigint_cpp_side);
+            BigInteger bi_X = new BigInteger(converted_back_X);
+            FieldT tmp = baseElement.zero();
+            tmp.setBigInteger(bi_X);
+            jni_res.add(new Tuple2<>(scalars.get(i)._1, tmp));
+        }
+        return jni_res;
+
+    }
+
+
+
+    public static <GroupT extends AbstractGroup<GroupT>,
+            FieldT extends AbstractFieldElementExpanded<FieldT>> JavaPairRDD<Long, FieldT>
+    distributedFieldBatchMSM(
+            FieldT baseElement,
+            final JavaPairRDD<Long, FieldT> scalars,
+            final JavaSparkContext sc) {
+        final Broadcast<FieldT> baseBroadcast = sc.broadcast(baseElement);
+
+
+        JavaPairRDD<Long, FieldT> true_result = scalars.mapPartitionsToPair(
+            partition ->  {
+                TaskContext tc = TaskContext.get();
+                long taskID = tc.taskAttemptId();
+                List<Tuple2<Long, FieldT>> scalar_partition = IteratorUtils.toList(partition);
+                List<Tuple2<Long, FieldT>> res = batchFieldMSMPartition( baseBroadcast.getValue(), scalar_partition, (int)taskID);
+                return res.iterator();
+            }
+        );
+        return true_result;
+
+    }
+
     //this batchMSMPartition is for distributed zkSNARK, each executor could work on multiple partition and each partition map this method.
     public static <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
     List<Tuple2<Long, T>> batchMSMPartition(
@@ -376,26 +436,21 @@ public class FixedBaseMSM {
             GroupT baseElement,
             final JavaPairRDD<Long, FieldT> scalars,
             final JavaSparkContext sc) {
-        long start1 = System.currentTimeMillis();
         final Broadcast<GroupT> baseBroadcast = sc.broadcast(baseElement);
-
-        long finish1 = System.currentTimeMillis();
-        long timeElapsed1 = finish1 - start1;
-        System.out.println("Spark broadcast  time elapsed: " + timeElapsed1 + " ms");
-
-        long start = System.currentTimeMillis();
         JavaPairRDD<Long, GroupT> true_result = scalars.mapPartitionsToPair(
             partition ->  {
                 TaskContext tc = TaskContext.get();
                 long taskID = tc.taskAttemptId();
                 List<Tuple2<Long, FieldT>> scalar_partition = IteratorUtils.toList(partition);
+                long start2 = System.currentTimeMillis();
                 List<Tuple2<Long, GroupT>> res =  batchMSMPartition(scalarSize, windowSize, out_size, in_size, baseBroadcast.getValue(), scalar_partition, (int)taskID);
+                long finish2 = System.currentTimeMillis();
+                long timeElapsed2 = finish2 - start2;
+                System.out.println("partition processing time elapsed: " + timeElapsed2 + " ms");
                 return res.iterator();
             }
         );
-        long finish = System.currentTimeMillis();
-        long timeElapsed = finish - start;
-        System.out.println("Spark processing time elapsed: " + timeElapsed + " ms");
+
         return true_result;
 
     }

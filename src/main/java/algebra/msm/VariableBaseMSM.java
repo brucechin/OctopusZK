@@ -292,7 +292,7 @@ public class VariableBaseMSM {
 
     ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
     ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
-
+    long start = System.currentTimeMillis();
     for (Tuple2<FieldT, GroupT> in : input) {
         bigScalarStream.write(bigIntegerToByteArrayHelperCGBN(in._1.toBigInteger()));
 
@@ -304,7 +304,9 @@ public class VariableBaseMSM {
 
     byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
     byte[] baseByteArrayXYZ = outputStream.toByteArray();
-
+    long finish = System.currentTimeMillis();
+    long timeElapsed = finish - start;
+    System.out.println("varMSM prepare data took: " + timeElapsed + " ms");
     byte[] resArray = variableBaseSerialMSMNativeHelper(baseByteArrayXYZ, bigScalarByteArray, input.size(), taskID);
 
     int size_of_bigint_cpp_side = 64;
@@ -472,7 +474,7 @@ public class VariableBaseMSM {
     final int size = input.size();
     assert (size > 0);
 
-
+    long start = System.currentTimeMillis();
 
     ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
 
@@ -498,7 +500,9 @@ public class VariableBaseMSM {
     byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
     byte[] baseByteArrayBase1 = outputStreamBase1.toByteArray();
     byte[] baseByteArrayBase2 = outputStreamBase2.toByteArray();
-
+    long finish = System.currentTimeMillis();
+    long timeElapsed = finish - start;
+    System.out.println("varMSM prepare data took: " + timeElapsed + " ms");
     byte[] resArray = variableBaseDoubleMSMNativeHelper(baseByteArrayBase1, baseByteArrayBase2, bigScalarByteArray, input.size(), taskID);
 
 
@@ -611,7 +615,24 @@ public class VariableBaseMSM {
             FieldT extends AbstractFieldElementExpanded<FieldT>>
     GroupT distributedMSM(final JavaRDD<Tuple2<FieldT, GroupT>> input) throws Exception{
 
-        return input.mapPartitions(partition -> {
+        GroupT final_result = input.mapPartitions(partition -> {
+            TaskContext tc = TaskContext.get();
+            long taskID = tc.taskAttemptId();
+            List<Tuple2<FieldT, GroupT>> partition_list = IteratorUtils.toList(partition);
+            GroupT res =  serialMSMPartition(partition_list, (int) taskID);
+            return Collections.singletonList(res).iterator();
+        }).reduce(GroupT::add);
+
+        return final_result;
+    }
+
+    public static <
+            GroupT extends AbstractGroup<GroupT>,
+            FieldT extends AbstractFieldElementExpanded<FieldT>>
+    GroupT distributedMSMWithoutJoin(final JavaRDD<Tuple2<Long, FieldT>> scalars,  final JavaRDD<Tuple2<Long, GroupT>> base) throws Exception{
+        //List<Partition> base_partitions = base.partitions();
+
+        return base.mapPartitions(partition -> {
             TaskContext tc = TaskContext.get();
             long taskID = tc.taskAttemptId();
             List<Tuple2<FieldT, GroupT>> partition_list = IteratorUtils.toList(partition);

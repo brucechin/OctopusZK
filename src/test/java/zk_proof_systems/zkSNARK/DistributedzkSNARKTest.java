@@ -62,7 +62,7 @@ public class DistributedzkSNARKTest implements Serializable {
 
         sc = new JavaSparkContext(conf);
 
-        config = new Configuration(16, 16, 400, 16, sc, StorageLevel.MEMORY_ONLY());
+        config = new Configuration(8, 16, 64, 8, sc, StorageLevel.MEMORY_ONLY());
         config.setRuntimeFlag(false);
         config.setDebugFlag(false);
     }
@@ -116,7 +116,7 @@ public class DistributedzkSNARKTest implements Serializable {
     @Test
     public void DistributedBN254aProofSystemTest() throws Exception{
         final int numInputs = 1023;
-        final int numConstraints = 1000000;
+        final int numConstraints = 10000;
         final BN254aFr fieldFactory = new BN254aFr(1);
         final BN254aG1 g1Factory = BN254aG1Parameters.ONE;
         final BN254aG2 g2Factory = BN254aG2Parameters.ONE;

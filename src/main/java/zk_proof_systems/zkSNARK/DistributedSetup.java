@@ -66,19 +66,23 @@ public class DistributedSetup {
         final JavaPairRDD<Long, FieldT> alphaBt = qap.Bt().mapValues(b -> b.mul(alpha));
         final JavaPairRDD<Long, FieldT> ABC = betaAt.union(alphaBt).union(qap.Ct())
                 .reduceByKey(FieldT::add).persist(config.storageLevel());
+        //TODO lianke this filter is too slow. move it to another func to speedup.
         final JavaPairRDD<Long, FieldT> gammaABC = ABC.filter(e -> e._1 < numInputs)
-                .mapValues(e -> e.mul(inverseGamma));
+                .mapValues(e -> e.mul(inverseGamma)).persist(config.storageLevel());
         final JavaPairRDD<Long, FieldT> deltaABC = ABC.filter(e -> e._1 >= numInputs)
-                .mapValues(e -> e.mul(inverseDelta));
+                .mapValues(e -> e.mul(inverseDelta)).persist(config.storageLevel());
+        gammaABC.count();
+        deltaABC.count();
         config.endLog("Computing deltaABC and gammaABC for R1CS proving key and verification key");
 
-        config.beginLog("Computing query densities");
-
-
-        final long numNonZeroAt = qap.At().filter(e -> !e._2.isZero()).count();
-        final long numNonZeroBt = qap.Bt().filter(e -> !e._2.isZero()).count();
-        System.out.println("numNonzeroAt=" + numNonZeroAt + " numNonZeroBt=" + numNonZeroBt);
-        config.endLog("Computing query densities");
+        //use the worst case nonZero number instead
+        final long numNonZeroAt = numVariables;
+        final long numNonZeroBt = numVariables;
+        //config.beginLog("Computing query densities");
+        // final long numNonZeroAt = qap.At().filter(e -> !e._2.isZero()).count();
+        // final long numNonZeroBt = qap.Bt().filter(e -> !e._2.isZero()).count();
+        // System.out.println("numNonzeroAt=" + numNonZeroAt + " numNonZeroBt=" + numNonZeroBt);
+        //config.endLog("Computing query densities");
 
         config.beginLog("Generating G1 MSM Window Table");
         final G1T generatorG1 = g1Factory.random(config.seed(), config.secureSeed());
@@ -151,8 +155,12 @@ public class DistributedSetup {
 
         config.beginLog("Computing query H");
         final FieldT inverseDeltaZt = qap.Zt().mul(delta.inverse());
-        final JavaPairRDD<Long, FieldT> inverseDeltaHtZt = qap.Ht()
-                .mapValues((e) -> e.mul(inverseDeltaZt));
+        // final JavaPairRDD<Long, FieldT> inverseDeltaHtZt = qap.Ht()
+        //         .mapValues((e) -> e.mul(inverseDeltaZt));
+
+        //TODO lianke: this function is still wrong!!!
+        final JavaPairRDD<Long, FieldT> inverseDeltaHtZt = FixedBaseMSM.distributedFieldBatchMSM(inverseDeltaZt, qap.Ht(), config.sparkContext());
+        
         final JavaPairRDD<Long, G1T> queryH = FixedBaseMSM.distributedBatchMSM(
                 scalarSizeG1,
                 windowSizeG1,

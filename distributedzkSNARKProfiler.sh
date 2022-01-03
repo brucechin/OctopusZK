@@ -1,9 +1,9 @@
 
 for TOTAL_CORES in 4; do
-  for SIZE in `seq 20 20`; do
+  for SIZE in `seq 13 13`; do
 
     export APP=zksnark
-    export MEMORY=400G
+    export MEMORY=64G
     export MULTIPLIER=1
 
     export CORES=1
@@ -19,7 +19,7 @@ for TOTAL_CORES in 4; do
       --conf spark.memory.fraction=0.95 \
       --conf spark.memory.storageFraction=0.3 \
       --conf spark.kryoserializer.buffer.max=1g \
-      --conf spark.rdd.compress=true \
+      --conf spark.rdd.compress=false \
       --conf spark.rpc.message.maxSize=2000 \
       --conf spark.executor.heartbeatInterval=30s \
       --conf spark.network.timeout=300s\

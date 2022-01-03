@@ -14,6 +14,7 @@
 #include <iostream>
 #include <gmp.h>
 #include "cgbn/cgbn.h"
+#include <chrono>
 
 #include <bitset>
 
@@ -1108,7 +1109,7 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
     size_t threads_per_block = 128;
     size_t instance_per_block = (threads_per_block / MSM_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
-    cout <<"VarBatchMSM taskID=" << taskID << "scheduled to GPU " << taskID % num_gpus<< endl;
+    cout <<"VarBatchMSM taskID=" << taskID << "  scheduled to GPU " << taskID % num_gpus<< endl;
     CUDA_CALL(cudaSetDevice(taskID % num_gpus));
 
     Scalar *inputScalarArrayGPU; 
@@ -1118,7 +1119,7 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
     BN254G1 *inputBaseArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputBaseArrayGPU, sizeof(BN254G1) * batch_size); )
     CUDA_CALL( cudaMemcpy(inputBaseArrayGPU, (void**)&multiplesOfBasePtrArray[0], sizeof(BN254G1) * batch_size, cudaMemcpyHostToDevice); )
-    CUDA_CALL(cudaDeviceSynchronize());
+    cout <<"VarBatchMSM taskID=" << taskID << "  finish copy data to GPU"<< endl;
 
     int numBits = 254;//BN254 specific value;
     int length = batch_size;
@@ -1126,6 +1127,7 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
     int c= log2Length - (log2Length/3);
     int numBuckets = 1 << c;
     int numGroups = (numBits + c - 1 ) / c;
+
     BN254G1  zero;
     memset(&zero, 0, sizeof(BN254G1));
     zero.Y._limbs[0] = 1;
@@ -1139,7 +1141,8 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
     CUDA_CALL(cudaDeviceSynchronize());
 
     for(int k = numGroups - 1; k >= 0; k--){
-        //printf("k=%d ", k);
+        auto start = std::chrono::steady_clock::now();
+        //TODO lianke the first iteration is very slow!!!
         int* bucketCounter;
         int* bucketIndex;
         int* inputBucketMappingLocation;
@@ -1156,6 +1159,7 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
         BN254G1* buckets;
         CUDA_CALL( cudaMalloc((void**)&buckets, sizeof(BN254G1) * numBuckets); )
         CUDA_CALL(cudaMemcpy(buckets, (void**)&buketsModel[0], sizeof(BN254G1) * numBuckets, cudaMemcpyHostToDevice);)
+        
         int num_blocks_unit1 = (batch_size + threads_per_block - 1) / threads_per_block;
         pippengerMSM_unit1 <<<num_blocks_unit1,threads_per_block>>>( inputScalarArrayGPU, inputBucketMappingLocation, bucketCounter, bucketIndex,  batch_size, c, k, numGroups);
         CUDA_CALL(cudaDeviceSynchronize();)
@@ -1223,6 +1227,11 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
         CUDA_CALL(cudaFree(bucketsBeforeAggregate));
         CUDA_CALL(cudaFree(inputBucketMappingLocation));
 
+
+        CUDA_CALL(cudaDeviceSynchronize());
+        auto end = std::chrono::steady_clock::now();
+        std::chrono::duration<double> elapsed_seconds = end-start;
+        std::cout << "k="<< k<< " elapsed time: " << elapsed_seconds.count() << "s\n";
     }
 
     CUDA_CALL( cudaMemcpy(outputArray, resultGPU,  sizeof(BN254G1), cudaMemcpyDeviceToHost); )
@@ -1426,10 +1435,16 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
 
 
     //lianke: we know in advance that the numBits will be at most 254. we hard encode it.
+    auto start = std::chrono::steady_clock::now();
 
     BN254G1* resultCPU = new BN254G1[1];
     memset(resultCPU, 0, sizeof(BN254G1));
     pippengerMSMG1(bigScalarArray, multiplesOfBasePtrArray, resultCPU, taskID);
+    auto end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end-start;
+    std::cout << "varMSM GPU computation elapsed time: " << elapsed_seconds.count() << "s\n";
+
+
 
     jbyteArray resultByteArray = env->NewByteArray((jsize)sizeof(BN254G1));
 
@@ -1505,6 +1520,10 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseDouble
 
     //lianke: we know in advance that the numBits will be at most 254. we hard encode it.
 
+
+
+    auto start = std::chrono::steady_clock::now();
+
     BN254G1* resultCPUG1 = new BN254G1[1];
     memset(resultCPUG1, 0, sizeof(BN254G1));
 
@@ -1512,6 +1531,12 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseDouble
     memset(resultCPUG2, 0, sizeof(BN254G2));
     pippengerMSMG1(bigScalarArray, multiplesOfBase1PtrArray, resultCPUG1, taskID);
     pippengerMSMG2(bigScalarArray, multiplesOfBase2PtrArray, resultCPUG2, taskID);
+
+    auto end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end-start;
+    std::cout << "varMSM doubleBatch GPU compute time: " << elapsed_seconds.count() << "s\n";
+
+   
 
     jbyteArray resultByteArray = env->NewByteArray((jsize)(sizeof(BN254G1) +sizeof(BN254G2)));
 

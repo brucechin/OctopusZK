@@ -85,9 +85,14 @@ public class DistributedProver {
         System.out.println("deltaABCG1 len=" + provingKey.deltaABCG1().count());
         System.out.println("queryH len=" + provingKey.queryH().count());
         System.out.println("oneFullAssignment len=" + oneFullAssignment.count());
+        long start = System.currentTimeMillis();
 
         final JavaRDD<Tuple2<FieldT, G1T>> computationA = oneFullAssignment
                 .join(provingKey.queryA(), numPartitions).values();
+        computationA.count();
+        long finish = System.currentTimeMillis();
+        long timeElapsed = finish - start;
+        System.out.println("Spark join queryA and oneFullAssignment took: " + timeElapsed + " ms");
         final G1T evaluationAt = VariableBaseMSM.distributedMSM(computationA);
         System.out.println("eval At=" +evaluationAt.toString());
         provingKey.queryA().unpersist();
@@ -95,12 +100,12 @@ public class DistributedProver {
 
         config.beginLog("Computing evaluation to query B: summation of variable_i*B_i(t)");
 
-        long start = System.currentTimeMillis();
+        start = System.currentTimeMillis();
         final JavaRDD<Tuple2<FieldT, Tuple2<G1T, G2T>>> computationB = oneFullAssignment
                 .join(provingKey.queryB(), numPartitions).values();
         computationB.count();
-        long finish = System.currentTimeMillis();
-        long timeElapsed = finish - start;
+        finish = System.currentTimeMillis();
+        timeElapsed = finish - start;
         System.out.println("Spark join queryB and oneFullAssignment took: " + timeElapsed + " ms");
 
         
@@ -112,8 +117,13 @@ public class DistributedProver {
 
         // Compute evaluationABC = a_i*((beta*A_i(t) + alpha*B_i(t) + C_i(t)) + H(t)*Z(t))/delta.
         config.beginLog("Computing evaluation to deltaABC");
+        start = System.currentTimeMillis();
         final JavaRDD<Tuple2<FieldT, G1T>> deltaABCAuxiliary = oneFullAssignment
                 .join(provingKey.deltaABCG1(), numPartitions).values();
+        deltaABCAuxiliary.count();
+        finish = System.currentTimeMillis();
+        timeElapsed = finish - start;
+        System.out.println("Spark join deltaABC and oneFullAssignment took: " + timeElapsed + " ms");
         G1T evaluationABC = VariableBaseMSM.distributedMSM(deltaABCAuxiliary);
         System.out.println("eval ABC=" +evaluationABC.toString());
 
@@ -122,8 +132,15 @@ public class DistributedProver {
         config.endLog("Computing evaluation to deltaABC");
 
         config.beginLog("Computing evaluation to query H");
+        start = System.currentTimeMillis();
+
         final JavaRDD<Tuple2<FieldT, G1T>> computationH = qapWitness.coefficientsH()
                 .join(provingKey.queryH(), numPartitions).values();
+        computationH.count();
+        //TODO lianke: join H is very slow.
+        finish = System.currentTimeMillis();
+        timeElapsed = finish - start;
+        System.out.println("Spark join coefficientsH and oneFullAssignment took: " + timeElapsed + " ms");
         final G1T evaluationHtZt = VariableBaseMSM.distributedMSM(computationH);
         System.out.println("evaluationHtZt=" + evaluationHtZt.toString());
 
