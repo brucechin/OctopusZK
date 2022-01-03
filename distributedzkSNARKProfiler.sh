@@ -1,6 +1,6 @@
 
-for TOTAL_CORES in 4; do
-  for SIZE in `seq 13 13`; do
+for TOTAL_CORES in 8; do
+  for SIZE in `seq 20 20`; do
 
     export APP=zksnark
     export MEMORY=64G

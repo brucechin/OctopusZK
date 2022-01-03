@@ -336,6 +336,101 @@ public class FixedBaseMSM {
     }
 
 
+    public static <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
+    List<Tuple2<Long, FieldT>> batchFilterFieldMSMPartition(
+            FieldT inverseDelta, 
+            FieldT inverseGamma,
+            final int numInputs,
+            final List<Tuple2< Long, FieldT>> scalars, 
+            int type, //0 stands for gamma, 1 stands for delta.
+            final int taskID) throws Exception {
+        
+        final List<Tuple2<Long, FieldT>> jni_res = new ArrayList<>(scalars.size());
+        ByteArrayOutputStream gammaABCStream = new ByteArrayOutputStream( );
+        ByteArrayOutputStream deltaABCStream = new ByteArrayOutputStream( );
+        int counter = 0;
+        for (Tuple2<Long, FieldT> scalar : scalars) {
+            if(scalar._1 < numInputs){
+                if(type == 0){
+                    gammaABCStream.write(bigIntegerToByteArrayHelperCGBN(scalar._2.toBigInteger()));
+                    counter += 1;
+                }
+            }else{
+                if(type == 1){
+                    deltaABCStream.write(bigIntegerToByteArrayHelperCGBN(scalar._2.toBigInteger()));
+                    counter += 1;
+                }
+            }
+        }
+
+
+        if(type == 0){
+            gammaABCStream.write(bigIntegerToByteArrayHelperCGBN(inverseGamma.toBigInteger()));
+            byte[] gammaABCByteArray =  gammaABCStream.toByteArray();
+            byte[] gammaResultByteArray = fieldBatchMSMNativeHelper( gammaABCByteArray, counter, taskID);
+            int size_of_bigint_cpp_side = 64;
+            int counterGamma = 0;
+            for(int i = 0; i < scalars.size(); i++){
+                if(scalars.get(i)._1 >= numInputs){
+                    continue;
+                }
+                byte[] converted_back_X = Arrays.copyOfRange(gammaResultByteArray, counterGamma*size_of_bigint_cpp_side, (counterGamma+1)*size_of_bigint_cpp_side);
+                BigInteger bi_X = new BigInteger(converted_back_X);
+                FieldT tmp = inverseGamma.zero();
+                tmp.setBigInteger(bi_X);
+                jni_res.add(new Tuple2<>(scalars.get(i)._1, tmp));
+                counterGamma++;
+            }
+        }else{
+            deltaABCStream.write(bigIntegerToByteArrayHelperCGBN(inverseDelta.toBigInteger()));
+            byte[] deltaABCByteArray =  deltaABCStream.toByteArray();
+            byte[] deltaResultByteArray = fieldBatchMSMNativeHelper( deltaABCByteArray, counter, taskID);
+
+            int size_of_bigint_cpp_side = 64;
+            int counterDelta = 0;
+            for(int i = 0; i < scalars.size(); i++){
+                if(scalars.get(i)._1 < numInputs){
+                    continue;
+                }
+                byte[] converted_back_X = Arrays.copyOfRange(deltaResultByteArray, counterDelta*size_of_bigint_cpp_side, (counterDelta+1)*size_of_bigint_cpp_side);
+                BigInteger bi_X = new BigInteger(converted_back_X);
+                FieldT tmp = inverseGamma.zero();
+                tmp.setBigInteger(bi_X);
+                jni_res.add(new Tuple2<>(scalars.get(i)._1, tmp));
+                counterDelta++;
+            }
+        }
+
+
+        return jni_res;
+
+    }
+
+    public static <GroupT extends AbstractGroup<GroupT>,
+            FieldT extends AbstractFieldElementExpanded<FieldT>> JavaPairRDD<Long, FieldT>
+    distributedFilterFieldBatchMSM(
+            FieldT inverseDelta, 
+            FieldT inverseGamma,
+            final int numInputs,
+            final int type, // 0 is gamma, 1 is delta.
+            final JavaPairRDD<Long, FieldT> scalars,
+            final JavaSparkContext sc) {
+        final Broadcast<FieldT> inverseDeltaBroadcast = sc.broadcast(inverseDelta);
+        final Broadcast<FieldT> inverseGammaBroadcast = sc.broadcast(inverseGamma);
+
+
+        JavaPairRDD<Long, FieldT> true_result = scalars.mapPartitionsToPair(
+            partition ->  {
+                TaskContext tc = TaskContext.get();
+                long taskID = tc.taskAttemptId();
+                List<Tuple2<Long, FieldT>> scalar_partition = IteratorUtils.toList(partition);
+                List<Tuple2<Long, FieldT>> res = batchFilterFieldMSMPartition( inverseDeltaBroadcast.getValue(), inverseGammaBroadcast.getValue(),  numInputs,  scalar_partition, type,(int)taskID);
+                return res.iterator();
+            }
+        );
+        return true_result;
+
+    }
 
     public static <GroupT extends AbstractGroup<GroupT>,
             FieldT extends AbstractFieldElementExpanded<FieldT>> JavaPairRDD<Long, FieldT>

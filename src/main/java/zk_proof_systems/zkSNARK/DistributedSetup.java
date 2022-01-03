@@ -62,15 +62,20 @@ public class DistributedSetup {
         // The gamma inverse product component: (beta*A_i(t) + alpha*B_i(t) + C_i(t)) * gamma^{-1}
         // The delta inverse product component: (beta*A_i(t) + alpha*B_i(t) + C_i(t)) * delta^{-1}
         config.beginLog("Computing deltaABC and gammaABC for R1CS proving key and verification key");
-        final JavaPairRDD<Long, FieldT> betaAt = qap.At().mapValues(a -> a.mul(beta));
-        final JavaPairRDD<Long, FieldT> alphaBt = qap.Bt().mapValues(b -> b.mul(alpha));
+        //due to lazy evaluation, the R1CStoQAPRelation is executed before qap is used.
+        final JavaPairRDD<Long, FieldT> betaAt =  FixedBaseMSM.distributedFieldBatchMSM(beta, qap.At(), config.sparkContext());     
+        final JavaPairRDD<Long, FieldT> alphaBt =  FixedBaseMSM.distributedFieldBatchMSM(alpha, qap.Bt(), config.sparkContext());     
+
         final JavaPairRDD<Long, FieldT> ABC = betaAt.union(alphaBt).union(qap.Ct())
                 .reduceByKey(FieldT::add).persist(config.storageLevel());
-        //TODO lianke this filter is too slow. move it to another func to speedup.
-        final JavaPairRDD<Long, FieldT> gammaABC = ABC.filter(e -> e._1 < numInputs)
-                .mapValues(e -> e.mul(inverseGamma)).persist(config.storageLevel());
-        final JavaPairRDD<Long, FieldT> deltaABC = ABC.filter(e -> e._1 >= numInputs)
-                .mapValues(e -> e.mul(inverseDelta)).persist(config.storageLevel());
+
+        final JavaPairRDD<Long, FieldT> gammaABC = FixedBaseMSM.distributedFilterFieldBatchMSM(inverseDelta, inverseGamma, numInputs, 0, ABC, config.sparkContext()).persist(config.storageLevel());
+        final JavaPairRDD<Long, FieldT> deltaABC = FixedBaseMSM.distributedFilterFieldBatchMSM(inverseDelta, inverseGamma, numInputs, 1, ABC, config.sparkContext()).persist(config.storageLevel());
+
+        // final JavaPairRDD<Long, FieldT> gammaABC = ABC.filter(e -> e._1 < numInputs)
+        //         .mapValues(e -> e.mul(inverseGamma)).persist(config.storageLevel());
+        // final JavaPairRDD<Long, FieldT> deltaABC = ABC.filter(e -> e._1 >= numInputs)
+        //         .mapValues(e -> e.mul(inverseDelta)).persist(config.storageLevel());
         gammaABC.count();
         deltaABC.count();
         config.endLog("Computing deltaABC and gammaABC for R1CS proving key and verification key");
@@ -158,7 +163,6 @@ public class DistributedSetup {
         // final JavaPairRDD<Long, FieldT> inverseDeltaHtZt = qap.Ht()
         //         .mapValues((e) -> e.mul(inverseDeltaZt));
 
-        //TODO lianke: this function is still wrong!!!
         final JavaPairRDD<Long, FieldT> inverseDeltaHtZt = FixedBaseMSM.distributedFieldBatchMSM(inverseDeltaZt, qap.Ht(), config.sparkContext());
         
         final JavaPairRDD<Long, G1T> queryH = FixedBaseMSM.distributedBatchMSM(
@@ -167,7 +171,7 @@ public class DistributedSetup {
                 numWindowsG1, innerLimitG1,
                 generatorG1,
                 inverseDeltaHtZt,
-                config.sparkContext()).cache();//persist(config.storageLevel());
+                config.sparkContext()).persist(config.storageLevel());
         queryH.count();
         qap.Ht().unpersist();
         config.endLog("Computing query H");
@@ -185,7 +189,7 @@ public class DistributedSetup {
                 numWindowsG1, innerLimitG1,
                 generatorG1,
                 gammaABC,
-                config.sparkContext());//.persist(config.storageLevel());
+                config.sparkContext()).persist(config.storageLevel());
         final JavaPairRDD<Long, G1T> fullGammaABCG1 = Utils
                 .fillRDD(numInputs, generatorG1.zero(), config)
                 .union(gammaABCG1).reduceByKey(G1T::add);

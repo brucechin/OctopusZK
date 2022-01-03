@@ -40,23 +40,6 @@ public class DistributedProver {
                 .R1CStoQAPWitness(provingKey.r1cs(), primary, oneFullAssignment, fieldFactory, config);
         config.endLog("Computing witness polynomial");
 
-        // if (config.debugFlag()) {
-        //     // We are dividing degree 2(d-1) polynomial by degree d polynomial
-        //     // and not adding a PGHR-style ZK-patch, so our H is degree d-2.
-        //     final FieldT zero = fieldFactory.zero();
-        //     qapWitness.coefficientsH().filter(e -> e._1 >= qapWitness.degree() - 2).foreach(coeff -> {
-        //         if (coeff._1 == qapWitness.degree() - 2) {
-        //             assert (!coeff._2.equals(zero));
-        //         } else if (coeff._1 > qapWitness.degree() - 2) {
-        //             assert (coeff._2.equals(zero));
-        //         }
-        //     });
-        //     // Check that the witness satisfies the QAP relation.
-        //     final FieldT t = fieldFactory.random(config.seed(), config.secureSeed());
-        //     final QAPRelationRDD<FieldT> qap = R1CStoQAPRDD
-        //             .R1CStoQAPRelation(provingKey.r1cs(), t, config);
-        //     assert (qap.isSatisfied(qapWitness));
-        // }
 
         // Unpersist the R1CS constraints RDDs and free up memory.
         provingKey.r1cs().constraints().A().unpersist();
