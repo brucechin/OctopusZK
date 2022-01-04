@@ -68,7 +68,7 @@ public class Configuration implements Serializable {
         numCores = 1;
         numMemory = 64;
         numPartitions = 1;
-        storageLevel = StorageLevel.MEMORY_AND_DISK_SER();
+        storageLevel = StorageLevel.MEMORY_ONLY();
 
         debugFlag = false;
     }

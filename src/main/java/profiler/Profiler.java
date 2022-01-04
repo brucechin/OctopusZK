@@ -66,9 +66,7 @@ public class Profiler {
             ZKSNARKProfiling.distributedzkSNARKProfiling(config, size);
         } else if (app.equals("zksnark-large")) {
             ZKSNARKProfiling.distributedzkSNARKLargeProfiling(config, size);
-        } else if (app.equals("vmsm-sorted-g1")) {
-            VariableBaseMSMProfiling.distributedSortedVariableBaseMSMG1Profiling(config, size);
-        }
+        } 
 
         System.out.format(
                 "\n[Profiler] - End Distributed %s - %d executors - %d partitions - %d size\n\n",

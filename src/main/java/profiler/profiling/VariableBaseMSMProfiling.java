@@ -59,6 +59,7 @@ public class VariableBaseMSMProfiling {
         config.beginLog("VariableBaseMSM");
         config.beginRuntime("VariableBaseMSM");
         final BN254aG2 res = VariableBaseMSM.serialMSM(scalars, bases);
+        System.out.println("res="+res.toString());
         config.endRuntime("VariableBaseMSM");
         config.endLog("VariableBaseMSM");
 
@@ -75,11 +76,12 @@ public class VariableBaseMSMProfiling {
         config.beginRuntimeMetadata("Size (inputs)", size);
         config.beginLog("Finished random R1CS generation for benchmark purpose. benchmark data generation is not counted into the setup and proving time.");
 
-        config.beginLog("BosCosterVariableBaseMSM");
-        config.beginRuntime("BosCosterVariableBaseMSM");
+        config.beginLog("VariableBaseMSM");
+        config.beginRuntime("VariableBaseMSM");
         final BN254aG1 res2 = VariableBaseMSM.distributedMSM(input);
-        config.endRuntime("BosCosterVariableBaseMSM");
-        config.endLog("BosCosterVariableBaseMSM");
+        System.out.println("res="+res2.toString());
+        config.endRuntime("VariableBaseMSM");
+        config.endLog("VariableBaseMSM");
 
         config.writeRuntimeLog(config.context());
     }
@@ -94,30 +96,15 @@ public class VariableBaseMSMProfiling {
         config.beginRuntimeMetadata("Size (inputs)", size);
         config.beginLog("Finished random R1CS generation for benchmark purpose. benchmark data generation is not counted into the setup and proving time.");
 
-        config.beginLog("BosCosterVariableBaseMSM");
-        config.beginRuntime("BosCosterVariableBaseMSM");
+        config.beginLog("VariableBaseMSM");
+        config.beginRuntime("VariableBaseMSM");
         final BN254aG2 res2 = VariableBaseMSM.distributedMSM(input);
-        config.endRuntime("BosCosterVariableBaseMSM");
-        config.endLog("BosCosterVariableBaseMSM");
+        System.out.println("res="+res2.toString());
+        config.endRuntime("VariableBaseMSM");
+        config.endLog("VariableBaseMSM");
 
         config.writeRuntimeLog(config.context());
     }
 
-    public static void distributedSortedVariableBaseMSMG1Profiling(
-            final Configuration config,
-            final long size) {
-        final JavaRDD<Tuple2<BN254aFr, BN254aG1>> input = VariableBaseMSMGenerator
-                .generateG1Data(config, size);
 
-        config.setContext("VariableBaseMSMG1");
-        config.beginRuntimeMetadata("Size (inputs)", size);
-
-        config.beginLog("BosCosterVariableBaseMSM");
-        config.beginRuntime("BosCosterVariableBaseMSM");
-        final BN254aG1 res2 = VariableBaseMSM.distributedSortedMSM(input);
-        config.endRuntime("BosCosterVariableBaseMSM");
-        config.endLog("BosCosterVariableBaseMSM");
-
-        config.writeRuntimeLog(config.context());
-    }
 }

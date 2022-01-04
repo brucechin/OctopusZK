@@ -96,6 +96,7 @@ public class FixedBaseMSMProfiling {
         final int innerLimitG1 = (int) Math.pow(2, windowSizeG1);
         config.beginLog("FixedBaseMSM(previously generating random data for execution)");
         config.beginRuntime("FixedBaseMSM");
+        long start = System.currentTimeMillis();
         JavaPairRDD<Long, BN254aG1> result = FixedBaseMSM.distributedBatchMSM(
                 scalarSizeG1,
                 windowSizeG1,
@@ -104,6 +105,10 @@ public class FixedBaseMSMProfiling {
                 scalars,
                 config.sparkContext()).persist(config.storageLevel());
         result.count();
+        long finish = System.currentTimeMillis();
+        long timeElapsed = finish - start;
+        System.out.println("distributedFixedBaseMSMG1Profiling size="+ size +  "  time elapsed: " + timeElapsed + " ms");
+
         config.endRuntime("FixedBaseMSM");
         config.endLog("FixedBaseMSM");
 
