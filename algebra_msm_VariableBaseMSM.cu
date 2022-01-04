@@ -1161,19 +1161,15 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
         CUDA_CALL(cudaMemcpy(buckets, (void**)&buketsModel[0], sizeof(BN254G1) * numBuckets, cudaMemcpyHostToDevice);)
         auto end = std::chrono::steady_clock::now();
         std::chrono::duration<double> elapsed_seconds = end-start;
-        if(k > numGroups - 3)
-        std::cout << "k="<< k<< " cudaMalloc time: " << elapsed_seconds.count() << "s\n";
 
-        start = std::chrono::steady_clock::now();
+
         int num_blocks_unit1 = (batch_size + threads_per_block - 1) / threads_per_block;
         pippengerMSM_unit1 <<<num_blocks_unit1,threads_per_block>>>( inputScalarArrayGPU, inputBucketMappingLocation, bucketCounter, bucketIndex,  batch_size, c, k, numGroups);
         CUDA_CALL(cudaDeviceSynchronize();)
-        end = std::chrono::steady_clock::now();
-        elapsed_seconds = end-start;
-        if(k > numGroups - 3)
-        std::cout << "k="<< k<< " unit1 time: " << elapsed_seconds.count() << "s\n";
-
-        start = std::chrono::steady_clock::now();
+        if(k == numGroups - 1){
+            //TODO lianke the first round density is crazy. optimize it specially.
+            vector_print<<<1, 128>>>(bucketCounter, min(numBuckets, 200));  
+        }
         int num_blocks_prefix_sum = (numBuckets + threads_per_block - 1)/threads_per_block;
         for(int stride = 1; stride <= numBuckets/2; stride = stride *2){
             prefix_sum_first_step<<< num_blocks_prefix_sum, threads_per_block>>>(bucketCounter, numBuckets, stride);
@@ -1184,21 +1180,14 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
             prefix_sum_second_step<<< num_blocks_prefix_sum, threads_per_block>>>(bucketCounter, numBuckets, stride);
             CUDA_CALL(cudaDeviceSynchronize();)
         }
-        end = std::chrono::steady_clock::now();
-        elapsed_seconds = end-start;
-        if(k > numGroups - 3)
-        std::cout << "k="<< k<< " prefixsum time: " << elapsed_seconds.count() << "s\n";
 
 
         //now bucketCounter is prefix-sumed version. write into bucketsBeforeAggregate
-        start = std::chrono::steady_clock::now();
         int num_blocks_write_together = (batch_size + threads_per_block - 1)/threads_per_block;
         pippengerMSMG1_unit2_write_together<<<num_blocks_write_together, threads_per_block>>>(inputBaseArrayGPU, bucketsBeforeAggregate, inputBucketMappingLocation, bucketCounter, bucketIndex, batch_size);
         CUDA_CALL(cudaDeviceSynchronize();)
-        end = std::chrono::steady_clock::now();
-        elapsed_seconds = end-start;
-        if(k > numGroups - 3)
-        std::cout << "k="<< k<< " unit2_write_together time: " << elapsed_seconds.count() << "s\n";
+
+
 
         //reduce the bucketsBeforeAggregate, because they have been write to ajacent positions.
         start = std::chrono::steady_clock::now();
@@ -1207,13 +1196,14 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
         CUDA_CALL(cudaDeviceSynchronize();)
         end = std::chrono::steady_clock::now();
         elapsed_seconds = end-start;
-        if(k > numGroups - 3)
-        std::cout << "k="<< k<< " unit2_reduce_to_buckets time: " << elapsed_seconds.count() << "s\n";
+        if(k == numGroups - 1){
+            std::cout << "k="<< k<< " unit2_reduce_to_buckets time: " << elapsed_seconds.count() << "s\n";
+
+        }
 
 
         int num_blocks_prefix_sum_G1 = (numBuckets + instance_per_block - 1)/instance_per_block;
 
-        start = std::chrono::steady_clock::now();
         for(int stride = 1; stride <= numBuckets/2; stride = stride *2){
             prefix_sum_G1_reverse_first_step<<< num_blocks_prefix_sum_G1, threads_per_block>>>(buckets, numBuckets, stride);
             CUDA_CALL(cudaDeviceSynchronize();)
@@ -1223,12 +1213,7 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
             prefix_sum_G1_reverse_second_step<<< num_blocks_prefix_sum_G1, threads_per_block>>>(buckets, resultGPU, numBuckets, stride, false);
             CUDA_CALL(cudaDeviceSynchronize();)
         }
-        end = std::chrono::steady_clock::now();
-        elapsed_seconds = end-start;
-        if(k > numGroups - 3)
-        std::cout << "k="<< k<< " unit2_reverse_prefixsum_first_pass time: " << elapsed_seconds.count() << "s\n";
 
-        start = std::chrono::steady_clock::now();
         for(int stride = 1; stride <= numBuckets/2; stride = stride *2){
             prefix_sum_G1_reverse_first_step<<< num_blocks_prefix_sum_G1, threads_per_block>>>(buckets, numBuckets, stride);
             CUDA_CALL(cudaDeviceSynchronize();)
@@ -1238,32 +1223,17 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
             prefix_sum_G1_reverse_second_step<<< num_blocks_prefix_sum_G1, threads_per_block>>>(buckets, resultGPU, numBuckets, stride, true);
             CUDA_CALL(cudaDeviceSynchronize();)
         }
-        end = std::chrono::steady_clock::now();
-        elapsed_seconds = end-start;
-        if(k > numGroups - 3)
-        std::cout << "k="<< k<< " unit2_reverse_prefixsum_first_pass time: " << elapsed_seconds.count() << "s\n";
 
 
-        start = std::chrono::steady_clock::now();
         pippengerMSMG1_unit2_final_add <<<1, 128>>>(resultGPU, buckets);
         CUDA_CALL(cudaDeviceSynchronize());
-        end = std::chrono::steady_clock::now();
-        elapsed_seconds = end-start;
-        if(k > numGroups - 3)
-        std::cout << "k="<< k<< " unit2_final_add time: " << elapsed_seconds.count() << "s\n";
 
-        start = std::chrono::steady_clock::now();
         if(k > 0){
             pippengerMSMG1_unit3 <<<1, 128>>>(resultGPU, c);
             CUDA_CALL(cudaDeviceSynchronize());
         }
-        end = std::chrono::steady_clock::now();
-        elapsed_seconds = end-start;
-        if(k > numGroups - 3)
-        std::cout << "k="<< k<< " unit3 time: " << elapsed_seconds.count() << "s\n";
 
 
-        start = std::chrono::steady_clock::now();
         CUDA_CALL(cudaFree(buckets));
         CUDA_CALL(cudaFree(bucketCounter));
         CUDA_CALL(cudaFree(bucketIndex));
@@ -1271,10 +1241,7 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
         CUDA_CALL(cudaFree(inputBucketMappingLocation));
 
         CUDA_CALL(cudaDeviceSynchronize());
-        end = std::chrono::steady_clock::now();
-        elapsed_seconds = end-start;
-        if(k > numGroups - 3)
-        std::cout << "k="<< k<< " cudaFree time: " << elapsed_seconds.count() << "s\n";
+
     }
 
     CUDA_CALL( cudaMemcpy(outputArray, resultGPU,  sizeof(BN254G1), cudaMemcpyDeviceToHost); )
