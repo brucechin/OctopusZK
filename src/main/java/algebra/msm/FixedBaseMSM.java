@@ -157,58 +157,7 @@ public class FixedBaseMSM {
         return res;
     }
 
-    public static <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
-    T serialMSMTest(
-            final int scalarSize,
-            final int windowSize,
-            final List<List<T>> multiplesOfBase,
-            final FieldT scalar) {
 
-        final int outerc = (scalarSize + windowSize - 1) / windowSize;
-        //System.out.println("JAVA out_len="+outerc + " inner_len="+ windowSize);
-        final BigInteger bigScalar = scalar.toBigInteger();
-
-        T res = multiplesOfBase.get(0).get(0);
-        for (int outer = 0; outer < outerc; ++outer) {
-            int inner = 0;
-            for (int i = 0; i < windowSize; ++i) {
-                if (bigScalar.testBit(outer * windowSize + i)) {         
-                    inner |= 1 << i;
-                }
-            }
-            //System.out.println("JAVA outer=" + outer + " inner=" +inner);
-            res = res.add(multiplesOfBase.get(outer).get(inner));
-            //System.out.println("target for add is=" + multiplesOfBase.get(outer).get(inner).toString());
-        }
-        //System.out.println("\n\n\n");
-
-        return res;
-    }
-
-    public static byte[] bigIntegerToByteArrayHelperForJAVACppChecking(BigInteger bigint){
-        byte[] temp = bigint.toByteArray();
-        byte[] res = new byte[temp.length / 4 * 4 + 4];
-        int size_diff = temp.length / 4 * 4 + 4 - temp.length;
-        int j = temp.length - 1;
-        for(; j >= 3; j-=4){
-            res[ size_diff+ j] = temp[j-3];
-            res[size_diff+ j-1] = temp[j-2];
-            res[ size_diff+j-2] = temp[j-1];
-            res[ size_diff+j-3] = temp[j];
-        }
-        if(j == 2){
-            res[2] = temp[j-2];
-            res[1] = temp[j-1];
-            res[0] = temp[j];
-        }else if(j == 1){
-            res[1] = temp[j-1];
-            res[0] = temp[j];
-        }else if(j == 0){
-            res[0] = temp[j];
-        }
-        return res;
-
-    }
 
     public static byte[] bigIntegerToByteArrayHelperCGBN(BigInteger bigint){
         byte[] temp = bigint.toByteArray();

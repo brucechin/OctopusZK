@@ -40,7 +40,7 @@ class MSM_params_t {
     static const bool     CONSTANT_TIME=false;       // constant time implementations aren't available yet
     
     // parameters used locally in the application
-    static const uint32_t TPI=4;                   // threads per instance
+    static const uint32_t TPI=32;                   // threads per instance
     static const uint32_t BITS=512;                 // instance size
     static const uint32_t num_of_bytes=64;                 // instance size
 

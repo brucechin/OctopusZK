@@ -1262,6 +1262,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   elapsed_seconds = end-start;
   //std::cout << "C++ write results back to JVM elapsed time: " << elapsed_seconds.count() << "s\n";
 
+  delete[] outputBN254ArrayCPU;
 
   return resultByteArray;
 }
@@ -1371,7 +1372,8 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
   end = std::chrono::steady_clock::now();
   elapsed_seconds = end-start;
   std::cout << "doubleBatchMSM C++ write back elapsed time: " << elapsed_seconds.count() << "s\n";
-  
+  delete[] outputBN254G1ArrayCPU;
+  delete[] outputBN254G2ArrayCPU;
   return resultByteArray;
 
   }
@@ -1439,6 +1441,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_fieldBatchMSMNativeHe
     env->SetByteArrayRegion(resultByteArray, 0 , sizeof(Scalar) * batch_size ,   reinterpret_cast<const jbyte*>(&bigScalarArray[0]));
     //cout << "finish write back to JVM" <<endl;
     CUDA_CALL(cudaFree(inputScalarArrayGPU);)
+
     return resultByteArray;
   }
 
