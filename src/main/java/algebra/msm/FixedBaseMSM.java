@@ -180,117 +180,123 @@ public class FixedBaseMSM {
             final int out_size, final int in_size,
             final T baseElement,
             final List<FieldT> scalars) throws Exception{
-        System.out.println("scalarSize len :" + scalarSize);
-        System.out.println("windowSize len :" + windowSize);
-        System.out.println("batchMSM len :" + scalars.size());
-        System.out.println("scalars type : " + scalars.get(0).getClass().getName());
-        System.out.println("base type :" + baseElement.getClass().getName());
+        // System.out.println("scalarSize len :" + scalarSize);
+        // System.out.println("windowSize len :" + windowSize);
+        // System.out.println("batchMSM len :" + scalars.size());
+        // System.out.println("scalars type : " + scalars.get(0).getClass().getName());
+        // System.out.println("base type :" + baseElement.getClass().getName());
     
         if(baseElement.getClass().getName() == "algebra.curves.barreto_naehrig.bn254a.BN254aG1"){
             //G1
-            long start = System.currentTimeMillis();
-
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
-            //we only send a single base value to CUDA for computing the windowTable per executor,
-            //this is acutually faster than spark broadcast the windowTable.
-            ArrayList<BigInteger> three_values = baseElement.BN254G1ToBigInteger();
-            outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
-            outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
-            outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
-    
-    
-            byte[] baseByteArrayXYZ = outputStream.toByteArray();
-    
-            final int outerc = (scalarSize + windowSize - 1) / windowSize;
-            
-            ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
-    
-            for (FieldT scalar : scalars) {
-                bigScalarStream.write(bigIntegerToByteArrayHelperCGBN(scalar.toBigInteger()));
-            }
-            byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
-    
-            long finish = System.currentTimeMillis();
-            long timeElapsed = finish - start;
-            System.out.println("data transfer preparation time elapsed: " + timeElapsed + " ms");
-            byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, scalars.size(), scalarSize, baseByteArrayXYZ, bigScalarByteArray, 1, 0);
-            
-            start = System.currentTimeMillis();
-            int size_of_bigint_cpp_side = 64;
+            int G1_iteration_batch_size = (1 << 23);
             final List<T> jni_res = new ArrayList<>(scalars.size());
-            
-    
-            for(int i = 0; i < scalars.size(); i++){
-                byte[] converted_back_X = Arrays.copyOfRange(resultByteArray, 3*i*size_of_bigint_cpp_side, (3*i+1)*size_of_bigint_cpp_side);
-                byte[] converted_back_Y = Arrays.copyOfRange(resultByteArray, (3*i +1)*size_of_bigint_cpp_side, (3*i+2)*size_of_bigint_cpp_side);
-                byte[] converted_back_Z = Arrays.copyOfRange(resultByteArray, (3*i +2)*size_of_bigint_cpp_side, (3*i+3)*size_of_bigint_cpp_side);
-    
-    
-                BigInteger bi_X = new BigInteger(converted_back_X);
-                BigInteger bi_Y = new BigInteger(converted_back_Y);
-                BigInteger bi_Z = new BigInteger(converted_back_Z);
-    
-    
-                T temp = baseElement.zero();
-                temp.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
-                jni_res.add(temp);
+            //because when size is too large, we will exceed the capacity of java byte array.
+            for(int iter = 0; iter < scalars.size(); iter+= G1_iteration_batch_size){
+                long start = System.currentTimeMillis();
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
+                //we only send a single base value to CUDA for computing the windowTable per executor,
+                //this is acutually faster than spark broadcast the windowTable.
+                ArrayList<BigInteger> three_values = baseElement.BN254G1ToBigInteger();
+                outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
+                outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
+                outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
+                byte[] baseByteArrayXYZ = outputStream.toByteArray();
+        
+                final int outerc = (scalarSize + windowSize - 1) / windowSize;
+                
+                ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
+        
+                for (int i = iter * G1_iteration_batch_size; i < Integer.min(iter + G1_iteration_batch_size, scalars.size()); i++) {
+                    bigScalarStream.write(bigIntegerToByteArrayHelperCGBN(scalars.get(i).toBigInteger()));
+                }
+                byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
+        
+                long finish = System.currentTimeMillis();
+                long timeElapsed = finish - start;
+                System.out.println("iteration=" + iter + " data transfer preparation time elapsed: " + timeElapsed + " ms");
+                byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, Integer.min(G1_iteration_batch_size, scalars.size() - iter), scalarSize, baseByteArrayXYZ, bigScalarByteArray, 1, 0);
+                
+                start = System.currentTimeMillis();
+                int size_of_bigint_cpp_side = 64;
+                
+                
+                for(int i = 0; i < Integer.min(G1_iteration_batch_size, scalars.size() - iter); i++){
+                    byte[] converted_back_X = Arrays.copyOfRange(resultByteArray, 3*i*size_of_bigint_cpp_side, (3*i+1)*size_of_bigint_cpp_side);
+                    byte[] converted_back_Y = Arrays.copyOfRange(resultByteArray, (3*i +1)*size_of_bigint_cpp_side, (3*i+2)*size_of_bigint_cpp_side);
+                    byte[] converted_back_Z = Arrays.copyOfRange(resultByteArray, (3*i +2)*size_of_bigint_cpp_side, (3*i+3)*size_of_bigint_cpp_side);
+        
+        
+                    BigInteger bi_X = new BigInteger(converted_back_X);
+                    BigInteger bi_Y = new BigInteger(converted_back_Y);
+                    BigInteger bi_Z = new BigInteger(converted_back_Z);
+        
+        
+                    T temp = baseElement.zero();
+                    temp.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
+                    jni_res.add(temp);
+                }
+        
+                finish = System.currentTimeMillis();
+                timeElapsed = finish - start;
+                System.out.println("iteration=" + iter + " data receive transformation time elapsed: " + timeElapsed + " ms");
             }
-    
-            finish = System.currentTimeMillis();
-            timeElapsed = finish - start;
-            System.out.println("data receive transformation time elapsed: " + timeElapsed + " ms");
+
             return jni_res;
         }else{
             //BN254 G2
             final List<T> jni_res = new ArrayList<>(scalars.size());
+            int G2_iteration_batch_size = (1 << 22);
 
+            //because when size is too large, we will exceed the capacity of java byte array.
+            for(int iter = 0; iter < scalars.size(); iter += G2_iteration_batch_size){
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
+                ArrayList<BigInteger> six_values = baseElement.BN254G2ToBigInteger();
+                outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(0)));
+                outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(1)));
+                outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(2)));
+                outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(3)));
+                outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(4)));
+                outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(5)));
+        
+        
+                byte[] baseByteArrayXYZ = outputStream.toByteArray();
+        
+                final int outerc = (scalarSize + windowSize - 1) / windowSize;
+                
+                ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
+        
+                for (int i = iter ; i < Integer.min(iter + G2_iteration_batch_size, scalars.size()); i++) {
+                    bigScalarStream.write(bigIntegerToByteArrayHelperCGBN(scalars.get(i).toBigInteger()));
+                }
+                byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
+        
+                byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, Integer.min(G2_iteration_batch_size, scalars.size() - iter), scalarSize, baseByteArrayXYZ, bigScalarByteArray, 2, 0);
+                
+                int size_of_bigint_cpp_side = 64;            
+        
+                for(int i = 0; i <  Integer.min(G2_iteration_batch_size, scalars.size() - iter); i++){
+                    byte[] converted_back_Xa = Arrays.copyOfRange(resultByteArray, 6*i*size_of_bigint_cpp_side, (6*i+1)*size_of_bigint_cpp_side);
+                    byte[] converted_back_Xb = Arrays.copyOfRange(resultByteArray, (6*i +1)*size_of_bigint_cpp_side, (6*i+2)*size_of_bigint_cpp_side);
+                    byte[] converted_back_Ya = Arrays.copyOfRange(resultByteArray, (6*i +2)*size_of_bigint_cpp_side, (6*i+3)*size_of_bigint_cpp_side);
+                    byte[] converted_back_Yb = Arrays.copyOfRange(resultByteArray, (6*i + 3)*size_of_bigint_cpp_side, (6*i+4)*size_of_bigint_cpp_side);
+                    byte[] converted_back_Za = Arrays.copyOfRange(resultByteArray, (6*i +4)*size_of_bigint_cpp_side, (6*i+5)*size_of_bigint_cpp_side);
+                    byte[] converted_back_Zb = Arrays.copyOfRange(resultByteArray, (6*i +5)*size_of_bigint_cpp_side, (6*i+6)*size_of_bigint_cpp_side);
+        
+        
+                    BigInteger bi_Xa = new BigInteger(converted_back_Xa);
+                    BigInteger bi_Ya = new BigInteger(converted_back_Ya);
+                    BigInteger bi_Za = new BigInteger(converted_back_Za);
+                    BigInteger bi_Xb = new BigInteger(converted_back_Xb);
+                    BigInteger bi_Yb = new BigInteger(converted_back_Yb);
+                    BigInteger bi_Zb = new BigInteger(converted_back_Zb);
+        
+                    T temp = baseElement.zero();
+                    temp.setBigIntegerBN254G2(bi_Xa, bi_Xb, bi_Ya, bi_Yb, bi_Za, bi_Zb);
+                    jni_res.add(temp);
+                }
+            }
 
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
-            ArrayList<BigInteger> six_values = baseElement.BN254G2ToBigInteger();
-            outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(0)));
-            outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(1)));
-            outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(2)));
-            outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(3)));
-            outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(4)));
-            outputStream.write(bigIntegerToByteArrayHelperCGBN(six_values.get(5)));
-    
-    
-            byte[] baseByteArrayXYZ = outputStream.toByteArray();
-    
-            final int outerc = (scalarSize + windowSize - 1) / windowSize;
             
-            ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
-    
-            for (FieldT scalar : scalars) {
-                bigScalarStream.write(bigIntegerToByteArrayHelperCGBN(scalar.toBigInteger()));
-            }
-            byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
-    
-            byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, scalars.size(), scalarSize, baseByteArrayXYZ, bigScalarByteArray, 2, 0);
-            
-            int size_of_bigint_cpp_side = 64;            
-    
-            for(int i = 0; i < scalars.size(); i++){
-                byte[] converted_back_Xa = Arrays.copyOfRange(resultByteArray, 6*i*size_of_bigint_cpp_side, (6*i+1)*size_of_bigint_cpp_side);
-                byte[] converted_back_Xb = Arrays.copyOfRange(resultByteArray, (6*i +1)*size_of_bigint_cpp_side, (6*i+2)*size_of_bigint_cpp_side);
-                byte[] converted_back_Ya = Arrays.copyOfRange(resultByteArray, (6*i +2)*size_of_bigint_cpp_side, (6*i+3)*size_of_bigint_cpp_side);
-                byte[] converted_back_Yb = Arrays.copyOfRange(resultByteArray, (6*i + 3)*size_of_bigint_cpp_side, (6*i+4)*size_of_bigint_cpp_side);
-                byte[] converted_back_Za = Arrays.copyOfRange(resultByteArray, (6*i +4)*size_of_bigint_cpp_side, (6*i+5)*size_of_bigint_cpp_side);
-                byte[] converted_back_Zb = Arrays.copyOfRange(resultByteArray, (6*i +5)*size_of_bigint_cpp_side, (6*i+6)*size_of_bigint_cpp_side);
-    
-    
-                BigInteger bi_Xa = new BigInteger(converted_back_Xa);
-                BigInteger bi_Ya = new BigInteger(converted_back_Ya);
-                BigInteger bi_Za = new BigInteger(converted_back_Za);
-                BigInteger bi_Xb = new BigInteger(converted_back_Xb);
-                BigInteger bi_Yb = new BigInteger(converted_back_Yb);
-                BigInteger bi_Zb = new BigInteger(converted_back_Zb);
-    
-                T temp = baseElement.zero();
-                temp.setBigIntegerBN254G2(bi_Xa, bi_Xb, bi_Ya, bi_Yb, bi_Za, bi_Zb);
-                jni_res.add(temp);
-            }
-    
 
             return jni_res;
         }
@@ -314,55 +320,60 @@ public class FixedBaseMSM {
 
             if(baseElement.getClass().getName() == "algebra.curves.barreto_naehrig.bn254a.BN254aG1"){
                 long start = System.currentTimeMillis();
-                ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
-                //we only send a single base value to CUDA for computing the windowTable per executor,
-                //this is acutually faster than spark broadcast the windowTable.
-                ArrayList<BigInteger> three_values = baseElement.BN254G1ToBigInteger();
-                outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
-                outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
-                outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
-    
-    
-                byte[] baseByteArrayXYZ = outputStream.toByteArray();
-    
-                final int outerc = (scalarSize + windowSize - 1) / windowSize;
-                
-                ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
-    
-                for (Tuple2<Long, FieldT> scalar : scalars) {
-                    bigScalarStream.write(bigIntegerToByteArrayHelperCGBN(scalar._2.toBigInteger()));
-                }
-                byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
-    
-                long finish = System.currentTimeMillis();
-                long timeElapsed = finish - start;
-                System.out.println("data transfer preparation time elapsed: " + timeElapsed + " ms");
-                byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, scalars.size(), scalarSize, baseByteArrayXYZ, bigScalarByteArray, 1, (int)taskID);
-                
-                start = System.currentTimeMillis();
-                int size_of_bigint_cpp_side = 64;
+
+                int G1_iteration_batch_size = (1 << 23);
                 final List<Tuple2<Long, T>> jni_res = new ArrayList<>(scalars.size());
+                for(int iter = 0; iter < scalars.size(); iter+= G1_iteration_batch_size){
                 
-    
-                for(int i = 0; i < scalars.size(); i++){
-                    byte[] converted_back_X = Arrays.copyOfRange(resultByteArray, 3*i*size_of_bigint_cpp_side, (3*i+1)*size_of_bigint_cpp_side);
-                    byte[] converted_back_Y = Arrays.copyOfRange(resultByteArray, (3*i +1)*size_of_bigint_cpp_side, (3*i+2)*size_of_bigint_cpp_side);
-                    byte[] converted_back_Z = Arrays.copyOfRange(resultByteArray, (3*i +2)*size_of_bigint_cpp_side, (3*i+3)*size_of_bigint_cpp_side);
+                    ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
+                    //we only send a single base value to CUDA for computing the windowTable per executor,
+                    //this is acutually faster than spark broadcast the windowTable.
+                    ArrayList<BigInteger> three_values = baseElement.BN254G1ToBigInteger();
+                    outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(0)));
+                    outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(1)));
+                    outputStream.write(bigIntegerToByteArrayHelperCGBN(three_values.get(2)));
         
-    
-                    BigInteger bi_X = new BigInteger(converted_back_X);
-                    BigInteger bi_Y = new BigInteger(converted_back_Y);
-                    BigInteger bi_Z = new BigInteger(converted_back_Z);
-    
-                    T temp = baseElement.zero();
-                    temp.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
-                    jni_res.add(new Tuple2<>(scalars.get(i)._1, temp));
-                    //System.out.println("CUDA FixedBaseMSM output=" +temp.toString());
+                    byte[] baseByteArrayXYZ = outputStream.toByteArray();
+        
+                    final int outerc = (scalarSize + windowSize - 1) / windowSize;
+                    
+                    ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
+        
+                    for (int i = iter ; i < Integer.min(iter + G1_iteration_batch_size, scalars.size()); i++) {
+                        bigScalarStream.write(bigIntegerToByteArrayHelperCGBN(scalars.get(i)._2.toBigInteger()));
+                    }
+                    byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
+        
+                    long finish = System.currentTimeMillis();
+                    long timeElapsed = finish - start;
+                    System.out.println("iteration=" + iter + "  data transfer preparation time elapsed: " + timeElapsed + " ms");
+                    byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, Integer.min( G1_iteration_batch_size, scalars.size() - iter) , scalarSize, baseByteArrayXYZ, bigScalarByteArray, 1, (int)taskID);
+                    
+                    start = System.currentTimeMillis();
+                    int size_of_bigint_cpp_side = 64;
+                    
+        
+                    for(int i = 0; i < Integer.min( G1_iteration_batch_size, scalars.size() - iter); i++){
+                        byte[] converted_back_X = Arrays.copyOfRange(resultByteArray, 3*i*size_of_bigint_cpp_side, (3*i+1)*size_of_bigint_cpp_side);
+                        byte[] converted_back_Y = Arrays.copyOfRange(resultByteArray, (3*i +1)*size_of_bigint_cpp_side, (3*i+2)*size_of_bigint_cpp_side);
+                        byte[] converted_back_Z = Arrays.copyOfRange(resultByteArray, (3*i +2)*size_of_bigint_cpp_side, (3*i+3)*size_of_bigint_cpp_side);
+            
+        
+                        BigInteger bi_X = new BigInteger(converted_back_X);
+                        BigInteger bi_Y = new BigInteger(converted_back_Y);
+                        BigInteger bi_Z = new BigInteger(converted_back_Z);
+        
+                        T temp = baseElement.zero();
+                        temp.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);
+                        jni_res.add(new Tuple2<>(scalars.get(i + iter)._1, temp));
+                        //System.out.println("CUDA FixedBaseMSM output=" +temp.toString());
+                    }
+        
+                    finish = System.currentTimeMillis();
+                    timeElapsed = finish - start;
+                    System.out.println("iteration=" + iter + "  data receive transformation time elapsed: " + timeElapsed + " ms");
                 }
-    
-                finish = System.currentTimeMillis();
-                timeElapsed = finish - start;
-                System.out.println("data receive transformation time elapsed: " + timeElapsed + " ms");
+                
                 return jni_res;
             }else{
                 ///BN254 G2 curve 
@@ -475,11 +486,11 @@ public class FixedBaseMSM {
             final List<FieldT> scalars) throws Exception {
 
 
-        System.out.println("doubleBatchMSM info:");
-        System.out.println("batchMSM size :" + scalars.size());
-        System.out.println("scalarSize len :" + scalarSize1 + " " + scalarSize2 );
-        System.out.println("windowSize len :" + windowSize1 + " " + windowSize2);
-        System.out.println("scalars type : " + scalars.get(0).getClass().getName());
+        // System.out.println("doubleBatchMSM info:");
+        // System.out.println("batchMSM size :" + scalars.size());
+        // System.out.println("scalarSize len :" + scalarSize1 + " " + scalarSize2 );
+        // System.out.println("windowSize len :" + windowSize1 + " " + windowSize2);
+        // System.out.println("scalars type : " + scalars.get(0).getClass().getName());
 
         long start = System.currentTimeMillis();
 

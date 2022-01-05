@@ -26,10 +26,10 @@ public class VariableBaseMSMProfiling {
             scalars.add(fieldFactory.random(config.seed(), config.secureSeed()));
             bases.add(groupFactory);
         }
+        System.out.println("random benchmark data generation done.");
 
         config.setContext("VariableBaseMSMG1-Serial");
         config.beginRuntimeMetadata("Size (inputs)", size);
-        config.beginLog("Finished random R1CS generation for benchmark purpose. benchmark data generation is not counted into the setup and proving time.");
 
         config.beginLog("VariableBaseMSM");
         config.beginRuntime("VariableBaseMSM");
@@ -38,6 +38,8 @@ public class VariableBaseMSMProfiling {
         config.endLog("VariableBaseMSM");
 
         config.writeRuntimeLog(config.context());
+        System.out.println("VarMSM output =" +res.toString());
+
     }
 
     public static void serialVariableBaseMSMG2Profiling(final Configuration config, final long size) throws Exception{
@@ -51,10 +53,10 @@ public class VariableBaseMSMProfiling {
             scalars.add(fieldFactory.random(config.seed(), config.secureSeed()));
             bases.add(groupFactory);
         }
+        System.out.println("random benchmark data generation done.");
 
         config.setContext("VariableBaseMSMG2-Serial");
         config.beginRuntimeMetadata("Size (inputs)", size);
-        config.beginLog("Finished random R1CS generation for benchmark purpose. benchmark data generation is not counted into the setup and proving time.");
 
         config.beginLog("VariableBaseMSM");
         config.beginRuntime("VariableBaseMSM");
@@ -62,7 +64,7 @@ public class VariableBaseMSMProfiling {
         System.out.println("res="+res.toString());
         config.endRuntime("VariableBaseMSM");
         config.endLog("VariableBaseMSM");
-
+        System.out.println("VarMSM output =" +res.toString());
         config.writeRuntimeLog(config.context());
     }
 
@@ -74,7 +76,7 @@ public class VariableBaseMSMProfiling {
 
         config.setContext("VariableBaseMSMG1");
         config.beginRuntimeMetadata("Size (inputs)", size);
-        config.beginLog("Finished random R1CS generation for benchmark purpose. benchmark data generation is not counted into the setup and proving time.");
+        System.out.println("random benchmark data generation done.");
 
         config.beginLog("VariableBaseMSM");
         config.beginRuntime("VariableBaseMSM");
@@ -94,7 +96,7 @@ public class VariableBaseMSMProfiling {
 
         config.setContext("VariableBaseMSMG2");
         config.beginRuntimeMetadata("Size (inputs)", size);
-        config.beginLog("Finished random R1CS generation for benchmark purpose. benchmark data generation is not counted into the setup and proving time.");
+        System.out.println("random benchmark data generation done.");
 
         config.beginLog("VariableBaseMSM");
         config.beginRuntime("VariableBaseMSM");

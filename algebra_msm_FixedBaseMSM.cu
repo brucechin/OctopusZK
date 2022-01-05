@@ -997,7 +997,7 @@ __global__ void calculateBaseOuterG2Helper(BN254G2* outerArray, BN254G2 baseOute
 
 
 
-void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1* outputArray,  BN254G1 baseG1, int outerc, int scalarSize, int windowSize, int out_len, int inner_len, int taskID)
+void  fixed_batch_MSMG1(std::vector<Scalar> & bigScalarArray, BN254G1* outputArray,  BN254G1 baseG1, int outerc, int scalarSize, int windowSize, int out_len, int inner_len, int taskID)
 {
     int num_gpus = 1;
     CUDA_CALL(cudaGetDeviceCount(&num_gpus));
@@ -1009,7 +1009,7 @@ void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1* outputArray
     size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
     //printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
 
-    cout <<"FixedBatchMSM taskID=" << taskID << "scheduled to GPU " << taskID % num_gpus<< endl;
+    cout <<"FixedBatchMSM G1 taskID=" << taskID << "scheduled to GPU " << taskID % num_gpus<< endl;
     CUDA_CALL(cudaSetDevice(taskID % num_gpus));
     Scalar *inputScalarArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputScalarArrayGPU, sizeof(Scalar) * batch_size); )
@@ -1066,6 +1066,79 @@ void  fixed_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1* outputArray
 }
 
 
+void  fixed_batch_MSMG2(std::vector<Scalar> & bigScalarArray, BN254G2* outputArray,  BN254G2 baseG2, int outerc, int scalarSize, int windowSize, int out_len, int inner_len, int taskID)
+{
+    //only for benchmark purpose. actually we use the doubleBatchMSM when G2 is involved.
+    int num_gpus = 1;
+    CUDA_CALL(cudaGetDeviceCount(&num_gpus));
+    size_t batch_size = bigScalarArray.size();
+
+    printf("CUDA Devices number: %d, input_field size: %lu, input_field count: %lu\n", num_gpus, sizeof(Scalar), batch_size);
+    size_t threads_per_block = 128;
+    size_t instance_per_block = (threads_per_block / MSM_params_t::TPI);//TPI threads per instance, each block has threads.
+    size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
+    //printf("num of blocks %lu, threads per block %lu \n", blocks, threads_per_block);
+
+    cout <<"FixedBatchMSM G2 taskID=" << taskID << "scheduled to GPU " << taskID % num_gpus<< endl;
+    CUDA_CALL(cudaSetDevice(taskID % num_gpus));
+    Scalar *inputScalarArrayGPU; 
+    CUDA_CALL( cudaMalloc((void**)&inputScalarArrayGPU, sizeof(Scalar) * batch_size); )
+    CUDA_CALL( cudaMemcpy(inputScalarArrayGPU, (void**)&bigScalarArray[0], sizeof(Scalar) * batch_size, cudaMemcpyHostToDevice); )
+    
+    BN254G2 *inputBaseArrayGPU; 
+    CUDA_CALL( cudaMalloc((void**)&inputBaseArrayGPU, sizeof(BN254G2) * out_len * inner_len); )
+
+
+    BN254G2* outputBN254ArrayGPU;
+    CUDA_CALL( cudaMalloc((void**)&outputBN254ArrayGPU, sizeof(BN254G2) * batch_size); )
+    CUDA_CALL( cudaMemset(outputBN254ArrayGPU, 0, sizeof(BN254G2) * batch_size); )
+
+    int numWindows = (scalarSize % windowSize == 0) ? scalarSize / windowSize : scalarSize / windowSize + 1;
+    int innerLimit = (int) pow(2, windowSize);
+
+    //constant table to generate inputBaseArrayGPU
+    BN254G2* baseOuterArray;
+    CUDA_CALL( cudaMalloc((void**)&baseOuterArray, sizeof(BN254G2) * numWindows * windowSize); )
+
+    calculateBaseOuterG2Helper  <<<(numWindows + instance_per_block - 1)/instance_per_block, threads_per_block >>> (baseOuterArray, baseG2, numWindows, windowSize);
+    CUDA_CALL(cudaDeviceSynchronize());
+
+
+    size_t msmBaseComputeBlocks = (out_len * inner_len + instance_per_block - 1) / instance_per_block;
+    BN254G2 zeroG2;
+    memset(zeroG2.Xa._limbs, 0, MSM_params_t::num_of_bytes);
+    memset(zeroG2.Ya._limbs, 0, MSM_params_t::num_of_bytes);
+    memset(zeroG2.Za._limbs, 0, MSM_params_t::num_of_bytes);
+    memset(zeroG2.Xb._limbs, 0, MSM_params_t::num_of_bytes);
+    memset(zeroG2.Yb._limbs, 0, MSM_params_t::num_of_bytes);
+    memset(zeroG2.Zb._limbs, 0, MSM_params_t::num_of_bytes);
+    zeroG2.Ya._limbs[0] = 1;
+    getWindowTableG2<<< msmBaseComputeBlocks, threads_per_block>>>(inputBaseArrayGPU, baseOuterArray, baseG2, zeroG2, numWindows, windowSize, innerLimit); 
+    CUDA_CALL(cudaDeviceSynchronize());
+    
+    //printf("launch block = %d thread = %d\n", blocks, threads_per_block);
+
+    fixedbase_MSM_unit_processing_G2 <<<blocks,threads_per_block, 32 * 1024>>>( inputScalarArrayGPU, inputBaseArrayGPU, outputBN254ArrayGPU, outerc, windowSize, inner_len, batch_size);
+    CUDA_CALL(cudaDeviceSynchronize());
+
+    cudaError_t error = cudaGetLastError();
+    if(error != cudaSuccess)
+    {
+        printf("CUDA error: %s\n", cudaGetErrorString(error));
+        exit(-1);
+    }
+    
+    CUDA_CALL(cudaMemcpy((void**)outputArray, outputBN254ArrayGPU, sizeof(BN254G2) * batch_size, cudaMemcpyDeviceToHost); )
+    CUDA_CALL(cudaDeviceSynchronize());
+
+    CUDA_CALL(cudaFree(inputScalarArrayGPU));
+    CUDA_CALL(cudaFree(inputBaseArrayGPU));
+    CUDA_CALL(cudaFree(outputBN254ArrayGPU));
+    CUDA_CALL(cudaFree(baseOuterArray));
+
+}
+
+
 void  fixed_double_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1 baseG1, BN254G2 baseG2, 
                             BN254G1* outputArrayG1, BN254G2* outputArrayG2,
                             int outerc1, int windowSize1, int outerc2, int windowSize2, 
@@ -1089,11 +1162,9 @@ void  fixed_double_batch_MSM(std::vector<Scalar> & bigScalarArray, BN254G1 baseG
     
     BN254G1 *inputBase1ArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputBase1ArrayGPU, sizeof(BN254G1) * out_len1 * inner_len1); )
-    //CUDA_CALL( cudaMemcpy(inputBase1ArrayGPU, (void**)&multiplesOfBase1PtrArray[0], sizeof(BN254G1) * out_len1 * inner_len1, cudaMemcpyHostToDevice); )
     
     BN254G2 *inputBase2ArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputBase2ArrayGPU, sizeof(BN254G2) * out_len2 * inner_len2); )
-    //CUDA_CALL( cudaMemcpy(inputBase2ArrayGPU, (void**)&multiplesOfBase2PtrArray[0], sizeof(BN254G2) * out_len2 * inner_len2, cudaMemcpyHostToDevice); )
     
 
     BN254G1* outputBN254G1ArrayGPU;
@@ -1214,23 +1285,9 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   jmethodID java_util_ArrayList_size = env->GetMethodID(java_util_ArrayList, "size", "()I");
   jmethodID java_util_ArrayList_get  = env->GetMethodID(java_util_ArrayList, "get", "(I)Ljava/lang/Object;");
 
-
-  vector<Scalar> bigScalarArray = vector<Scalar>(batch_size, Scalar());
-  vector<BN254G1> multiplesOfBasePtrArray = vector<BN254G1>(out_len * inner_len, BN254G1());
-  BN254G1 baseElement = multiplesOfBasePtrArray[1];
-
-  auto start = std::chrono::steady_clock::now();
   int len = 32; //254-bit BN254.
 
-  char* baseByteArrayXYZ = (char*)env->GetByteArrayElements(multiplesOfBaseXYZ, NULL);
-
-    char* tmp = (char*)baseElement.X._limbs;
-    memcpy(tmp, &baseByteArrayXYZ[0],len);
-    char* tmp2 = (char*)baseElement.Y._limbs;
-    memcpy(tmp2,  &baseByteArrayXYZ[len],len);
-    char* tmp3 = (char*)baseElement.Z._limbs;
-    memcpy(tmp3, &baseByteArrayXYZ[2 * len],len);
-
+  vector<Scalar> bigScalarArray = vector<Scalar>(batch_size, Scalar());
 
   char* scalarBytes = (char*)env->GetByteArrayElements(bigScalarsArrayInput, NULL);
   for(int i =0; i < batch_size; i++){
@@ -1239,32 +1296,93 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   }
 
 
+  if(BNType == 1){
+    //BN254 G1
+    BN254G1 baseElement;
 
- 
-  jbyteArray resultByteArray = env->NewByteArray(sizeof(BN254G1) * batch_size);
-  BN254G1* outputBN254ArrayCPU = new BN254G1[batch_size];
-  memset(outputBN254ArrayCPU, 0, sizeof(BN254G1) * batch_size);
+    auto start = std::chrono::steady_clock::now();
 
+    char* baseByteArrayXYZ = (char*)env->GetByteArrayElements(multiplesOfBaseXYZ, NULL);
+
+      char* tmp = (char*)baseElement.X._limbs;
+      memcpy(tmp, &baseByteArrayXYZ[0],len);
+      char* tmp2 = (char*)baseElement.Y._limbs;
+      memcpy(tmp2,  &baseByteArrayXYZ[len],len);
+      char* tmp3 = (char*)baseElement.Z._limbs;
+      memcpy(tmp3, &baseByteArrayXYZ[2 * len],len);
+
+
+    jbyteArray resultByteArray = env->NewByteArray(sizeof(BN254G1) * batch_size);
+    BN254G1* outputBN254ArrayCPU = new BN254G1[batch_size];
+    memset(outputBN254ArrayCPU, 0, sizeof(BN254G1) * batch_size);
+
+
+    auto end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end-start;
+    //std::cout << "C++ read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
+
+    start = std::chrono::steady_clock::now();
+    fixed_batch_MSMG1(bigScalarArray, outputBN254ArrayCPU, baseElement ,outerc, scalarSize, windowSize, out_len, inner_len, taskID);
+    end = std::chrono::steady_clock::now();
+    std::cout << "fixMSM batch G1 GPU compute time: " << elapsed_seconds.count() << "s\n";
+
+
+    start = std::chrono::steady_clock::now();
+
+
+    env->SetByteArrayRegion(resultByteArray, 0 , sizeof(BN254G1) * batch_size ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[0]));
+    
+    end = std::chrono::steady_clock::now();
+    elapsed_seconds = end-start;
+    std::cout << "C++ write results back to JVM elapsed time: " << elapsed_seconds.count() << "s\n";
+
+    delete[] outputBN254ArrayCPU;
+    return resultByteArray;
+  }else{
+    //BN254 G2
+    //only for benchmark purpose. actually we use the doubleBatchMSM when G2 is involved.
+    BN254G2 baseElementG2;
+    memset(&baseElementG2, 0, sizeof(baseElementG2));
+    char* baseByteArrayXYZABC = (char*)env->GetByteArrayElements(multiplesOfBaseXYZ, NULL);
+    char* tmp7 = (char*)baseElementG2.Xa._limbs;
+    memcpy(tmp7, &baseByteArrayXYZABC[0 ],len);
+    char* tmp8 = (char*)baseElementG2.Xb._limbs;
+    memcpy(tmp8,  &baseByteArrayXYZABC[len],len);
+    char* tmp9 = (char*)baseElementG2.Ya._limbs;
+    memcpy(tmp9, &baseByteArrayXYZABC[2* len],len);
+
+    char* tmp4 = (char*)baseElementG2.Yb._limbs;
+    memcpy(tmp4, &baseByteArrayXYZABC[3 * len ],len);
+    char* tmp5 = (char*)baseElementG2.Za._limbs;
+    memcpy(tmp5,  &baseByteArrayXYZABC[4 * len],len);
+    char* tmp6 = (char*)baseElementG2.Zb._limbs;
+    memcpy(tmp6, &baseByteArrayXYZABC[5 * len],len);
+
+    jbyteArray resultByteArray = env->NewByteArray(batch_size *  sizeof(BN254G2));
+    BN254G2* outputBN254G2ArrayCPU = new BN254G2[batch_size];
+    memset(outputBN254G2ArrayCPU, 0, sizeof(BN254G2) * batch_size);
+
+  auto start = std::chrono::steady_clock::now();
+
+  fixed_batch_MSMG2(bigScalarArray, outputBN254G2ArrayCPU, baseElementG2 ,outerc, scalarSize, windowSize, out_len, inner_len, taskID);
 
   auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
-  //std::cout << "C++ read from JVM elapsed time: " << elapsed_seconds.count() << "s\n";
-
-  start = std::chrono::steady_clock::now();
-  fixed_batch_MSM(bigScalarArray, outputBN254ArrayCPU, baseElement ,outerc, scalarSize, windowSize, out_len, inner_len, taskID);
-  end = std::chrono::steady_clock::now();
-  std::cout << "fixMSM batch GPU compute time: " << elapsed_seconds.count() << "s\n";
+  std::cout << "fixMSM batch G2 GPU compute time: " << elapsed_seconds.count() << "s\n";
 
 
   start = std::chrono::steady_clock::now();
-  env->SetByteArrayRegion(resultByteArray, 0 , sizeof(BN254G1) * batch_size ,   reinterpret_cast<const jbyte*>(&outputBN254ArrayCPU[0]));
+
+  env->SetByteArrayRegion(resultByteArray, 0, sizeof(BN254G2) * batch_size ,   reinterpret_cast<const jbyte*>(&outputBN254G2ArrayCPU[0]));
+  
   end = std::chrono::steady_clock::now();
   elapsed_seconds = end-start;
-  //std::cout << "C++ write results back to JVM elapsed time: " << elapsed_seconds.count() << "s\n";
-
-  delete[] outputBN254ArrayCPU;
-
+  std::cout << "fixMSM batch G2 C++ write back elapsed time: " << elapsed_seconds.count() << "s\n";
+  delete[] outputBN254G2ArrayCPU;
   return resultByteArray;
+
+  }
+
 }
 
 
@@ -1288,10 +1406,6 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
 
 
   vector<Scalar> bigScalarArray = vector<Scalar>(batch_size, Scalar());
-  vector<BN254G1> multiplesOfBase1PtrArray = vector<BN254G1>(out_len1 * inner_len1, BN254G1());
-  vector<BN254G2> multiplesOfBase2PtrArray = vector<BN254G2>(out_len2 * inner_len2, BN254G2());
-
-
 
   BN254G1 baseElementG1 ;
   BN254G2 baseElementG2;
@@ -1364,7 +1478,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeH
   start = std::chrono::steady_clock::now();
 
 
-  for(int i = 0; i < batch_size; i++){
+  for(int i = 0; i < batch_size; i++){ 
     env->SetByteArrayRegion(resultByteArray, i * (sizeof(BN254G1) +sizeof(BN254G2)), sizeof(BN254G1) ,   reinterpret_cast<const jbyte*>(&outputBN254G1ArrayCPU[i]));
     env->SetByteArrayRegion(resultByteArray, i * (sizeof(BN254G1) +sizeof(BN254G2)) + sizeof(BN254G1), sizeof(BN254G2) ,   reinterpret_cast<const jbyte*>(&outputBN254G2ArrayCPU[i]));
   }

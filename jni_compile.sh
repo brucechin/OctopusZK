@@ -5,8 +5,8 @@ GPU_ARCH_CODE=sm_86
 
 sudo rm lib*.so
 
-#$CUDA_HOME/nvcc -O3  -Xcompiler -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=$GPU_ARCH_CODE algebra_msm_FixedBaseMSM.cu -o libAlgebraMSMFixedBaseMSM.so 
-$CUDA_HOME/nvcc -O3  -Xcompiler  -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=$GPU_ARCH_CODE algebra_msm_VariableBaseMSM.cu -o libAlgebraMSMVariableBaseMSM.so 
+$CUDA_HOME/nvcc -O3  -Xcompiler -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=$GPU_ARCH_CODE algebra_msm_FixedBaseMSM.cu -o libAlgebraMSMFixedBaseMSM.so 
+#$CUDA_HOME/nvcc -O3  -Xcompiler  -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=$GPU_ARCH_CODE algebra_msm_VariableBaseMSM.cu -o libAlgebraMSMVariableBaseMSM.so 
 #$CUDA_HOME/nvcc   -Xcompiler  -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=$GPU_ARCH_CODE algebra_fft_FFTAuxiliary.cu -o libAlgebraFFTAuxiliary.so
 
 sudo cp lib*.so /usr/lib/

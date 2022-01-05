@@ -1105,11 +1105,11 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
     CUDA_CALL(cudaGetDeviceCount(&num_gpus));
     size_t batch_size = bigScalarArray.size();
 
-    printf("CUDA Devices number: %d, input_field size: %lu, input_field count: %lu\n", num_gpus, sizeof(Scalar), batch_size);
+    //printf("CUDA Devices number: %d, input_field size: %lu, input_field count: %lu\n", num_gpus, sizeof(Scalar), batch_size);
     size_t threads_per_block = 128;
     size_t instance_per_block = (threads_per_block / MSM_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
-    cout <<"VarBatchMSM taskID=" << taskID << "  scheduled to GPU " << taskID % num_gpus<< endl;
+    cout <<"VarBatchMSM taskID=" << taskID << "  scheduled to GPU " << taskID % num_gpus<< " batch size" << batch_size << endl;
     CUDA_CALL(cudaSetDevice(taskID % num_gpus));
 
     Scalar *inputScalarArrayGPU; 
@@ -1119,7 +1119,6 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
     BN254G1 *inputBaseArrayGPU; 
     CUDA_CALL( cudaMalloc((void**)&inputBaseArrayGPU, sizeof(BN254G1) * batch_size); )
     CUDA_CALL( cudaMemcpy(inputBaseArrayGPU, (void**)&multiplesOfBasePtrArray[0], sizeof(BN254G1) * batch_size, cudaMemcpyHostToDevice); )
-    cout <<"VarBatchMSM taskID=" << taskID << "  finish copy data to GPU"<< endl;
 
     int numBits = 254;//BN254 specific value;
     int length = batch_size;

@@ -1,8 +1,10 @@
-
+mvn clean 
+mvn compile 
+mvn install -DskipTests
 for TOTAL_CORES in 16; do
-  for SIZE in `seq 20 20`; do
+  for SIZE in `seq 24 24`; do
 
-    export APP=zksnark
+    export APP=fmsm-g2
     export MEMORY=64G
     export MULTIPLIER=1
 
@@ -11,8 +13,10 @@ for TOTAL_CORES in 16; do
     export NUM_PARTITIONS=$((TOTAL_CORES * MULTIPLIER))
 
     sudo /opt/spark/bin/spark-submit \
+      --conf spark.driver.extraJavaOptions=-Xms16G\
       --conf spark.driver.memory=$MEMORY \
       --conf spark.driver.maxResultSize=$MEMORY \
+      --conf spark.driver.memoryOverhead=$MEMORY \
       --conf spark.executor.cores=$CORES \
       --total-executor-cores $TOTAL_CORES \
       --conf spark.executor.memory=$MEMORY \
