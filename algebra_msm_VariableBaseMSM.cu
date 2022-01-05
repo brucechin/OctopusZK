@@ -775,7 +775,7 @@ __global__ void pippengerMSMG1_unit2_write_together(BN254G1* inputBaseArray, BN2
     return;
 }
 
-__global__ void recursive_reduce_buckets_helper_G1(BN254G1* outputBaseArray, BN254G1* reduceOutput, BN254G1* zero, int left, int right, int numWorkers, int workerCapacity){
+__global__ void recursive_reduce_buckets_first_step_G1(BN254G1* outputBaseArray, BN254G1* reduceOutput, BN254G1* zero, int left, int right, int numWorkers, int workerCapacity){
     const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
     context_t _context;
     env_t    _env(_context);
@@ -795,9 +795,6 @@ __global__ void recursive_reduce_buckets_helper_G1(BN254G1* outputBaseArray, BN2
     cgbn_load(_env, res.X, &zero[0].X);
     cgbn_load(_env, res.Y, &zero[0].Y);
     cgbn_load(_env, res.Z, &zero[0].Z);
-    if(idx == 1){
-        printf("inner\n");
-    }
     for(; start < end; start++){
         BN254G1Compute to_add; 
         cgbn_load(_env, to_add.X, &outputBaseArray[start].X);
@@ -809,10 +806,33 @@ __global__ void recursive_reduce_buckets_helper_G1(BN254G1* outputBaseArray, BN2
     cgbn_store(_env, &reduceOutput[idx].X, res.X);
     cgbn_store(_env, &reduceOutput[idx].Y, res.Y);
     cgbn_store(_env, &reduceOutput[idx].Z, res.Z);
-    __syncthreads();
 }
 
-__global__ void pippengerMSMG1_unit2_reduce_to_buckets(BN254G1* outputBaseArray, BN254G1* outputBuckets,  int* bucketCounter, int numBuckets, BN254G1* zero){
+__global__ void recursive_reduce_buckets_second_step_G1(BN254G1* input, BN254G1* output, BN254G1* zero, int outputBucketId, int numWorkers){
+    const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
+    context_t _context;
+    env_t    _env(_context);
+    if(idx == 1){
+        BN254G1Compute res;
+        cgbn_load(_env, res.X, &zero[0].X);
+        cgbn_load(_env, res.Y, &zero[0].Y);
+        cgbn_load(_env, res.Z, &zero[0].Z);
+        for(int i = 0; i < numWorkers; i++){
+            BN254G1Compute to_add; 
+            cgbn_load(_env, to_add.X, &input[i].X);
+            cgbn_load(_env, to_add.Y, &input[i].Y);
+            cgbn_load(_env, to_add.Z, &input[i].Z);
+            res = add(res, to_add);
+        }
+        cgbn_store(_env, &output[outputBucketId].X, res.X);
+        cgbn_store(_env, &output[outputBucketId].Y, res.Y);
+        cgbn_store(_env, &output[outputBucketId].Z, res.Z);
+    }
+
+}
+
+
+__global__ void pippengerMSMG1_unit2_reduce_to_buckets(BN254G1* outputBaseArray, BN254G1* outputBuckets,  int* bucketCounter, int numBuckets, int dense_bucket_threshold, BN254G1* zero){
     const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
     const int offset = (blockIdx.x * blockDim.y + threadIdx.x) % MSM_params_t::TPI;
     context_t _context;
@@ -829,38 +849,10 @@ __global__ void pippengerMSMG1_unit2_reduce_to_buckets(BN254G1* outputBaseArray,
         left = bucketCounter[idx - 1];
         right = bucketCounter[idx];
     }
-    int threshold = 30000;
-    if(right - left > threshold){
+    if(right - left > dense_bucket_threshold){
         //for dense buckets, we need to spawn more workers to reduce the sum of bucket elements.
-        int bucketCount = right - left; 
-        int threads_per_block = 128;
-        int instance_per_block = (threads_per_block/MSM_params_t::TPI);
-        int workerCapacity = 1024;
-        int numWorkers = (bucketCount + workerCapacity - 1) / workerCapacity;
-        int numBlocks = (numWorkers + instance_per_block - 1) / instance_per_block;
-        BN254G1* temp_output = new BN254G1[numWorkers];
-        if(offset == 0){
-            recursive_reduce_buckets_helper_G1<<<numBlocks, threads_per_block>>>(outputBaseArray, temp_output, zero, left, right, numWorkers, workerCapacity);
-        }
-        //TODO this __syncthreads may be wrong
-        __syncthreads();
-
-        BN254G1Compute res;
-        cgbn_load(_env, res.X, &zero[0].X);
-        cgbn_load(_env, res.Y, &zero[0].Y);
-        cgbn_load(_env, res.Z, &zero[0].Z);
-        for(int i = 0; i < numWorkers; i++){
-            BN254G1Compute to_add; 
-            cgbn_load(_env, to_add.X, &temp_output[i].X);
-            cgbn_load(_env, to_add.Y, &temp_output[i].Y);
-            cgbn_load(_env, to_add.Z, &temp_output[i].Z);
-            res = add(res, to_add);
-        }
-        delete[] temp_output;
-        cgbn_store(_env, &outputBuckets[idx].X, res.X);
-        cgbn_store(_env, &outputBuckets[idx].Y, res.Y);
-        cgbn_store(_env, &outputBuckets[idx].Z, res.Z);
-        return;
+        return ;
+        
     }else{
         BN254G1Compute res;
         cgbn_load(_env, res.X, &zero[0].X);
@@ -1262,14 +1254,34 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
 
         //reduce the bucketsBeforeAggregate, because they have been write to ajacent positions.
         start = std::chrono::steady_clock::now();
+        int dense_bucket_threshold = 50000;
         int num_blocks_reduce_buckets = (numBuckets + instance_per_block - 1)/instance_per_block;
-        pippengerMSMG1_unit2_reduce_to_buckets<<<num_blocks_reduce_buckets, threads_per_block>>>(bucketsBeforeAggregate, buckets, bucketCounter, numBuckets, zeroGPU);
+        pippengerMSMG1_unit2_reduce_to_buckets<<<num_blocks_reduce_buckets, threads_per_block>>>(bucketsBeforeAggregate, buckets, bucketCounter, numBuckets, dense_bucket_threshold, zeroGPU);
         CUDA_CALL(cudaDeviceSynchronize();)
+        for(int i = 1; i < numBuckets; i++){
+            if(bucketCounter[i] - bucketCounter[i - 1] > threshold){
+                int left = bucketCounter[i - 1];
+                int right = bucketCounter[i];
+                int bucketCount = bucketCounter[i] - bucketCounter[i - 1]; 
+                int threads_per_block = 128;
+                int instance_per_block = (threads_per_block/MSM_params_t::TPI);
+                int workerCapacity = 128;
+                int numWorkers = (bucketCount + workerCapacity - 1) / workerCapacity;
+                int numBlocks = (numWorkers + instance_per_block - 1) / instance_per_block;
+                BN254G1* temp_output;
+                CUDA_CALL( cudaMalloc((void**)&temp_output, sizeof(BN254G1) * numWorkers));
+                recursive_reduce_buckets_first_step_G1<<<numBlocks, threads_per_block>>>(outputBaseArray, temp_output, zero, left, right, numWorkers, workerCapacity);
+                CUDA_CALL(cudaDeviceSynchronize();)
+                recursive_reduce_buckets_second_step_G1<<<1, 128>>>(temp_output, buckets,  zero, targetBucketId, numWorkers);
+                CUDA_CALL(cudaDeviceSynchronize();)
+
+                CUDA_CALL(cudaFree(temp_output));
+            }
+        }
         end = std::chrono::steady_clock::now();
         elapsed_seconds = end-start;
         if(k == numGroups - 1){
             std::cout << "k="<< k<< " unit2_reduce_to_buckets time: " << elapsed_seconds.count() << "s\n";
-
         }
 
 
