@@ -834,7 +834,6 @@ __global__ void recursive_reduce_buckets_second_step_G1(BN254G1* input, BN254G1*
 
 __global__ void pippengerMSMG1_unit2_reduce_to_buckets(BN254G1* outputBaseArray, BN254G1* outputBuckets,  int* bucketCounter, int numBuckets, int dense_bucket_threshold, BN254G1* zero){
     const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
-    const int offset = (blockIdx.x * blockDim.y + threadIdx.x) % MSM_params_t::TPI;
     context_t _context;
     env_t    _env(_context);
     
@@ -1333,7 +1332,7 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
 
         //reduce the bucketsBeforeAggregate, because they have been write to ajacent positions.
         start = std::chrono::steady_clock::now();
-        int dense_bucket_threshold = 50000;
+        int dense_bucket_threshold = 20000;
         int num_blocks_reduce_buckets = (numBuckets + instance_per_block - 1)/instance_per_block;
         pippengerMSMG1_unit2_reduce_to_buckets<<<num_blocks_reduce_buckets, threads_per_block>>>(bucketsBeforeAggregate, buckets, bucketCounter, numBuckets, dense_bucket_threshold, zeroGPU);
         CUDA_CALL(cudaDeviceSynchronize();)
@@ -1513,7 +1512,7 @@ void  pippengerMSMG2(std::vector<Scalar> & bigScalarArray, std::vector<BN254G2> 
 
         //reduce the bucketsBeforeAggregate, because they have been write to ajacent positions.
         int num_blocks_reduce_buckets = (numBuckets + instance_per_block - 1)/instance_per_block;
-        int dense_bucket_threshold = 20000;
+        int dense_bucket_threshold = 10000;
 
         pippengerMSMG2_unit2_reduce_to_buckets<<<num_blocks_reduce_buckets, threads_per_block>>>(bucketsBeforeAggregate, buckets, bucketCounter, numBuckets, dense_bucket_threshold, zeroGPU);
         CUDA_CALL(cudaDeviceSynchronize();)
@@ -1613,28 +1612,14 @@ void  pippengerMSMG2(std::vector<Scalar> & bigScalarArray, std::vector<BN254G2> 
  * Signature: (Ljava/util/ArrayList;Ljava/util/ArrayList;)Lalgebra/groups/AbstractGroup;
  */
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerialMSMNativeHelper
-  (JNIEnv * env, jclass obj,  jbyteArray multiplesOfBaseXYZ, jbyteArray bigScalarsArrayInput, jint batch_size, jint taskID){
+  (JNIEnv * env, jclass obj,  jbyteArray multiplesOfBaseXYZ, jbyteArray bigScalarsArrayInput, jint batch_size, jint type, jint taskID){
     jclass java_util_ArrayList      = static_cast<jclass>(env->NewGlobalRef(env->FindClass("java/util/ArrayList")));
     jmethodID java_util_ArrayList_size = env->GetMethodID(java_util_ArrayList, "size", "()I");
     jmethodID java_util_ArrayList_get  = env->GetMethodID(java_util_ArrayList, "get", "(I)Ljava/lang/Object;");
 
 
     vector<Scalar> bigScalarArray = vector<Scalar>(batch_size, Scalar());
-    vector<BN254G1> multiplesOfBasePtrArray = vector<BN254G1>(batch_size, BN254G1());
-
-
     int len = 32; //254-bit BN254.
-
-    char* baseByteArrayXYZ = (char*)env->GetByteArrayElements(multiplesOfBaseXYZ, NULL);
-    for(int i =0; i < batch_size; i++){
-        char* tmp = (char*)multiplesOfBasePtrArray[i].X._limbs;
-        memcpy(tmp, &baseByteArrayXYZ[i * 3 * len],len);
-        char* tmp2 = (char*)multiplesOfBasePtrArray[i].Y._limbs;
-        memcpy(tmp2,  &baseByteArrayXYZ[(i *3 +1) * len],len);
-        char* tmp3 = (char*)multiplesOfBasePtrArray[i].Z._limbs;
-        memcpy(tmp3, &baseByteArrayXYZ[(i*3 +2) * len],len);
-    }
-
 
     char* scalarBytes = (char*)env->GetByteArrayElements(bigScalarsArrayInput, NULL);
     for(int i =0; i < batch_size; i++){
@@ -1643,24 +1628,70 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerial
     }
 
 
-    //lianke: we know in advance that the numBits will be at most 254. we hard encode it.
-    auto start = std::chrono::steady_clock::now();
+    if(type == 1){
+        vector<BN254G1> multiplesOfBasePtrArray = vector<BN254G1>(batch_size, BN254G1());
 
-    BN254G1* resultCPU = new BN254G1[1];
-    memset(resultCPU, 0, sizeof(BN254G1));
-    pippengerMSMG1(bigScalarArray, multiplesOfBasePtrArray, resultCPU, taskID);
-    auto end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end-start;
-    std::cout << "varMSM GPU computation elapsed time: " << elapsed_seconds.count() << "s\n";
+        char* baseByteArrayXYZ = (char*)env->GetByteArrayElements(multiplesOfBaseXYZ, NULL);
+        for(int i =0; i < batch_size; i++){
+            char* tmp = (char*)multiplesOfBasePtrArray[i].X._limbs;
+            memcpy(tmp, &baseByteArrayXYZ[i * 3 * len],len);
+            char* tmp2 = (char*)multiplesOfBasePtrArray[i].Y._limbs;
+            memcpy(tmp2,  &baseByteArrayXYZ[(i *3 +1) * len],len);
+            char* tmp3 = (char*)multiplesOfBasePtrArray[i].Z._limbs;
+            memcpy(tmp3, &baseByteArrayXYZ[(i*3 +2) * len],len);
+        }
+
+        //lianke: we know in advance that the numBits will be at most 254. we hard encode it.
+        auto start = std::chrono::steady_clock::now();
+
+        BN254G1* resultCPU = new BN254G1[1];
+        memset(resultCPU, 0, sizeof(BN254G1));
+        pippengerMSMG1(bigScalarArray, multiplesOfBasePtrArray, resultCPU, taskID);
+        auto end = std::chrono::steady_clock::now();
+        std::chrono::duration<double> elapsed_seconds = end-start;
+        std::cout << "varMSM GPU computation elapsed time: " << elapsed_seconds.count() << "s\n";
+
+
+        jbyteArray resultByteArray = env->NewByteArray((jsize)sizeof(BN254G1));
+
+        env->SetByteArrayRegion(resultByteArray, 0 , sizeof(BN254G1) ,   reinterpret_cast<const jbyte*>(&resultCPU[0]));
+
+        return resultByteArray;
+
+    }else{
+        //BN254G2
+        vector<BN254G2> multiplesOfBase2PtrArray = vector<BN254G2>(batch_size, BN254G2());
+
+        char* baseByteArrayXYZABC = (char*)env->GetByteArrayElements(multiplesOfBaseXYZ, NULL);
+
+        for(int i =0; i < batch_size; i++){
+            char* tmp = (char*)multiplesOfBase2PtrArray[i].Xa._limbs;
+            memcpy(tmp, &baseByteArrayXYZABC[i * 6 * len],len);
+            char* tmp2 = (char*)multiplesOfBase2PtrArray[i].Xb._limbs;
+            memcpy(tmp2,  &baseByteArrayXYZABC[(i *6 +1) * len],len);
+            char* tmp3 = (char*)multiplesOfBase2PtrArray[i].Ya._limbs;
+            memcpy(tmp3, &baseByteArrayXYZABC[(i*6 +2) * len],len);
+
+            char* tmp4 = (char*)multiplesOfBase2PtrArray[i].Yb._limbs;
+            memcpy(tmp4, &baseByteArrayXYZABC[(i * 6 +3) * len],len);
+            char* tmp5 = (char*)multiplesOfBase2PtrArray[i].Za._limbs;
+            memcpy(tmp5,  &baseByteArrayXYZABC[(i *6 +4) * len],len);
+            char* tmp6 = (char*)multiplesOfBase2PtrArray[i].Zb._limbs;
+            memcpy(tmp6, &baseByteArrayXYZABC[(i*6 +5) * len],len);
+        }
 
 
 
-    jbyteArray resultByteArray = env->NewByteArray((jsize)sizeof(BN254G1));
+        BN254G2* resultCPUG2 = new BN254G2[1];
+        memset(resultCPUG2, 0, sizeof(BN254G2));
+        pippengerMSMG2(bigScalarArray, multiplesOfBase2PtrArray, resultCPUG2, taskID);
 
-    env->SetByteArrayRegion(resultByteArray, 0 , sizeof(BN254G1) ,   reinterpret_cast<const jbyte*>(&resultCPU[0]));
+        jbyteArray resultByteArray = env->NewByteArray((jsize)(sizeof(BN254G2)));
+        env->SetByteArrayRegion(resultByteArray, 0, sizeof(BN254G2) ,   reinterpret_cast<const jbyte*>(&resultCPUG2[0]));
+        return resultByteArray;
+    }
 
-    return resultByteArray;
-
+    
   }
 
 

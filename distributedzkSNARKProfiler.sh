@@ -2,7 +2,7 @@ mvn clean
 mvn compile 
 mvn install -DskipTests
 for TOTAL_CORES in 8; do
-  for SIZE in `seq 23 23`; do
+  for SIZE in `seq 18 18`; do
 
     export APP=zksnark
     export MEMORY=64G

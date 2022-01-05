@@ -2,9 +2,9 @@ mvn clean
 mvn compile 
 mvn install -DskipTests
 for TOTAL_CORES in 16; do
-  for SIZE in `seq 23 23`; do
+  for SIZE in `seq 22 22`; do
 
-    export APP=vmsm-g1
+    export APP=vmsm-g2
     export MEMORY=64G
     export MULTIPLIER=1
 

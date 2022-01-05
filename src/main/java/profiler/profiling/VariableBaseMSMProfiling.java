@@ -12,21 +12,25 @@ import profiler.generation.VariableBaseMSMGenerator;
 import scala.Tuple2;
 
 import java.util.ArrayList;
+import java.util.Random;
 
 public class VariableBaseMSMProfiling {
 
     public static void serialVariableBaseMSMG1Profiling(final Configuration config, final long size) throws Exception{
-        final BN254aG1 groupFactory = new BN254aG1Parameters().ONE();
+          final BN254aG1 groupFactory = new BN254aG1Parameters().ONE();
+        final BN254aG1 generatorG1 = groupFactory.random(config.seed(), config.secureSeed());
+
         final BN254aFr fieldFactory = new BN254aFr(2L);
 
         final ArrayList<BN254aFr> scalars = new ArrayList<>();
         final ArrayList<BN254aG1> bases = new ArrayList<>();
-
+        final Random rand = new Random(System.nanoTime());
         for (long j = 0; j < size; j++) {
-            scalars.add(fieldFactory.random(config.seed(), config.secureSeed()));
-            bases.add(groupFactory);
+            scalars.add(fieldFactory.random(rand.nextLong(), null));
+            bases.add(generatorG1);
         }
-        System.out.println("random benchmark data generation done.");
+	    
+	System.out.println("random benchmark data generation done.");
 
         config.setContext("VariableBaseMSMG1-Serial");
         config.beginRuntimeMetadata("Size (inputs)", size);
@@ -44,14 +48,17 @@ public class VariableBaseMSMProfiling {
 
     public static void serialVariableBaseMSMG2Profiling(final Configuration config, final long size) throws Exception{
         final BN254aG2 groupFactory = new BN254aG2Parameters().ONE();
+        final BN254aG2 generatorG2 = groupFactory.random(config.seed(), config.secureSeed());
+
         final BN254aFr fieldFactory = new BN254aFr(2L);
 
         final ArrayList<BN254aFr> scalars = new ArrayList<>();
         final ArrayList<BN254aG2> bases = new ArrayList<>();
+        final Random rand = new Random(System.nanoTime());
 
         for (long j = 0; j < size; j++) {
-            scalars.add(fieldFactory.random(config.seed(), config.secureSeed()));
-            bases.add(groupFactory);
+            scalars.add(fieldFactory.random(rand.nextLong(), null));
+            bases.add(generatorG2);
         }
         System.out.println("random benchmark data generation done.");
 
@@ -64,7 +71,6 @@ public class VariableBaseMSMProfiling {
         System.out.println("res="+res.toString());
         config.endRuntime("VariableBaseMSM");
         config.endLog("VariableBaseMSM");
-        System.out.println("VarMSM output =" +res.toString());
         config.writeRuntimeLog(config.context());
     }
 

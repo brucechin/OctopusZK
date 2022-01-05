@@ -10,10 +10,10 @@ extern "C" {
 /*
  * Class:     algebra_msm_VariableBaseMSM
  * Method:    variableBaseSerialMSMNativeHelper
- * Signature: ([B[BII)[B
+ * Signature: ([B[BIII)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_VariableBaseMSM_variableBaseSerialMSMNativeHelper
-  (JNIEnv *, jclass, jbyteArray, jbyteArray, jint, jint);
+  (JNIEnv *, jclass, jbyteArray, jbyteArray, jint, jint, jint);
 
 /*
  * Class:     algebra_msm_VariableBaseMSM

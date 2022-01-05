@@ -17,19 +17,19 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
 
 /*
  * Class:     algebra_msm_FixedBaseMSM
- * Method:    fieldBatchMSMNativeHelper
- * Signature: ([BII)[B
- */
-JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_fieldBatchMSMNativeHelper
-  (JNIEnv *, jclass, jbyteArray, jint, jint);
-
-/*
- * Class:     algebra_msm_FixedBaseMSM
  * Method:    doubleBatchMSMNativeHelper
  * Signature: (IIIIIIIII[B[B[BI)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_doubleBatchMSMNativeHelper
   (JNIEnv *, jclass, jint, jint, jint, jint, jint, jint, jint, jint, jint, jbyteArray, jbyteArray, jbyteArray, jint);
+
+/*
+ * Class:     algebra_msm_FixedBaseMSM
+ * Method:    fieldBatchMSMNativeHelper
+ * Signature: ([BII)[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_fieldBatchMSMNativeHelper
+  (JNIEnv *, jclass, jbyteArray, jint, jint);
 
 #ifdef __cplusplus
 }
