@@ -40,7 +40,7 @@ class MSM_params_t {
     static const bool     CONSTANT_TIME=false;       // constant time implementations aren't available yet
     
     // parameters used locally in the application
-    static const uint32_t TPI=32;                   // threads per instance
+    static const uint32_t TPI=4;                   // threads per instance
     static const uint32_t BITS=512;                 // instance size
     static const uint32_t num_of_bytes=64;                 // instance size
 
@@ -775,8 +775,46 @@ __global__ void pippengerMSMG1_unit2_write_together(BN254G1* inputBaseArray, BN2
     return;
 }
 
+__global__ void recursive_reduce_buckets_helper_G1(BN254G1* outputBaseArray, BN254G1* reduceOutput, BN254G1* zero, int left, int right, int numWorkers, int workerCapacity){
+    const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
+    context_t _context;
+    env_t    _env(_context);
+    
+    if(idx >= numWorkers){
+        return;
+    }
+    
+
+    int start = idx * workerCapacity +left; 
+    int end = min(right, (idx + 1) *workerCapacity + left);
+    if(start >= right){
+        return;
+    }
+
+    BN254G1Compute res;
+    cgbn_load(_env, res.X, &zero[0].X);
+    cgbn_load(_env, res.Y, &zero[0].Y);
+    cgbn_load(_env, res.Z, &zero[0].Z);
+    if(idx == 1){
+        printf("inner\n");
+    }
+    for(; start < end; start++){
+        BN254G1Compute to_add; 
+        cgbn_load(_env, to_add.X, &outputBaseArray[start].X);
+        cgbn_load(_env, to_add.Y, &outputBaseArray[start].Y);
+        cgbn_load(_env, to_add.Z, &outputBaseArray[start].Z);
+
+        res = add(res, to_add);
+    }
+    cgbn_store(_env, &reduceOutput[idx].X, res.X);
+    cgbn_store(_env, &reduceOutput[idx].Y, res.Y);
+    cgbn_store(_env, &reduceOutput[idx].Z, res.Z);
+    __syncthreads();
+}
+
 __global__ void pippengerMSMG1_unit2_reduce_to_buckets(BN254G1* outputBaseArray, BN254G1* outputBuckets,  int* bucketCounter, int numBuckets, BN254G1* zero){
     const int idx = (blockIdx.x * blockDim.x + threadIdx.x)/MSM_params_t::TPI;
+    const int offset = (blockIdx.x * blockDim.y + threadIdx.x) % MSM_params_t::TPI;
     context_t _context;
     env_t    _env(_context);
     
@@ -791,25 +829,59 @@ __global__ void pippengerMSMG1_unit2_reduce_to_buckets(BN254G1* outputBaseArray,
         left = bucketCounter[idx - 1];
         right = bucketCounter[idx];
     }
+    int threshold = 30000;
+    if(right - left > threshold){
+        //for dense buckets, we need to spawn more workers to reduce the sum of bucket elements.
+        int bucketCount = right - left; 
+        int threads_per_block = 128;
+        int instance_per_block = (threads_per_block/MSM_params_t::TPI);
+        int workerCapacity = 1024;
+        int numWorkers = (bucketCount + workerCapacity - 1) / workerCapacity;
+        int numBlocks = (numWorkers + instance_per_block - 1) / instance_per_block;
+        BN254G1* temp_output = new BN254G1[numWorkers];
+        if(offset == 0){
+            recursive_reduce_buckets_helper_G1<<<numBlocks, threads_per_block>>>(outputBaseArray, temp_output, zero, left, right, numWorkers, workerCapacity);
+        }
+        //TODO this __syncthreads may be wrong
+        __syncthreads();
 
-    BN254G1Compute res;
-    cgbn_load(_env, res.X, &zero[0].X);
-    cgbn_load(_env, res.Y, &zero[0].Y);
-    cgbn_load(_env, res.Z, &zero[0].Z);
+        BN254G1Compute res;
+        cgbn_load(_env, res.X, &zero[0].X);
+        cgbn_load(_env, res.Y, &zero[0].Y);
+        cgbn_load(_env, res.Z, &zero[0].Z);
+        for(int i = 0; i < numWorkers; i++){
+            BN254G1Compute to_add; 
+            cgbn_load(_env, to_add.X, &temp_output[i].X);
+            cgbn_load(_env, to_add.Y, &temp_output[i].Y);
+            cgbn_load(_env, to_add.Z, &temp_output[i].Z);
+            res = add(res, to_add);
+        }
+        delete[] temp_output;
+        cgbn_store(_env, &outputBuckets[idx].X, res.X);
+        cgbn_store(_env, &outputBuckets[idx].Y, res.Y);
+        cgbn_store(_env, &outputBuckets[idx].Z, res.Z);
+        return;
+    }else{
+        BN254G1Compute res;
+        cgbn_load(_env, res.X, &zero[0].X);
+        cgbn_load(_env, res.Y, &zero[0].Y);
+        cgbn_load(_env, res.Z, &zero[0].Z);
 
-    for(; left < right; left++){
-        BN254G1Compute to_add; 
-        cgbn_load(_env, to_add.X, &outputBaseArray[left].X);
-        cgbn_load(_env, to_add.Y, &outputBaseArray[left].Y);
-        cgbn_load(_env, to_add.Z, &outputBaseArray[left].Z);
+        for(; left < right; left++){
+            BN254G1Compute to_add; 
+            cgbn_load(_env, to_add.X, &outputBaseArray[left].X);
+            cgbn_load(_env, to_add.Y, &outputBaseArray[left].Y);
+            cgbn_load(_env, to_add.Z, &outputBaseArray[left].Z);
 
-        res = add(res, to_add);
+            res = add(res, to_add);
+        }
+
+        cgbn_store(_env, &outputBuckets[idx].X, res.X);
+        cgbn_store(_env, &outputBuckets[idx].Y, res.Y);
+        cgbn_store(_env, &outputBuckets[idx].Z, res.Z);
+        return;
     }
 
-    cgbn_store(_env, &outputBuckets[idx].X, res.X);
-    cgbn_store(_env, &outputBuckets[idx].Y, res.Y);
-    cgbn_store(_env, &outputBuckets[idx].Z, res.Z);
-    return;
 }
 
 __global__ void prefix_sum_G1_reverse_first_step(BN254G1* buckets, int size, int stride){
@@ -862,7 +934,7 @@ __global__ void pippengerMSMG1_unit2_final_add(BN254G1* result, BN254G1* buckets
     context_t _context;
     env_t    _env(_context);
     if(idx == 0){
-                BN254G1Compute res,to_add;
+        BN254G1Compute res,to_add;
         cgbn_load(_env, res.X, &result[0].X);
         cgbn_load(_env, res.Y, &result[0].Y);
         cgbn_load(_env, res.Z, &result[0].Z);
@@ -1165,7 +1237,7 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
         int num_blocks_unit1 = (batch_size + threads_per_block - 1) / threads_per_block;
         pippengerMSM_unit1 <<<num_blocks_unit1,threads_per_block>>>( inputScalarArrayGPU, inputBucketMappingLocation, bucketCounter, bucketIndex,  batch_size, c, k, numGroups);
         CUDA_CALL(cudaDeviceSynchronize();)
-        if(k == numGroups - 1){
+        if(k >= numGroups - 1){
             //TODO lianke the first round density is crazy. optimize it specially.
             vector_print<<<1, 128>>>(bucketCounter, min(numBuckets, 200));  
         }
