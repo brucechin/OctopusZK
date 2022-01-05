@@ -1299,17 +1299,18 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
   if(BNType == 1){
     //BN254 G1
     BN254G1 baseElement;
+    memset(&baseElement, 0, sizeof(BN254G1));
 
     auto start = std::chrono::steady_clock::now();
 
     char* baseByteArrayXYZ = (char*)env->GetByteArrayElements(multiplesOfBaseXYZ, NULL);
 
-      char* tmp = (char*)baseElement.X._limbs;
-      memcpy(tmp, &baseByteArrayXYZ[0],len);
-      char* tmp2 = (char*)baseElement.Y._limbs;
-      memcpy(tmp2,  &baseByteArrayXYZ[len],len);
-      char* tmp3 = (char*)baseElement.Z._limbs;
-      memcpy(tmp3, &baseByteArrayXYZ[2 * len],len);
+    char* tmp = (char*)baseElement.X._limbs;
+    memcpy(tmp, &baseByteArrayXYZ[0],len);
+    char* tmp2 = (char*)baseElement.Y._limbs;
+    memcpy(tmp2,  &baseByteArrayXYZ[len],len);
+    char* tmp3 = (char*)baseElement.Z._limbs;
+    memcpy(tmp3, &baseByteArrayXYZ[2 * len],len);
 
 
     jbyteArray resultByteArray = env->NewByteArray(sizeof(BN254G1) * batch_size);

@@ -141,7 +141,7 @@ public class SerialzkSNARKTest implements Serializable {
     @Test
     public void SerialBN254aProofSystemTest() throws Exception{
         final int numInputs = 1023;
-        final int numConstraints = 1 << 20;
+        final int numConstraints = 1 << 16;
         final BN254aFr fieldFactory = BN254aFr.ONE;
         final BN254aG1 g1Factory = BN254aG1Parameters.ONE;
         final BN254aG2 g2Factory = BN254aG2Parameters.ONE;
