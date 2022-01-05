@@ -1258,26 +1258,33 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
         int num_blocks_reduce_buckets = (numBuckets + instance_per_block - 1)/instance_per_block;
         pippengerMSMG1_unit2_reduce_to_buckets<<<num_blocks_reduce_buckets, threads_per_block>>>(bucketsBeforeAggregate, buckets, bucketCounter, numBuckets, dense_bucket_threshold, zeroGPU);
         CUDA_CALL(cudaDeviceSynchronize();)
-        for(int i = 1; i < numBuckets; i++){
-            if(bucketCounter[i] - bucketCounter[i - 1] > threshold){
-                int left = bucketCounter[i - 1];
-                int right = bucketCounter[i];
-                int bucketCount = bucketCounter[i] - bucketCounter[i - 1]; 
+        int* bucketCounterCPU = new int[numBuckets];
+	CUDA_CALL(cudaMemcpy(bucketCounterCPU, (void**)&bucketCounter[0], sizeof(int) * numBuckets, cudaMemcpyDeviceToHost);)
+	CUDA_CALL(cudaDeviceSynchronize();)
+	for(int i = 1; i < numBuckets; i++){
+            if(bucketCounterCPU[i] - bucketCounterCPU[i - 1] > dense_bucket_threshold){
+                int left = bucketCounterCPU[i - 1];
+                int right = bucketCounterCPU[i];
+                int bucketCount = bucketCounterCPU[i] - bucketCounterCPU[i - 1]; 
                 int threads_per_block = 128;
                 int instance_per_block = (threads_per_block/MSM_params_t::TPI);
                 int workerCapacity = 128;
                 int numWorkers = (bucketCount + workerCapacity - 1) / workerCapacity;
                 int numBlocks = (numWorkers + instance_per_block - 1) / instance_per_block;
-                BN254G1* temp_output;
+                //cout << "numberWorkers=" << numWorkers << "bucketCount=" << bucketCount << endl;
+		BN254G1* temp_output;
                 CUDA_CALL( cudaMalloc((void**)&temp_output, sizeof(BN254G1) * numWorkers));
-                recursive_reduce_buckets_first_step_G1<<<numBlocks, threads_per_block>>>(outputBaseArray, temp_output, zero, left, right, numWorkers, workerCapacity);
                 CUDA_CALL(cudaDeviceSynchronize();)
-                recursive_reduce_buckets_second_step_G1<<<1, 128>>>(temp_output, buckets,  zero, targetBucketId, numWorkers);
+		recursive_reduce_buckets_first_step_G1<<<numBlocks, threads_per_block>>>(bucketsBeforeAggregate, temp_output, zeroGPU, left, right, numWorkers, workerCapacity);
+
+		CUDA_CALL(cudaDeviceSynchronize();)
+                recursive_reduce_buckets_second_step_G1<<<1, 128>>>(temp_output, buckets,  zeroGPU, i, numWorkers);
                 CUDA_CALL(cudaDeviceSynchronize();)
 
                 CUDA_CALL(cudaFree(temp_output));
             }
         }
+	delete[] bucketCounterCPU;
         end = std::chrono::steady_clock::now();
         elapsed_seconds = end-start;
         if(k == numGroups - 1){
