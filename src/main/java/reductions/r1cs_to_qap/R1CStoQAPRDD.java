@@ -225,6 +225,7 @@ public class R1CStoQAPRDD implements Serializable {
                     // Multiply the constraint value by the input value.
                     return new Tuple2<>(term._2._1._1, term._2._1._2.mul(term._2._2));
                 }).union(zeroIndexedC).reduceByKey(FieldT::add);
+
         config.endLog("Compute evaluation of polynomials A, B, and C, on set S.");
 
         final int rows = (int) MathUtils.lowestPowerOfTwo((long) Math.sqrt(domainSize));
@@ -242,36 +243,15 @@ public class R1CStoQAPRDD implements Serializable {
         C = DistributedFFT.radix2CosetFFT(C, multiplicativeGenerator, rows, cols, fieldFactory);
         config.endLog("Compute evaluation of polynomials A, B, and C on set T.");
 
+
         config.beginLog("Compute the evaluation, (A * B) - C, for polynomial H on a set T.");
-
-
-
-        long start = System.currentTimeMillis();
-
-        //TODO lianke this join is tooo slow.
-        JavaPairRDD<Long, Tuple2< Tuple2<FieldT, FieldT>, FieldT>> coefficientsH_tmp = A.join(B).join(C, config.numPartitions());
-        coefficientsH_tmp.count();
-        
-        long finish = System.currentTimeMillis();
-        long timeElapsed = finish - start;
-        System.out.println("Spark join A B C took: " + timeElapsed + " ms");
-
-
-        start = System.currentTimeMillis();
-        JavaPairRDD<Long, FieldT> coefficientsH = coefficientsH_tmp.mapValues(element -> element._1._1.mul(element._1._2).sub(element._2));
-        coefficientsH.count();
-
-        finish = System.currentTimeMillis();
-        timeElapsed = finish - start;
-        System.out.println("Spark map reduce vec dot took: " + timeElapsed + " ms");
-
-
+        JavaPairRDD<Long, FieldT> coefficientsH = A.join(B).join(C, config.numPartitions())
+                .mapValues(element -> element._1._1.mul(element._1._2).sub(element._2));
         config.endLog("Compute the evaluation, (A * B) - C, for polynomial H on a set T.");
 
         config.beginLog("Divide by Z on set T.");
         coefficientsH = DistributedFFT
                 .divideByZOnCoset(multiplicativeGenerator, coefficientsH, domainSize);
-        coefficientsH.count();
         config.endLog("Divide by Z on set T.");
 
         config.beginLog("Compute coefficients of polynomial H.");
@@ -279,7 +259,6 @@ public class R1CStoQAPRDD implements Serializable {
                 .radix2CosetInverseFFT(coefficientsH, multiplicativeGenerator, rows, cols, fieldFactory)
                 .union(config.sparkContext()
                         .parallelizePairs(Collections.singletonList(new Tuple2<>(domainSize, zero))));
-        coefficientsH.count();
         config.endLog("Compute coefficients of polynomial H.");
 
         return new QAPWitnessRDD<>(

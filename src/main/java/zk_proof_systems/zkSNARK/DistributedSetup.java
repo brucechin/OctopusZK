@@ -79,8 +79,8 @@ public class DistributedSetup {
         //         .mapValues(e -> e.mul(inverseGamma)).persist(config.storageLevel());
         // final JavaPairRDD<Long, FieldT> deltaABC = ABC.filter(e -> e._1 >= numInputs)
         //         .mapValues(e -> e.mul(inverseDelta)).persist(config.storageLevel());
-        // gammaABC.count();
-        // deltaABC.count();
+        gammaABC.count();
+        deltaABC.count();
         config.endLog("Computing deltaABC and gammaABC for R1CS proving key and verification key");
 
         //use the worst case nonZero number instead

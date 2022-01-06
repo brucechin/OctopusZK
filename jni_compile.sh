@@ -1,13 +1,13 @@
 JAVA_HOME='/usr/lib/jvm/java-8-openjdk-amd64'
 GMP_HOME='./gmp-6.2.1'
 CUDA_HOME='/usr/local/cuda-11.1/bin'
-GPU_ARCH_CODE=sm_60
+GPU_ARCH_CODE=sm_86
 
 sudo rm lib*.so
 
-nvcc -O3  -Xcompiler -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=$GPU_ARCH_CODE algebra_msm_FixedBaseMSM.cu -o libAlgebraMSMFixedBaseMSM.so 
-#nvcc -O3 -rdc=true -Xcompiler  -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=$GPU_ARCH_CODE algebra_msm_VariableBaseMSM.cu -o libAlgebraMSMVariableBaseMSM.so 
-#nvcc   -Xcompiler  -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=$GPU_ARCH_CODE algebra_fft_FFTAuxiliary.cu -o libAlgebraFFTAuxiliary.so
+#$CUDA_HOME/nvcc -O3  -Xcompiler -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=$GPU_ARCH_CODE algebra_msm_FixedBaseMSM.cu -o libAlgebraMSMFixedBaseMSM.so 
+$CUDA_HOME/nvcc -O3 -rdc=true -Xcompiler  -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=$GPU_ARCH_CODE algebra_msm_VariableBaseMSM.cu -o libAlgebraMSMVariableBaseMSM.so 
+#$CUDA_HOME/nvcc   -Xcompiler  -fPIC -shared -I $GMP_HOME/include -I $JAVA_HOME/include -I $JAVA_HOME/include/linux -I ./include -arch=$GPU_ARCH_CODE algebra_fft_FFTAuxiliary.cu -o libAlgebraFFTAuxiliary.so
 
 sudo cp lib*.so /usr/lib/
 
