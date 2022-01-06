@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.io.*;
 import org.apache.commons.collections.IteratorUtils;
 import org.apache.spark.TaskContext;
+import org.apache.spark.Partition;
 
 public class VariableBaseMSM {
 
@@ -206,7 +207,7 @@ public class VariableBaseMSM {
 
         if(bases.get(0).getClass().getName() == "algebra.curves.barreto_naehrig.bn254a.BN254aG1"){
             //BN254 G1
-            int G1_iteration_batch_size = (1 << 22);
+            int G1_iteration_batch_size = (1 << 23);
             final List<GroupT> jni_res = new ArrayList<>(scalars.size() / G1_iteration_batch_size + 1);
             for(int iter = 0; iter < scalars.size(); iter+= G1_iteration_batch_size){
             
@@ -263,7 +264,7 @@ public class VariableBaseMSM {
             return final_res;
         }else{
             //BN254 G2
-            int G2_iteration_batch_size = (1 << 21);
+            int G2_iteration_batch_size = (1 << 22);
             final List<GroupT> jni_res = new ArrayList<>(scalars.size() / G2_iteration_batch_size + 1);
             for(int iter = 0; iter < scalars.size(); iter += G2_iteration_batch_size){
                 ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
@@ -286,7 +287,7 @@ public class VariableBaseMSM {
         
                 byte[] baseByteArrayXYZ = outputStream.toByteArray();
     
-                byte[] resArray = variableBaseSerialMSMNativeHelper(baseByteArrayXYZ, bigScalarByteArray, bases.size(), 2, 0);
+                byte[] resArray = variableBaseSerialMSMNativeHelper(baseByteArrayXYZ, bigScalarByteArray,  Integer.min(G2_iteration_batch_size, scalars.size() - iter), 2, 0);
                 
                 int size_of_bigint_cpp_side = 64;
                 
@@ -364,7 +365,7 @@ public class VariableBaseMSM {
             long finish = System.currentTimeMillis();
             long timeElapsed = finish - start;
             System.out.println("varMSM prepare data took: " + timeElapsed + " ms");
-            byte[] resArray = variableBaseSerialMSMNativeHelper(baseByteArrayXYZ, bigScalarByteArray, input.size(), 1, taskID);
+            byte[] resArray = variableBaseSerialMSMNativeHelper(baseByteArrayXYZ, bigScalarByteArray, Integer.min(G1_iteration_batch_size, input.size() - iter), 1, taskID);
 
             int size_of_bigint_cpp_side = 64;
 
@@ -418,7 +419,7 @@ public class VariableBaseMSM {
                 byte[] baseByteArrayXYZ = outputStream.toByteArray();
                 byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
     
-                byte[] resArray = variableBaseSerialMSMNativeHelper(baseByteArrayXYZ, bigScalarByteArray, input.size(), 2, taskID);
+                byte[] resArray = variableBaseSerialMSMNativeHelper(baseByteArrayXYZ, bigScalarByteArray, Integer.min(G2_iteration_batch_size, input.size() - iter), 2, taskID);
                 
                 int size_of_bigint_cpp_side = 64;
                 
@@ -526,7 +527,7 @@ public class VariableBaseMSM {
     
             long timeElapsed = finish - start;
             System.out.println("doubleVarMSM JAVA side prepare data time elapsed: " + timeElapsed + " ms");
-            byte[] resArray = variableBaseDoubleMSMNativeHelper(baseByteArrayBase1, baseByteArrayBase2, bigScalarByteArray, bases.size(), 0);
+            byte[] resArray = variableBaseDoubleMSMNativeHelper(baseByteArrayBase1, baseByteArrayBase2, bigScalarByteArray, Integer.min(double_batch_iteration_batch_size, scalars.size() - iter), 0);
     
     
             int size_of_bigint_cpp_side = 64;
@@ -647,7 +648,7 @@ public class VariableBaseMSM {
         long finish = System.currentTimeMillis();
         long timeElapsed = finish - start;
         System.out.println("varMSM prepare data took: " + timeElapsed + " ms");
-        byte[] resArray = variableBaseDoubleMSMNativeHelper(baseByteArrayBase1, baseByteArrayBase2, bigScalarByteArray, input.size(), taskID);
+        byte[] resArray = variableBaseDoubleMSMNativeHelper(baseByteArrayBase1, baseByteArrayBase2, bigScalarByteArray,  Integer.min(double_batch_iteration_batch_size, input.size() - iter), taskID);
     
     
         int size_of_bigint_cpp_side = 64;
@@ -787,7 +788,8 @@ public class VariableBaseMSM {
             GroupT extends AbstractGroup<GroupT>,
             FieldT extends AbstractFieldElementExpanded<FieldT>>
     GroupT distributedMSMWithoutJoin(final JavaRDD<Tuple2<Long, FieldT>> scalars,  final JavaRDD<Tuple2<Long, GroupT>> base) throws Exception{
-        //List<Partition> base_partitions = base.partitions();
+        List<Partition> base_partitions = base.partitions();
+        List<Partition> scalars_partitions = scalars.partitions();
 
         return base.mapPartitions(partition -> {
             TaskContext tc = TaskContext.get();

@@ -194,7 +194,6 @@ void best_fft (std::vector<Scalar> &a, const Scalar &omg, int taskID)
     for(; s <= log_m; s++){
         cuda_fft_second_step <<<blocks,threads_per_block>>>( in, omg, length, log_m, s);
         CUDA_CALL(cudaDeviceSynchronize());
-        //cout <<"finish round " << s  <<endl;
     }
 
     // auto end = std::chrono::steady_clock::now();

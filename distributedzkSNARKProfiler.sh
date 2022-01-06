@@ -1,12 +1,12 @@
 mvn clean 
 mvn compile 
 mvn install -DskipTests
-for TOTAL_CORES in 8; do
-  for SIZE in `seq 18 18`; do
+for TOTAL_CORES in 4; do
+  for SIZE in `seq 20 20`; do
 
     export APP=zksnark
-    export MEMORY=64G
-    export MULTIPLIER=1
+    export MEMORY=400G
+    export MULTIPLIER=8
 
     export CORES=1
     export NUM_EXECUTORS=$((TOTAL_CORES / CORES))
@@ -14,6 +14,7 @@ for TOTAL_CORES in 8; do
 
     sudo /opt/spark/bin/spark-submit \
       --conf spark.driver.memory=$MEMORY \
+      --conf spark.logLineage=true \
       --conf spark.driver.maxResultSize=$MEMORY \
       --conf spark.executor.cores=$CORES \
       --total-executor-cores $TOTAL_CORES \

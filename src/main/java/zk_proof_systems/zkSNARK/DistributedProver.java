@@ -38,6 +38,7 @@ public class DistributedProver {
         config.beginLog("Computing witness polynomial");
         final QAPWitnessRDD<FieldT> qapWitness = R1CStoQAPRDD
                 .R1CStoQAPWitness(provingKey.r1cs(), primary, oneFullAssignment, fieldFactory, config);
+        qapWitness.coefficientsH().cache();
         config.endLog("Computing witness polynomial");
 
 
@@ -68,14 +69,23 @@ public class DistributedProver {
         System.out.println("deltaABCG1 len=" + provingKey.deltaABCG1().count());
         System.out.println("queryH len=" + provingKey.queryH().count());
         System.out.println("oneFullAssignment len=" + oneFullAssignment.count());
+        System.out.println("qap coefficientsH len=" + qapWitness.coefficientsH().count());
+
+
         long start = System.currentTimeMillis();
 
         final JavaRDD<Tuple2<FieldT, G1T>> computationA = oneFullAssignment
                 .join(provingKey.queryA(), numPartitions).values();
+        
         computationA.count();
+
+        //System.out.println("computationA plan:" + computationA.toDebugString());
         long finish = System.currentTimeMillis();
         long timeElapsed = finish - start;
         System.out.println("Spark join queryA and oneFullAssignment took: " + timeElapsed + " ms");
+
+
+
         final G1T evaluationAt = VariableBaseMSM.distributedMSM(computationA);
         System.out.println("eval At=" +evaluationAt.toString());
         provingKey.queryA().unpersist();
@@ -91,7 +101,8 @@ public class DistributedProver {
         timeElapsed = finish - start;
         System.out.println("Spark join queryB and oneFullAssignment took: " + timeElapsed + " ms");
 
-        
+
+
         final Tuple2<G1T, G2T> evaluationBt = VariableBaseMSM.distributedDoubleMSM(computationB);
         System.out.println("eval Bt=" +evaluationBt.toString());
 
@@ -117,6 +128,10 @@ public class DistributedProver {
         config.beginLog("Computing evaluation to query H");
         start = System.currentTimeMillis();
 
+
+
+        System.gc();
+
         final JavaRDD<Tuple2<FieldT, G1T>> computationH = qapWitness.coefficientsH()
                 .join(provingKey.queryH(), numPartitions).values();
         computationH.count();
@@ -124,6 +139,10 @@ public class DistributedProver {
         finish = System.currentTimeMillis();
         timeElapsed = finish - start;
         System.out.println("Spark join coefficientsH and oneFullAssignment took: " + timeElapsed + " ms");
+
+
+
+
         final G1T evaluationHtZt = VariableBaseMSM.distributedMSM(computationH);
         System.out.println("evaluationHtZt=" + evaluationHtZt.toString());
 

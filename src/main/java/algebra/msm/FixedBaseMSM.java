@@ -213,7 +213,7 @@ public class FixedBaseMSM {
         
                 long finish = System.currentTimeMillis();
                 long timeElapsed = finish - start;
-                System.out.println("iteration=" + iter + " data transfer preparation time elapsed: " + timeElapsed + " ms");
+                //System.out.println("iteration=" + iter + " data transfer preparation time elapsed: " + timeElapsed + " ms");
                 byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, Integer.min(G1_iteration_batch_size, scalars.size() - iter), scalarSize, baseByteArrayXYZ, bigScalarByteArray, 1, 0);
                 
                 start = System.currentTimeMillis();
@@ -346,7 +346,7 @@ public class FixedBaseMSM {
         
                     long finish = System.currentTimeMillis();
                     long timeElapsed = finish - start;
-                    System.out.println("iteration=" + iter + "  data transfer preparation time elapsed: " + timeElapsed + " ms");
+                    //System.out.println("iteration=" + iter + "  data transfer preparation time elapsed: " + timeElapsed + " ms");
                     byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, Integer.min( G1_iteration_batch_size, scalars.size() - iter) , scalarSize, baseByteArrayXYZ, bigScalarByteArray, 1, (int)taskID);
                     
                     start = System.currentTimeMillis();
@@ -371,7 +371,7 @@ public class FixedBaseMSM {
         
                     finish = System.currentTimeMillis();
                     timeElapsed = finish - start;
-                    System.out.println("iteration=" + iter + "  data receive transformation time elapsed: " + timeElapsed + " ms");
+                    //System.out.println("iteration=" + iter + "  data receive transformation time elapsed: " + timeElapsed + " ms");
                 }
                 
                 return jni_res;
@@ -453,7 +453,7 @@ public class FixedBaseMSM {
                 List<Tuple2<Long, GroupT>> res =  batchMSMPartition(scalarSize, windowSize, out_size, in_size, baseBroadcast.getValue(), scalar_partition, (int)taskID);
                 long finish2 = System.currentTimeMillis();
                 long timeElapsed2 = finish2 - start2;
-                System.out.println("partition processing time elapsed: " + timeElapsed2 + " ms");
+                //System.out.println("partition processing time elapsed: " + timeElapsed2 + " ms");
                 return res.iterator();
             }
         );
@@ -644,7 +644,7 @@ public class FixedBaseMSM {
                 byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
         
                 long timeElapsed = finish - start;
-                System.out.println("JAVA side prepare data time elapsed: " + timeElapsed + " ms");
+                //System.out.println("JAVA side prepare data time elapsed: " + timeElapsed + " ms");
         
                 byte[] resultByteArray = doubleBatchMSMNativeHelper(outerc1, windowSize1, outerc2, windowSize2,
                                                 out_size1, in_size1, out_size2, in_size2, Integer.min(double_batch_iteration_batch_size, scalars.size() - iter),
@@ -690,7 +690,7 @@ public class FixedBaseMSM {
         
                 finish = System.currentTimeMillis();
                 timeElapsed = finish - start;
-                System.out.println("data receive transformation time elapsed: " + timeElapsed + " ms");
+                //System.out.println("data receive transformation time elapsed: " + timeElapsed + " ms");
             }
             
     

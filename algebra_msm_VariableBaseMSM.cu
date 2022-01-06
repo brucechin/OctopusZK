@@ -40,7 +40,7 @@ class MSM_params_t {
     static const bool     CONSTANT_TIME=false;       // constant time implementations aren't available yet
     
     // parameters used locally in the application
-    static const uint32_t TPI=4;                   // threads per instance
+    static const uint32_t TPI=32;                   // threads per instance
     static const uint32_t BITS=512;                 // instance size
     static const uint32_t num_of_bytes=64;                 // instance size
 
@@ -1308,9 +1308,9 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
         int num_blocks_unit1 = (batch_size + threads_per_block - 1) / threads_per_block;
         pippengerMSM_unit1 <<<num_blocks_unit1,threads_per_block>>>( inputScalarArrayGPU, inputBucketMappingLocation, bucketCounter, bucketIndex,  batch_size, c, k, numGroups);
         CUDA_CALL(cudaDeviceSynchronize();)
-        if(k >= numGroups - 1){
-            vector_print<<<1, 128>>>(bucketCounter, min(numBuckets, 200));  
-        }
+        // if(k >= numGroups - 1){
+        //     vector_print<<<1, 128>>>(bucketCounter, min(numBuckets, 200));  
+        // }
         int num_blocks_prefix_sum = (numBuckets + threads_per_block - 1)/threads_per_block;
         for(int stride = 1; stride <= numBuckets/2; stride = stride *2){
             prefix_sum_first_step<<< num_blocks_prefix_sum, threads_per_block>>>(bucketCounter, numBuckets, stride);
@@ -1332,7 +1332,7 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
 
         //reduce the bucketsBeforeAggregate, because they have been write to ajacent positions.
         start = std::chrono::steady_clock::now();
-        int dense_bucket_threshold = 20000;
+        int dense_bucket_threshold = 10000;
         int num_blocks_reduce_buckets = (numBuckets + instance_per_block - 1)/instance_per_block;
         pippengerMSMG1_unit2_reduce_to_buckets<<<num_blocks_reduce_buckets, threads_per_block>>>(bucketsBeforeAggregate, buckets, bucketCounter, numBuckets, dense_bucket_threshold, zeroGPU);
         CUDA_CALL(cudaDeviceSynchronize();)
@@ -1346,7 +1346,7 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
                 int bucketCount = bucketCounterCPU[i] - bucketCounterCPU[i - 1]; 
                 int threads_per_block = 128;
                 int instance_per_block = (threads_per_block/MSM_params_t::TPI);
-                int workerCapacity = 1024;
+                int workerCapacity = (int)sqrt(bucketCount) ;
                 int numWorkers = (bucketCount + workerCapacity - 1) / workerCapacity;
                 int numBlocks = (numWorkers + instance_per_block - 1) / instance_per_block;
                 cout << "var MSM G1 dense bucketCount=" << bucketCount << endl;
@@ -1436,11 +1436,11 @@ void  pippengerMSMG2(std::vector<Scalar> & bigScalarArray, std::vector<BN254G2> 
     CUDA_CALL(cudaGetDeviceCount(&num_gpus));
     size_t batch_size = bigScalarArray.size();
 
-    printf("CUDA Devices number: %d, input_field size: %lu, input_field count: %lu\n", num_gpus, sizeof(Scalar), batch_size);
+    //printf("CUDA Devices number: %d, input_field size: %lu, input_field count: %lu\n", num_gpus, sizeof(Scalar), batch_size);
     size_t threads_per_block = 128;
     size_t instance_per_block = (threads_per_block / MSM_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (batch_size + instance_per_block - 1) / instance_per_block;
-    cout <<"VarDoubleBatchMSM taskID=" << taskID << "scheduled to GPU " << taskID % num_gpus<< endl;
+    //cout <<"VarDoubleBatchMSM taskID=" << taskID << "scheduled to GPU " << taskID % num_gpus<< endl;
     CUDA_CALL(cudaSetDevice(taskID % num_gpus));
 
     Scalar *inputScalarArrayGPU; 

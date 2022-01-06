@@ -79,8 +79,8 @@ public class DistributedSetup {
         //         .mapValues(e -> e.mul(inverseGamma)).persist(config.storageLevel());
         // final JavaPairRDD<Long, FieldT> deltaABC = ABC.filter(e -> e._1 >= numInputs)
         //         .mapValues(e -> e.mul(inverseDelta)).persist(config.storageLevel());
-        gammaABC.count();
-        deltaABC.count();
+        // gammaABC.count();
+        // deltaABC.count();
         config.endLog("Computing deltaABC and gammaABC for R1CS proving key and verification key");
 
         //use the worst case nonZero number instead
@@ -175,7 +175,8 @@ public class DistributedSetup {
                 generatorG1,
                 inverseDeltaHtZt,
                 config.sparkContext()).persist(config.storageLevel());
-        queryH.count();
+        // queryH.count();
+        System.out.println("queryH length: " + queryH.count());
         qap.Ht().unpersist();
         config.endLog("Computing query H");
 
@@ -221,7 +222,7 @@ public class DistributedSetup {
                 gammaG2,
                 deltaG2,
                 UVWGammaG1);
-
+        System.gc();
         return new CRS<>(provingKey, verificationKey);
     }
 }

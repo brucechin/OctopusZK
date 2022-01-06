@@ -210,7 +210,7 @@ public class FFTAuxiliary {
     distributedMultiplyByCoset(
             final JavaPairRDD<Long, FieldT> input,
             final FieldT g) {
-
+        //TODO lianke implement this function in GPU
         return input.mapToPair(term -> new Tuple2<>(term._1, term._2.mul(g.pow(term._1))));
     }
 
