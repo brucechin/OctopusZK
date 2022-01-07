@@ -60,7 +60,7 @@ public class R1CStoQAPRDDTest implements Serializable {
     }
 
     @Test
-    public void VerifyQAPRelationTest() {
+    public void VerifyQAPRelationTest()  throws Exception{
         final R1CSRelation<Fp> r1cs = R1CSExample._1();
         final R1CSRelationRDD<Fp> r1csRDD = R1CSExampleRDD._1();
 
@@ -103,7 +103,7 @@ public class R1CStoQAPRDDTest implements Serializable {
     }
 
     @Test
-    public void VerifyQAPWitnessTest() {
+    public void VerifyQAPWitnessTest()  throws Exception{
         final R1CSRelation<Fp> r1cs = R1CSExample._1();
         final Assignment<Fp> primary = R1CSExample._2();
         final Assignment<Fp> auxiliary = R1CSExample._3();

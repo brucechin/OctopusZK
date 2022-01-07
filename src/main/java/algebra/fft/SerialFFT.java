@@ -9,6 +9,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Arrays;
+import scala.Tuple2;
 
 import algebra.groups.AbstractGroup;
 
@@ -44,60 +45,56 @@ public class SerialFFT<FieldT extends AbstractFieldElementExpanded<FieldT>> impl
         return builder.toString();
     }
 
-    public static byte[] bigIntegerToByteArrayHelper(BigInteger bigint){
-        byte[] temp = bigint.toByteArray();
 
-        byte[] res = new byte[temp.length / 4 * 4 + 4];
-        int size_diff = temp.length / 4 * 4 + 4 - temp.length;
-        int j = temp.length - 1;
-        for(; j >= 3; j-=4){
-            res[ size_diff+ j] = temp[j-3];
-            res[size_diff+ j-1] = temp[j-2];
-            res[ size_diff+j-2] = temp[j-1];
-            res[ size_diff+j-3] = temp[j];
-        }
-        if(j == 2){
-            res[2] = temp[j-2];
-            res[1] = temp[j-1];
-            res[0] = temp[j];
-        }else if(j == 1){
-            res[1] = temp[j-1];
-            res[0] = temp[j];
-        }else if(j == 0){
-            res[0] = temp[j];
-        }
-        return res;
-
-    }
     /**
      * Compute the FFT, over the domain S, of the vector input, and stores the result in input.
      */
-    public void radix2FFT(final List<FieldT> input, final int taskID) {
+    public void radix2FFT(final List<FieldT> input, final int taskID) throws Exception{
         assert (input.size() == domainSize);
         FFTAuxiliary.serialRadix2FFT(input, omega, taskID);
-
-        
     }
+
+    public void radix2FFTBatch(final List<Tuple2<Long, ArrayList<Tuple2<Long, FieldT>>>>  input, final int taskID) throws Exception{
+        assert (input.size() == domainSize);
+        FFTAuxiliary.serialRadix2FFTBatchPartition(input, omega, taskID);
+    }
+
 
     /**
      * Compute the inverse FFT, over the domain S, of the vector input, and stores the result in
      * input.
      */
-    public  void radix2InverseFFT(final List<FieldT> input, final int taskID) {
+    public  void radix2InverseFFT(final List<FieldT> input, final int taskID) throws Exception{
         assert (input.size() == domainSize);
         //System.out.println("radix2InverseFFT input side " + input.size());
         FFTAuxiliary.serialRadix2FFT(input, omega.inverse(), taskID);
 
+        //TODO lianke maybe move this to GPU
         final FieldT constant = input.get(0).construct(domainSize).inverse();
         for (int i = 0; i < domainSize; ++i) {
             input.set(i, input.get(i).mul(constant));
         }
     }
 
+    public  void radix2InverseFFTBatch(final List<Tuple2<Long, ArrayList<Tuple2<Long, FieldT>>>> input, final int taskID) throws Exception{
+        assert (input.get(0)._2.size() == domainSize);
+        System.out.println("radix2InverseFFT input side " + input.size() + " domain size " + input.get(0)._2.size());
+        FFTAuxiliary.serialRadix2FFTBatchPartition(input, omega.inverse(), taskID);
+
+        //TODO lianke maybe move this to GPU
+        for(int i = 0; i < input.size(); i++){
+            final FieldT constant = input.get(i)._2.get(0)._2.construct(domainSize).inverse();
+            for (int j = 0; j < domainSize; j++) {
+                input.get(i)._2.set(j, new Tuple2<>(input.get(i)._2.get(j)._1, input.get(i)._2.get(j)._2.mul(constant)));
+            }
+        }
+
+    }
+
     /**
      * Compute the FFT, over the domain g*S, of the vector input, and stores the result in input.
      */
-    public void radix2CosetFFT(final List<FieldT> input, final FieldT g, final int taskID) {
+    public void radix2CosetFFT(final List<FieldT> input, final FieldT g, final int taskID)throws Exception {
         //System.out.println("radix2CosetFFT input side " + input.size());
 
         FFTAuxiliary.multiplyByCoset(input, g);
@@ -108,7 +105,7 @@ public class SerialFFT<FieldT extends AbstractFieldElementExpanded<FieldT>> impl
      * Compute the inverse FFT, over the domain g*S, of the vector input, and stores the result in
      * input.
      */
-    public void radix2CosetInverseFFT(final List<FieldT> input, final FieldT g, final int taskID) {
+    public void radix2CosetInverseFFT(final List<FieldT> input, final FieldT g, final int taskID)throws Exception {
         //System.out.println("radix2CosetInverseFFT input side " + input.size());
         this.radix2InverseFFT(input, taskID);
         FFTAuxiliary.multiplyByCoset(input, g.inverse());

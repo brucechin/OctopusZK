@@ -1,11 +1,11 @@
-# mvn clean 
-# mvn compile 
-# mvn install -DskipTests
+mvn clean 
+mvn compile 
+mvn install -DskipTests
 for TOTAL_CORES in 16; do
-  for SIZE in `seq 20 20`; do
+  for SIZE in `seq 25 25`; do
 
-    export APP=zksnark
-    export MEMORY=400G
+    export APP=fft
+    export MEMORY=64G
     export MULTIPLIER=1
 
     export CORES=1

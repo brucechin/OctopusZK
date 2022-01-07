@@ -34,7 +34,7 @@ public class R1CStoQAPRelationProfiling {
         config.writeRuntimeLog(config.context());
     }
 
-    public static void distributedQAPRelation(final Configuration config, final long numConstraints) {
+    public static void distributedQAPRelation(final Configuration config, final long numConstraints) throws Exception{
         final BN254aFr fieldFactory = new BN254aFr(2L);
         final int numInputs = 1023;
 
