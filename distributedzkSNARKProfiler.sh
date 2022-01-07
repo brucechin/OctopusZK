@@ -2,11 +2,11 @@ mvn clean
 mvn compile 
 mvn install -DskipTests
 for TOTAL_CORES in 4; do
-  for SIZE in `seq 18 18`; do
+  for SIZE in `seq 20 20`; do
 
     export APP=zksnark
     export MEMORY=64G
-    export MULTIPLIER=1
+    export MULTIPLIER=8
 
     export CORES=1
     export NUM_EXECUTORS=$((TOTAL_CORES / CORES))

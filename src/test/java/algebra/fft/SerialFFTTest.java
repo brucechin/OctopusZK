@@ -166,7 +166,7 @@ public class SerialFFTTest implements Serializable {
     // }
 
     @Test
-    public void PrimeFieldSerialFFTTest() throws Exception{
+    public void PrimeFieldSerialFFTTest() {
         final int m = 4;
         final Fp FieldFactory = new Fp(1, FpParameters);
         final SerialFFT<Fp> domain = new SerialFFT<>(m, FieldFactory);

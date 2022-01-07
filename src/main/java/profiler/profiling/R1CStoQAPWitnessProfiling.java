@@ -15,7 +15,7 @@ import scala.Tuple3;
 
 public class R1CStoQAPWitnessProfiling {
 
-    public static void serialQAPWitness(final Configuration config, final long numConstraints) throws Exception{
+    public static void serialQAPWitness(final Configuration config, final long numConstraints) {
         final BN254aFr fieldFactory = new BN254aFr(2L);
         final int numInputs = 1023;
 
@@ -37,7 +37,7 @@ public class R1CStoQAPWitnessProfiling {
         config.writeRuntimeLog(config.context());
     }
 
-    public static void distributedQAPWitness(final Configuration config, final long numConstraints) throws Exception{
+    public static void distributedQAPWitness(final Configuration config, final long numConstraints) {
         final BN254aFr fieldFactory = new BN254aFr(2L);
         final int numInputs = 1023;
 

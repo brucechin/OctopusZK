@@ -128,7 +128,7 @@ public class R1CStoQAP {
             final Assignment<FieldT> primary,
             final Assignment<FieldT> auxiliary,
             final FieldT fieldFactory,
-            final Configuration config) throws Exception{
+            final Configuration config) {
 
         if (config.debugFlag()) {
             assert (r1cs.isSatisfied(primary, auxiliary));

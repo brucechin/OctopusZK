@@ -39,7 +39,7 @@ public class DistributedFFTTest implements Serializable {
     }
 
     @Test
-    public void VerifyFFTTest() throws Exception{
+    public void VerifyFFTTest() {
         int m = 4;
         int rows = 2;
         int columns = 2;
@@ -68,7 +68,7 @@ public class DistributedFFTTest implements Serializable {
     }
 
     @Test
-    public void VerifyFFTofInverseFFTTest() throws Exception {
+    public void VerifyFFTofInverseFFTTest() {
         int m = 4;
         int rows = 2;
         int columns = 2;
@@ -102,7 +102,7 @@ public class DistributedFFTTest implements Serializable {
     }
 
     @Test
-    public void VerifyCosetFFTTest()  throws Exception{
+    public void VerifyCosetFFTTest() {
         int m = 4;
         int rows = 2;
         int columns = 2;
@@ -137,7 +137,7 @@ public class DistributedFFTTest implements Serializable {
     }
 
     @Test
-    public void VerifyCosetFFTofCosetInverseFFTTest()  throws Exception{
+    public void VerifyCosetFFTofCosetInverseFFTTest() {
         int m = 4;
         int rows = 2;
         int columns = 2;

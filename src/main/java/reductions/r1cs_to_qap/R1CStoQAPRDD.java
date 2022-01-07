@@ -45,7 +45,7 @@ public class R1CStoQAPRDD implements Serializable {
     R1CStoQAPRelation(
             final R1CSRelationRDD<FieldT> r1cs,
             final FieldT t,
-            final Configuration config) throws Exception{
+            final Configuration config) {
         final int numInputs = r1cs.numInputs();
         final long numVariables = r1cs.numVariables();
         final long numConstraints = r1cs.numConstraints();
@@ -162,7 +162,7 @@ public class R1CStoQAPRDD implements Serializable {
             final Assignment<FieldT> primary,
             final JavaPairRDD<Long, FieldT> oneFullAssignment,
             final FieldT fieldFactory,
-            final Configuration config) throws Exception{
+            final Configuration config) {
 
         if (config.debugFlag()) {
             assert (r1cs.isSatisfied(primary, oneFullAssignment));

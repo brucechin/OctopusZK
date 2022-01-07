@@ -14,7 +14,7 @@ import scala.Tuple3;
 public class MatrixMultiplicationProfiling {
 
     public static void MatrixMultiplicationProfile(
-            final Configuration config, int n1, int n2, int n3, int b1, int b2, int b3) throws Exception{
+            final Configuration config, int n1, int n2, int n3, int b1, int b2, int b3) {
 
         final LargeFpParameters FpParameters = new LargeFpParameters();
         final Fp fieldFactory = new Fp(1, FpParameters);
@@ -38,7 +38,7 @@ public class MatrixMultiplicationProfiling {
         config.writeRuntimeLog(config.context());
     }
 
-    public static void LRProfile(final Configuration config, int n, int d, int bn, int bd) throws Exception{
+    public static void LRProfile(final Configuration config, int n, int d, int bn, int bd) {
         final LargeFpParameters FpParameters = new LargeFpParameters();
         final Fp fieldFactory = new Fp(1, FpParameters);
 
@@ -60,7 +60,7 @@ public class MatrixMultiplicationProfiling {
         config.writeRuntimeLog(config.context());
     }
 
-    public static void GaussianProfile(final Configuration config, int n, int d, int bn, int bd) throws Exception{
+    public static void GaussianProfile(final Configuration config, int n, int d, int bn, int bd) {
         final LargeFpParameters FpParameters = new LargeFpParameters();
         final Fp fieldFactory = new Fp(1, FpParameters);
 

@@ -37,7 +37,7 @@ public class DistributedSetup {
             final G1T g1Factory,
             final G2T g2Factory,
             final PairingT pairing,
-            final Configuration config) throws Exception{
+            final Configuration config) {
         // Generate secret randomness.
         final FieldT t = fieldFactory.random(config.seed(), config.secureSeed());
         final FieldT alpha = fieldFactory.random(config.seed(), config.secureSeed());

@@ -15,14 +15,6 @@ extern "C" {
 JNIEXPORT jbyteArray JNICALL Java_algebra_fft_FFTAuxiliary_serialRadix2FFTNativeHelper
   (JNIEnv *, jclass, jobject, jbyteArray, jint);
 
-/*
- * Class:     algebra_fft_FFTAuxiliary
- * Method:    serialRadix2FFTNativeBatchPartition
- * Signature: (Ljava/util/List;[BIII)[B
- */
-JNIEXPORT jbyteArray JNICALL Java_algebra_fft_FFTAuxiliary_serialRadix2FFTNativeBatchPartition
-  (JNIEnv *, jclass, jobject, jbyteArray, jint, jint, jint);
-
 #ifdef __cplusplus
 }
 #endif
