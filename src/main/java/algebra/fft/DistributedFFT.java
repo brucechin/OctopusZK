@@ -12,11 +12,11 @@ public class DistributedFFT {
      * Compute the distributed FFT, over the domain S, of the vector input.
      */
     public static <FieldT extends AbstractFieldElementExpanded<FieldT>> JavaPairRDD<Long, FieldT>
-    radix2FFT(
+    radix2FFT  (
             final JavaPairRDD<Long, FieldT> input,
             final long rows,
             final long columns,
-            final FieldT fieldFactory) {
+            final FieldT fieldFactory)throws Exception {
         return FFTAuxiliary.distributedRadix2FFT(input, rows, columns, false, fieldFactory);
     }
 
@@ -28,7 +28,7 @@ public class DistributedFFT {
             final JavaPairRDD<Long, FieldT> input,
             final long rows,
             final long columns,
-            final FieldT fieldFactory) {
+            final FieldT fieldFactory)throws Exception {
         return FFTAuxiliary.distributedRadix2FFT(input, rows, columns, true, fieldFactory);
     }
 
@@ -41,7 +41,7 @@ public class DistributedFFT {
             final FieldT g,
             final long rows,
             final long columns,
-            final FieldT fieldFactory) {
+            final FieldT fieldFactory) throws Exception{
         return radix2FFT(
                 FFTAuxiliary.distributedMultiplyByCoset(input, g),
                 rows,
@@ -58,7 +58,7 @@ public class DistributedFFT {
             final FieldT g,
             final long rows,
             final long columns,
-            final FieldT fieldFactory) {
+            final FieldT fieldFactory) throws Exception{
         return FFTAuxiliary
                 .distributedMultiplyByCoset(radix2InverseFFT(
                         input,

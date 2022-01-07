@@ -78,7 +78,7 @@ public class Profiler {
 
     public static void matmulTest(final Configuration config,
                                   int n1, int n2, int n3, int b1, int b2, int b3,
-                                  String app) {
+                                  String app) throws Exception{
         if (app.equals("matmul")) {
             MatrixMultiplicationProfiling.MatrixMultiplicationProfile(config, n1, n2, n3, b1, b2, b3);
         } else {
@@ -87,24 +87,24 @@ public class Profiler {
     }
 
     public static void lrTest(final Configuration config,
-                              int n, int d, int bn, int bd, String app) {
+                              int n, int d, int bn, int bd, String app)throws Exception {
         if (app.equals("regression")) {
             MatrixMultiplicationProfiling.LRProfile(config, n, d, bn, bd);
         }
     }
 
     public static void matrixMultiplicationTest(
-            final Configuration config, int n1, int n2, int n3, int b1, int b2, int b3) {
+            final Configuration config, int n1, int n2, int n3, int b1, int b2, int b3) throws Exception{
         MatrixMultiplicationProfiling.MatrixMultiplicationProfile(config, n1, n2, n3, b1, b2, b3);
     }
 
     public static void lrTest(
-            final Configuration config, int n, int d, int bn, int bd) {
+            final Configuration config, int n, int d, int bn, int bd) throws Exception{
         MatrixMultiplicationProfiling.LRProfile(config, n, d, bn, bd);
     }
 
     public static void gaussianTest(
-            final Configuration config, int n, int d, int bn, int bd) {
+            final Configuration config, int n, int d, int bn, int bd) throws Exception{
         MatrixMultiplicationProfiling.GaussianProfile(config, n, d, bn, bd);
     }
 

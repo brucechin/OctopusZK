@@ -161,7 +161,6 @@ public class FixedBaseMSM {
 
     public static byte[] bigIntegerToByteArrayHelperCGBN(BigInteger bigint){
         byte[] temp = bigint.toByteArray();
-        //byte[] res = new byte[(temp.length + 3)/ 4 * 4];
         byte[] res = new byte[32]; //254-bit BN254 biginteger is enough to be saved in 32bytes.
         for(int i = 0; i < temp.length; i++){
             res[temp.length - i - 1] = temp[i];

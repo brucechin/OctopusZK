@@ -12,7 +12,7 @@ import java.util.ArrayList;
 
 public class FFTProfiling {
 
-    public static void serialFFTProfiling(final Configuration config, final long size) {
+    public static void serialFFTProfiling(final Configuration config, final long size) throws Exception{
         final BN254aFr fieldFactory = new BN254aFr(2L);
 
         final ArrayList<BN254aFr> serial = new ArrayList<>();
@@ -34,7 +34,7 @@ public class FFTProfiling {
         config.writeRuntimeLog(config.context());
     }
 
-    public static void distributedFFTProfiling(final Configuration config, final long size) {
+    public static void distributedFFTProfiling(final Configuration config, final long size) throws Exception{
         final BN254aFr fieldFactory = new BN254aFr(2L);
         final JavaPairRDD<Long, BN254aFr> distributed = FFTGenerator.generateData(config, size);
 
