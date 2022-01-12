@@ -9,7 +9,7 @@ package algebra.fields;
 
 import algebra.fields.abstractfieldparameters.AbstractFp12_2Over3Over2_Parameters;
 import algebra.fields.abstractfieldparameters.AbstractFp6_3Over2_Parameters;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 import java.io.Serializable;
 

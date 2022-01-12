@@ -11,7 +11,7 @@ import algebra.fields.Fp;
 import algebra.fields.fieldparameters.LargeFpParameters;
 import algebra.groups.AdditiveIntegerGroup;
 import algebra.groups.integergroupparameters.LargeAdditiveIntegerGroupParameters;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 import org.junit.Before;
 import org.junit.Test;

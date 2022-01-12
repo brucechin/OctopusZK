@@ -1,7 +1,7 @@
 package algebra.fft;
 
 import algebra.fields.AbstractFieldElementExpanded;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 import common.Combiner;
 import common.MathUtils;
 import common.Utils;
@@ -70,57 +70,57 @@ public class FFTAuxiliary {
         assert (n == (1 << logn));
 
         //--------------------------------------Java Native code--------------------------------
-        //TODO optimize it to a large bytearray which may be more efficient
-        ArrayList<byte[]> inputByteArray = new ArrayList<byte[]>();
-        for(FieldT f : input){
-            inputByteArray.add(bigIntegerToByteArrayHelperCGBN(f.toBigInteger()));
-        }
+        // //TODO optimize it to a large bytearray which may be more efficient
+        // ArrayList<byte[]> inputByteArray = new ArrayList<byte[]>();
+        // for(FieldT f : input){
+        //     inputByteArray.add(bigIntegerToByteArrayHelperCGBN(f.toBigInteger()));
+        // }
 
-        System.out.println("on java side serialRadix2FFT omega=" + byteToString(omega.toBigInteger().toByteArray()));
-        byte[] omegaBytes = bigIntegerToByteArrayHelperCGBN(omega.toBigInteger());
-        byte[] resultByteArray = FFTAuxiliary.serialRadix2FFTNativeHelper(inputByteArray, omegaBytes, taskID);
-        System.out.println("finish JNI fft");
-        int size_of_bigint_cpp_side = 64;
-        for(int i = 0; i < input.size(); i++){
-            byte[] slice = Arrays.copyOfRange(resultByteArray, i*size_of_bigint_cpp_side, (i+1)*size_of_bigint_cpp_side);
-            byte[] converted_back = new byte[64];
-            for(int j =0; j < size_of_bigint_cpp_side; j++){
-                converted_back[j] = slice[size_of_bigint_cpp_side - j - 1];
-            }
-            BigInteger bi = new BigInteger(converted_back);
-            FieldT temp = input.get(0).zero();
-            temp.setBigInteger(bi);
-            input.set(i, temp);
+        // //System.out.println("on java side serialRadix2FFT omega=" + byteToString(omega.toBigInteger().toByteArray()));
+        // byte[] omegaBytes = bigIntegerToByteArrayHelperCGBN(omega.toBigInteger());
+        // byte[] resultByteArray = FFTAuxiliary.serialRadix2FFTNativeHelper(inputByteArray, omegaBytes, taskID);
+        // //System.out.println("finish JNI fft");
+        // int size_of_bigint_cpp_side = 64;
+        // for(int i = 0; i < input.size(); i++){
+        //     byte[] slice = Arrays.copyOfRange(resultByteArray, i*size_of_bigint_cpp_side, (i+1)*size_of_bigint_cpp_side);
+        //     byte[] converted_back = new byte[64];
+        //     for(int j =0; j < size_of_bigint_cpp_side; j++){
+        //         converted_back[j] = slice[size_of_bigint_cpp_side - j - 1];
+        //     }
+        //     BigInteger bi = new BigInteger(converted_back);
+        //     FieldT temp = input.get(0).zero();
+        //     temp.setBigInteger(bi);
+        //     input.set(i, temp);
 
-        }
+        // }
 
         // //--------------------------------------Java Native code--------------------------------
 
     
-        // /* swapping in place (from Storer's book) */
-        // for (int k = 0; k < n; ++k) {
-        //     final int rk = MathUtils.bitreverse(k, logn);
-        //     if (k < rk) {
-        //         Collections.swap(input, k, rk);
-        //     }
-        // }
+        /* swapping in place (from Storer's book) */
+        for (int k = 0; k < n; ++k) {
+            final int rk = MathUtils.bitreverse(k, logn);
+            if (k < rk) {
+                Collections.swap(input, k, rk);
+            }
+        }
 
-        // int m = 1; // invariant: m = 2^{s-1}
-        // for (int s = 1; s <= logn; ++s) {
-        //     // w_m is 2^s-th root of unity now
-        //     final FieldT w_m = omega.pow(n / (2 * m));
+        int m = 1; // invariant: m = 2^{s-1}
+        for (int s = 1; s <= logn; ++s) {
+            // w_m is 2^s-th root of unity now
+            final FieldT w_m = omega.pow(n / (2 * m));
 
-        //     for (int k = 0; k < n; k += 2 * m) {
-        //         FieldT w = omega.one();
-        //         for (int j = 0; j < m; ++j) {
-        //             final FieldT t = w.mul(input.get(k + j + m));
-        //             input.set(k + j + m, input.get(k + j).sub(t));
-        //             input.set(k + j, input.get(k + j).add(t));
-        //             w = w.mul(w_m);
-        //         }
-        //     }
-        //     m *= 2;
-        // }
+            for (int k = 0; k < n; k += 2 * m) {
+                FieldT w = omega.one();
+                for (int j = 0; j < m; ++j) {
+                    final FieldT t = w.mul(input.get(k + j + m));
+                    input.set(k + j + m, input.get(k + j).sub(t));
+                    input.set(k + j, input.get(k + j).add(t));
+                    w = w.mul(w_m);
+                }
+            }
+            m *= 2;
+        }
     }
 
     /**

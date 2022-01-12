@@ -1332,7 +1332,7 @@ void  pippengerMSMG1(std::vector<Scalar> & bigScalarArray, std::vector<BN254G1> 
 
         //reduce the bucketsBeforeAggregate, because they have been write to ajacent positions.
         start = std::chrono::steady_clock::now();
-        int dense_bucket_threshold = 10000;
+        int dense_bucket_threshold = 20000;
         int num_blocks_reduce_buckets = (numBuckets + instance_per_block - 1)/instance_per_block;
         pippengerMSMG1_unit2_reduce_to_buckets<<<num_blocks_reduce_buckets, threads_per_block>>>(bucketsBeforeAggregate, buckets, bucketCounter, numBuckets, dense_bucket_threshold, zeroGPU);
         CUDA_CALL(cudaDeviceSynchronize();)
@@ -1512,7 +1512,7 @@ void  pippengerMSMG2(std::vector<Scalar> & bigScalarArray, std::vector<BN254G2> 
 
         //reduce the bucketsBeforeAggregate, because they have been write to ajacent positions.
         int num_blocks_reduce_buckets = (numBuckets + instance_per_block - 1)/instance_per_block;
-        int dense_bucket_threshold = 10000;
+        int dense_bucket_threshold = 20000;
 
         pippengerMSMG2_unit2_reduce_to_buckets<<<num_blocks_reduce_buckets, threads_per_block>>>(bucketsBeforeAggregate, buckets, bucketCounter, numBuckets, dense_bucket_threshold, zeroGPU);
         CUDA_CALL(cudaDeviceSynchronize();)

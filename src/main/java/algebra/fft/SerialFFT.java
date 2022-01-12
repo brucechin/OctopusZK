@@ -10,7 +10,7 @@ import java.util.Collections;
 import java.util.Arrays;
 
 import algebra.groups.AbstractGroup;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 public class SerialFFT<FieldT extends AbstractFieldElementExpanded<FieldT>> implements
         Serializable {

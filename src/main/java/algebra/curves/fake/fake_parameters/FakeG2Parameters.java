@@ -9,7 +9,7 @@ package algebra.curves.fake.fake_parameters;
 
 import algebra.curves.fake.FakeG2;
 import algebra.curves.fake.abstract_fake_parameters.AbstractFakeG2Parameters;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 import java.io.Serializable;
 import java.util.ArrayList;

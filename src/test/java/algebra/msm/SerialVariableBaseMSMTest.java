@@ -9,7 +9,7 @@ package algebra.msm;
 
 import algebra.groups.AdditiveIntegerGroup;
 import algebra.groups.integergroupparameters.LargeAdditiveIntegerGroupParameters;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 import org.junit.Before;
 import org.junit.Test;

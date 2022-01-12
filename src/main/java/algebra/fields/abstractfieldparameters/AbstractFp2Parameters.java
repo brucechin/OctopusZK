@@ -9,7 +9,7 @@ package algebra.fields.abstractfieldparameters;
 
 import algebra.fields.Fp;
 import algebra.fields.Fp2;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 public abstract class AbstractFp2Parameters {
 

@@ -89,9 +89,7 @@ __global__ void cuda_fft_first_step( Scalar *input_field, Scalar omega, const si
         cgbn_store(_env, &(input_field[global_k]), b);
         cgbn_store(_env, &(input_field[rk]), a);
     }
-    
-   // __syncthreads();
-    
+        
 }
 
 
@@ -114,6 +112,7 @@ __global__ void cuda_fft_second_step(Scalar *input_field, Scalar omega_binary, c
 //                                 0,1048576,0,0,
 //                                 0, 0,0,0,
 //                                 0,0,0,0};
+
     memcpy(modulus_binary._limbs, Fr_modulus_raw, fft_params_t::num_of_bytes);
     bn_t modulus;
     cgbn_load(_env, modulus, &modulus_binary);
@@ -159,7 +158,6 @@ __global__ void cuda_fft_second_step(Scalar *input_field, Scalar omega_binary, c
         cgbn_mul(_env, w, w, w_m);
         cgbn_rem(_env, w, w, modulus);
     }
-   // __syncthreads();
 
 }
 
@@ -172,7 +170,7 @@ void best_fft (std::vector<Scalar> &a, const Scalar &omg, int taskID)
     CUDA_CALL(cudaGetDeviceCount(&num_gpus));
     //printf("CUDA Devices number: %d, input_field size: %lu, input_field count: %lu\n", num_gpus, sizeof(Scalar), batch_size);
 
-    size_t threads_per_block = 128;
+    size_t threads_per_block = 512;
     size_t instance_per_block = (threads_per_block / fft_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (a.size() + instance_per_block - 1) / instance_per_block;
 
@@ -194,6 +192,7 @@ void best_fft (std::vector<Scalar> &a, const Scalar &omg, int taskID)
     for(; s <= log_m; s++){
         cuda_fft_second_step <<<blocks,threads_per_block>>>( in, omg, length, log_m, s);
         CUDA_CALL(cudaDeviceSynchronize());
+        //cout <<"finish round " << s  <<endl;
     }
 
     // auto end = std::chrono::steady_clock::now();
@@ -231,7 +230,6 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_fft_FFTAuxiliary_serialRadix2FFTNative
         char* bytes = (char*)env->GetByteArrayElements(element, NULL);
         int len = env->GetArrayLength(element);
         char* tmp = (char*)&inputArray[i]._limbs;
-
         memcpy(tmp, bytes, len);
     }
 
@@ -243,9 +241,12 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_fft_FFTAuxiliary_serialRadix2FFTNative
     memcpy(tmp , 
                 bytes,
                 len);
-    
-    best_fft(inputArray, omega, taskID);
+    auto start = std::chrono::steady_clock::now();
 
+    best_fft(inputArray, omega, taskID);
+    auto end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end-start;
+    //std::cout << "CUDA FFT elapsed time: " << elapsed_seconds.count() << "s\n";
 
     //TODO lianke this write back part can be optimized
     jbyteArray resultByteArray = env->NewByteArray((jsize)fft_params_t::num_of_bytes * input_len);
@@ -257,4 +258,3 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_fft_FFTAuxiliary_serialRadix2FFTNative
     return resultByteArray;
 
 }
-

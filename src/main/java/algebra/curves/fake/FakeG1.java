@@ -14,7 +14,7 @@ import algebra.curves.fake.abstract_fake_parameters.AbstractFakeG1Parameters;
 import java.io.Serializable;
 import java.util.ArrayList;
 import algebra.fields.Fp2;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 public class FakeG1 extends AbstractG1<FakeG1> implements Serializable {
 

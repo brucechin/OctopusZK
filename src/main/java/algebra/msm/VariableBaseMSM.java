@@ -9,7 +9,7 @@ package algebra.msm;
 
 import algebra.fields.AbstractFieldElementExpanded;
 import algebra.groups.AbstractGroup;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 import common.MathUtils;
 
 import java.util.ArrayList;

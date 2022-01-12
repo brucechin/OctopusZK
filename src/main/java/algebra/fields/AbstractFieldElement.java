@@ -9,7 +9,7 @@ package algebra.fields;
 
 import java.io.Serializable;
 
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 public abstract class AbstractFieldElement<FieldT extends AbstractFieldElement<FieldT>>
         implements Serializable {

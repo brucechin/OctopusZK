@@ -25,7 +25,7 @@ import algebra.fields.Fp;
 import algebra.fields.fieldparameters.LargeFpParameters;
 import algebra.groups.AdditiveIntegerGroup;
 import algebra.groups.integergroupparameters.LargeAdditiveIntegerGroupParameters;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 import algebra.fields.Fp2;
 import java.util.Iterator;
 import java.util.ArrayList;
@@ -107,6 +107,15 @@ public class FixedBaseMSM {
             final byte[] multiplesOfBaseBN254XYZ,
             final byte[] bigScalarsArrays,
             int BNType, int taskID);//1 is G1, 2 is G2.
+
+    // public static native <T extends AbstractGroup<T>, FieldT extends AbstractFieldElementExpanded<FieldT>>
+    // ArrayList<int[]> batchMSMNativeHelperIntArray(
+    //         final int outerc,
+    //         final int windowSize,
+    //         final int out_len, final int inner_len, final int batch_size, final int scalarSize,
+    //         final byte[] multiplesOfBaseBN254XYZ,
+    //         final byte[] bigScalarsArrays,
+    //         int BNType, int taskID);//1 is G1, 2 is G2.
 
     public static String byteToString(byte[] b) {
         byte[] masks = { -128, 64, 32, 16, 8, 4, 2, 1 };
@@ -207,14 +216,14 @@ public class FixedBaseMSM {
                 ByteArrayOutputStream bigScalarStream = new ByteArrayOutputStream( );
         
                 for (int i = iter; i < Integer.min(iter + G1_iteration_batch_size, scalars.size()); i++) {
+                    //TODO lianke replace with toIntArray.
                     bigScalarStream.write(bigIntegerToByteArrayHelperCGBN(scalars.get(i).toBigInteger()));
-                    //System.out.println("int array = " +scalars.get(i).toBigInteger());
                 }
                 byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
         
                 long finish = System.currentTimeMillis();
                 long timeElapsed = finish - start;
-                //System.out.println("iteration=" + iter + " data transfer preparation time elapsed: " + timeElapsed + " ms");
+                System.out.println("iteration=" + iter + " data transfer preparation time elapsed: " + timeElapsed + " ms");
                 byte[] resultByteArray = batchMSMNativeHelper(outerc, windowSize, out_size, in_size, Integer.min(G1_iteration_batch_size, scalars.size() - iter), scalarSize, baseByteArrayXYZ, bigScalarByteArray, 1, 0);
                 
                 start = System.currentTimeMillis();
@@ -230,7 +239,6 @@ public class FixedBaseMSM {
                     BigInteger bi_X = new BigInteger(converted_back_X);
                     BigInteger bi_Y = new BigInteger(converted_back_Y);
                     BigInteger bi_Z = new BigInteger(converted_back_Z);
-        
         
                     T temp = baseElement.zero();
                     temp.setBigIntegerBN254G1(bi_X, bi_Y, bi_Z);

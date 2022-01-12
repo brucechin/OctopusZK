@@ -8,7 +8,7 @@
 package bace.circuit;
 
 import algebra.fields.AbstractFieldElementExpanded;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 import java.util.Map;
 

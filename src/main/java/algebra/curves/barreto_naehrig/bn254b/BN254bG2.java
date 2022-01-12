@@ -15,7 +15,7 @@ import algebra.curves.barreto_naehrig.bn254b.bn254b_parameters.BN254bG2Parameter
 
 import java.util.ArrayList;
 import algebra.fields.Fp2;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 public class BN254bG2
         extends BNG2<BN254bFr, BN254bFq, BN254bFq2, BN254bG2, BN254bG2Parameters> {
 

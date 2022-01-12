@@ -8,7 +8,7 @@
 package algebra.curves.barreto_naehrig.bn254b.bn254b_parameters;
 
 import algebra.fields.Fp;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 import algebra.curves.barreto_naehrig.abstract_bn_parameters.AbstractBNFqParameters;
 
 import java.io.Serializable;

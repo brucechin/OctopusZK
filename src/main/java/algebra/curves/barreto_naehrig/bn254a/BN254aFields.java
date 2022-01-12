@@ -4,7 +4,7 @@ import algebra.fields.Fp;
 import algebra.fields.Fp12_2Over3Over2;
 import algebra.fields.Fp2;
 import algebra.fields.Fp6_3Over2;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 import algebra.curves.barreto_naehrig.BNFields.*;
 import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.*;
 
