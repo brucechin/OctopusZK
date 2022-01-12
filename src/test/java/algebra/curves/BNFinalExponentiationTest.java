@@ -20,9 +20,9 @@ import algebra.curves.barreto_naehrig.bn254b.BN254bFields.BN254bFq12;
 import algebra.curves.barreto_naehrig.bn254b.BN254bPairing;
 import algebra.curves.barreto_naehrig.bn254b.BN254bPublicParameters;
 import algebra.curves.barreto_naehrig.bn254b.bn254b_parameters.BN254bGTParameters;
-import org.junit.Test;
+import algebra.math.BigInteger;
 
-import java.math.BigInteger;
+import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
 

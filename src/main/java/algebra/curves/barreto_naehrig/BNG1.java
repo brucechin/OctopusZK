@@ -11,7 +11,7 @@ import algebra.curves.AbstractG1;
 import algebra.curves.barreto_naehrig.BNFields.BNFq;
 import algebra.curves.barreto_naehrig.BNFields.BNFr;
 import algebra.curves.barreto_naehrig.abstract_bn_parameters.AbstractBNG1Parameters;
-import java.math.BigInteger;
+import algebra.math.BigInteger;
 
 import java.util.ArrayList;
 

@@ -7,7 +7,7 @@
 
 package algebra.curves;
 
-import java.math.BigInteger;
+import algebra.math.BigInteger;
 
 public abstract class AbstractGT<GTT extends AbstractGT<GTT>> {
 

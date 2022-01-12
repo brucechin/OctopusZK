@@ -1,8 +1,7 @@
 package algebra.curves.barreto_naehrig;
 
 import algebra.fields.*;
-
-import java.math.BigInteger;
+import algebra.math.BigInteger;
 
 public interface BNFields {
     /* Scalar field Fr */

@@ -9,12 +9,13 @@ package algebra.msm;
 
 import algebra.groups.AdditiveIntegerGroup;
 import algebra.groups.integergroupparameters.LargeAdditiveIntegerGroupParameters;
+import algebra.math.BigInteger;
+
 import org.junit.Before;
 import org.junit.Test;
 import scala.Tuple2;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 import java.util.ArrayList;
 
 import static org.junit.Assert.assertTrue;

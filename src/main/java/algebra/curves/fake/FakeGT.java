@@ -8,11 +8,11 @@
 package algebra.curves.fake;
 
 import algebra.fields.Fp;
+import algebra.math.BigInteger;
 import algebra.curves.AbstractGT;
 import algebra.curves.fake.abstract_fake_parameters.AbstractFakeGTParameters;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 
 public class FakeGT extends AbstractGT<FakeGT> implements Serializable {
 

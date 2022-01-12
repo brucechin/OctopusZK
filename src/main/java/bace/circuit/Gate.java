@@ -8,8 +8,8 @@
 package bace.circuit;
 
 import algebra.fields.AbstractFieldElementExpanded;
+import algebra.math.BigInteger;
 
-import java.math.BigInteger;
 import java.util.Map;
 
 /* Gate is the abstract declaration of an arithmetic circuit gate, extendable

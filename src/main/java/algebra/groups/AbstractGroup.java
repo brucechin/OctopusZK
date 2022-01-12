@@ -8,12 +8,11 @@
 package algebra.groups;
 
 import algebra.fields.AbstractFieldElementExpanded;
-import java.math.BigInteger;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import algebra.fields.Fp2;
+import algebra.math.BigInteger;
 
 public abstract class AbstractGroup<GroupT extends AbstractGroup<GroupT>> implements Serializable {
 

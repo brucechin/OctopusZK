@@ -1,6 +1,7 @@
 package profiler.utils;
 
 import algebra.fields.*;
+import algebra.math.BigInteger;
 import algebra.curves.barreto_naehrig.bn254a.BN254aFields.*;
 import algebra.curves.barreto_naehrig.bn254a.BN254aG1;
 import algebra.curves.barreto_naehrig.bn254a.BN254aG2;
@@ -22,7 +23,6 @@ import scala.collection.mutable.WrappedArray;
 
 import java.io.File;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.LongAccumulator;
 

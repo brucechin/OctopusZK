@@ -9,9 +9,9 @@ package algebra.curves.fake.fake_parameters;
 
 import algebra.curves.fake.FakeG1;
 import algebra.curves.fake.abstract_fake_parameters.AbstractFakeG1Parameters;
+import algebra.math.BigInteger;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 import java.util.ArrayList;
 
 public class FakeG1Parameters extends AbstractFakeG1Parameters implements Serializable {

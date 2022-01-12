@@ -5,12 +5,12 @@ import common.MathUtils;
 
 import java.io.Serializable;
 import java.util.List;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Arrays;
 
 import algebra.groups.AbstractGroup;
+import algebra.math.BigInteger;
 
 public class SerialFFT<FieldT extends AbstractFieldElementExpanded<FieldT>> implements
         Serializable {

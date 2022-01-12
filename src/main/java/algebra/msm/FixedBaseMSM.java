@@ -25,7 +25,7 @@ import algebra.fields.Fp;
 import algebra.fields.fieldparameters.LargeFpParameters;
 import algebra.groups.AdditiveIntegerGroup;
 import algebra.groups.integergroupparameters.LargeAdditiveIntegerGroupParameters;
-import java.math.BigInteger;
+import algebra.math.BigInteger;
 import algebra.fields.Fp2;
 import java.util.Iterator;
 import java.util.ArrayList;
@@ -208,6 +208,7 @@ public class FixedBaseMSM {
         
                 for (int i = iter; i < Integer.min(iter + G1_iteration_batch_size, scalars.size()); i++) {
                     bigScalarStream.write(bigIntegerToByteArrayHelperCGBN(scalars.get(i).toBigInteger()));
+                    //System.out.println("int array = " +scalars.get(i).toBigInteger());
                 }
                 byte[] bigScalarByteArray =  bigScalarStream.toByteArray();
         

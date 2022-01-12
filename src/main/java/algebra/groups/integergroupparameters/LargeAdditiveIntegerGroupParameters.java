@@ -9,9 +9,9 @@ package algebra.groups.integergroupparameters;
 
 import algebra.groups.AdditiveIntegerGroup;
 import algebra.groups.abstractintegergroupparameters.AbstractAdditiveIntegerGroupParameters;
+import algebra.math.BigInteger;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 
 public class LargeAdditiveIntegerGroupParameters extends AbstractAdditiveIntegerGroupParameters
         implements

@@ -8,10 +8,10 @@
 package bace.circuit;
 
 import algebra.fields.AbstractFieldElementExpanded;
+import algebra.math.BigInteger;
 import scala.Tuple3;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Stack;

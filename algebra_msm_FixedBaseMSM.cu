@@ -139,7 +139,7 @@ void print_bn_t(bn_t &number, int instance_id_) {
   
 }
 
-__device__ 
+__device__ __forceinline__
 Fp2 add(Fp2 input1, Fp2 input2)
 {
   //add should be good.
@@ -162,7 +162,7 @@ Fp2 add(Fp2 input1, Fp2 input2)
     return result;
 }
 
-__device__ 
+__device__ __forceinline__
 Fp2 sub(Fp2 input1, Fp2 input2)
 {
     context_t _context;
@@ -190,7 +190,7 @@ Fp2 sub(Fp2 input1, Fp2 input2)
     return result;
 }
 
-__device__ 
+__device__ __forceinline__
 Fp2 mul(Fp2 input1, Fp2 input2)
 {
     context_t _context;
@@ -208,9 +208,6 @@ Fp2 mul(Fp2 input1, Fp2 input2)
     memcpy(residue_binary._limbs, Fp2_nonresidue_raw, MSM_params_t::num_of_bytes);
     bn_t residue;
     cgbn_load(_env, residue, &residue_binary);
-
-
-
 
     bn_t c0c0, c1c1, tmp1;
 
@@ -435,7 +432,7 @@ BN254G2Compute twice(BN254G2Compute a)
   // F = E^2
   F = mul(E, E);
 
-   // X3 = F - 2 D
+  // X3 = F - 2 D
   X3 = sub(F, D);
   X3 = sub(X3, D);
 
@@ -1325,7 +1322,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
     start = std::chrono::steady_clock::now();
     fixed_batch_MSMG1(bigScalarArray, outputBN254ArrayCPU, baseElement ,outerc, scalarSize, windowSize, out_len, inner_len, taskID);
     end = std::chrono::steady_clock::now();
-    //std::cout << "fixMSM batch G1 GPU compute time: " << elapsed_seconds.count() << "s\n";
+    std::cout << "fixMSM batch G1 GPU compute time: " << elapsed_seconds.count() << "s\n";
 
 
     start = std::chrono::steady_clock::now();
@@ -1369,7 +1366,7 @@ JNIEXPORT jbyteArray JNICALL Java_algebra_msm_FixedBaseMSM_batchMSMNativeHelper
 
   auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double> elapsed_seconds = end-start;
-  //std::cout << "fixMSM batch G2 GPU compute time: " << elapsed_seconds.count() << "s\n";
+  std::cout << "fixMSM batch G2 GPU compute time: " << elapsed_seconds.count() << "s\n";
 
 
   start = std::chrono::steady_clock::now();
