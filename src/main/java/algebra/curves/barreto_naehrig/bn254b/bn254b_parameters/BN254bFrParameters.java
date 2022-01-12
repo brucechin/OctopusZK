@@ -8,10 +8,10 @@
 package algebra.curves.barreto_naehrig.bn254b.bn254b_parameters;
 
 import algebra.fields.Fp;
+import algebra.math.BigInteger;
 import algebra.curves.barreto_naehrig.abstract_bn_parameters.AbstractBNFrParameters;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 
 public class BN254bFrParameters extends AbstractBNFrParameters implements Serializable {
     public BigInteger modulus;

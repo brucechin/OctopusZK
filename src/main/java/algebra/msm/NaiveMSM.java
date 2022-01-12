@@ -9,9 +9,10 @@ package algebra.msm;
 
 import algebra.fields.AbstractFieldElementExpanded;
 import algebra.groups.AbstractGroup;
+import algebra.math.BigInteger;
+
 import org.apache.spark.api.java.JavaPairRDD;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 

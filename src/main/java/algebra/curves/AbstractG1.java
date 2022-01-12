@@ -6,9 +6,8 @@
  *****************************************************************************/
 
 package algebra.curves;
-import java.math.BigInteger;
-
 import algebra.groups.AbstractGroup;
+import algebra.math.BigInteger;
 
 public abstract class AbstractG1<G1T extends AbstractG1<G1T>> extends AbstractGroup<G1T> {
 

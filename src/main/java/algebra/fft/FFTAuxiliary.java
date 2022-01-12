@@ -1,13 +1,14 @@
 package algebra.fft;
 
 import algebra.fields.AbstractFieldElementExpanded;
+import algebra.math.BigInteger;
 import common.Combiner;
 import common.MathUtils;
 import common.Utils;
 import configuration.Configuration;
 import org.apache.spark.api.java.JavaPairRDD;
 import scala.Tuple2;
-import java.math.BigInteger;
+
 import java.util.Arrays;
 
 import java.util.ArrayList;
@@ -125,57 +126,57 @@ public class FFTAuxiliary {
         assert (n == (1 << logn));
 
         //--------------------------------------Java Native code--------------------------------
-        // //TODO optimize it to a large bytearray which may be more efficient
-        // ArrayList<byte[]> inputByteArray = new ArrayList<byte[]>();
-        // for(FieldT f : input){
-        //     inputByteArray.add(bigIntegerToByteArrayHelperCGBN(f.toBigInteger()));
-        // }
+        //TODO optimize it to a large bytearray which may be more efficient
+        ArrayList<byte[]> inputByteArray = new ArrayList<byte[]>();
+        for(FieldT f : input){
+            inputByteArray.add(bigIntegerToByteArrayHelperCGBN(f.toBigInteger()));
+        }
 
-        // //System.out.println("on java side serialRadix2FFT omega=" + byteToString(omega.toBigInteger().toByteArray()));
-        // byte[] omegaBytes = bigIntegerToByteArrayHelperCGBN(omega.toBigInteger());
-        // byte[] resultByteArray = FFTAuxiliary.serialRadix2FFTNativeHelper(inputByteArray, omegaBytes, taskID);
-        // //System.out.println("finish JNI fft");
-        // int size_of_bigint_cpp_side = 64;
-        // for(int i = 0; i < input.size(); i++){
-        //     byte[] slice = Arrays.copyOfRange(resultByteArray, i*size_of_bigint_cpp_side, (i+1)*size_of_bigint_cpp_side);
-        //     byte[] converted_back = new byte[64];
-        //     for(int j =0; j < size_of_bigint_cpp_side; j++){
-        //         converted_back[j] = slice[size_of_bigint_cpp_side - j - 1];
-        //     }
-        //     BigInteger bi = new BigInteger(converted_back);
-        //     FieldT temp = input.get(0).zero();
-        //     temp.setBigInteger(bi);
-        //     input.set(i, temp);
+        System.out.println("on java side serialRadix2FFT omega=" + byteToString(omega.toBigInteger().toByteArray()));
+        byte[] omegaBytes = bigIntegerToByteArrayHelperCGBN(omega.toBigInteger());
+        byte[] resultByteArray = FFTAuxiliary.serialRadix2FFTNativeHelper(inputByteArray, omegaBytes, taskID);
+        System.out.println("finish JNI fft");
+        int size_of_bigint_cpp_side = 64;
+        for(int i = 0; i < input.size(); i++){
+            byte[] slice = Arrays.copyOfRange(resultByteArray, i*size_of_bigint_cpp_side, (i+1)*size_of_bigint_cpp_side);
+            byte[] converted_back = new byte[64];
+            for(int j =0; j < size_of_bigint_cpp_side; j++){
+                converted_back[j] = slice[size_of_bigint_cpp_side - j - 1];
+            }
+            BigInteger bi = new BigInteger(converted_back);
+            FieldT temp = input.get(0).zero();
+            temp.setBigInteger(bi);
+            input.set(i, temp);
 
-        // }
+        }
 
         //--------------------------------------Java Native code--------------------------------
 
     
-        /* swapping in place (from Storer's book) */
-        for (int k = 0; k < n; ++k) {
-            final int rk = MathUtils.bitreverse(k, logn);
-            if (k < rk) {
-                Collections.swap(input, k, rk);
-            }
-        }
+        // /* swapping in place (from Storer's book) */
+        // for (int k = 0; k < n; ++k) {
+        //     final int rk = MathUtils.bitreverse(k, logn);
+        //     if (k < rk) {
+        //         Collections.swap(input, k, rk);
+        //     }
+        // }
 
-        int m = 1; // invariant: m = 2^{s-1}
-        for (int s = 1; s <= logn; ++s) {
-            // w_m is 2^s-th root of unity now
-            final FieldT w_m = omega.pow(n / (2 * m));
+        // int m = 1; // invariant: m = 2^{s-1}
+        // for (int s = 1; s <= logn; ++s) {
+        //     // w_m is 2^s-th root of unity now
+        //     final FieldT w_m = omega.pow(n / (2 * m));
 
-            for (int k = 0; k < n; k += 2 * m) {
-                FieldT w = omega.one();
-                for (int j = 0; j < m; ++j) {
-                    final FieldT t = w.mul(input.get(k + j + m));
-                    input.set(k + j + m, input.get(k + j).sub(t));
-                    input.set(k + j, input.get(k + j).add(t));
-                    w = w.mul(w_m);
-                }
-            }
-            m *= 2;
-        }
+        //     for (int k = 0; k < n; k += 2 * m) {
+        //         FieldT w = omega.one();
+        //         for (int j = 0; j < m; ++j) {
+        //             final FieldT t = w.mul(input.get(k + j + m));
+        //             input.set(k + j + m, input.get(k + j).sub(t));
+        //             input.set(k + j, input.get(k + j).add(t));
+        //             w = w.mul(w_m);
+        //         }
+        //     }
+        //     m *= 2;
+        // }
     }
 
     /**
@@ -200,117 +201,43 @@ public class FFTAuxiliary {
 
 
 
-        // /* Algorithm 1: Forward FFT, Mapper */
-        // final JavaPairRDD<Long, FieldT> columnGroups = input.mapToPair(element -> {
-        //     /* AbstractGroup the array of inputs into rows using the combiner. */
-        //     final long group = element._1 % rows;
-        //     final long index = element._1 / rows;
-
-        //     return new Tuple2<>(group, new Tuple2<>(index, element._2));
-        // }).combineByKey(combine.createGroup, combine.mergeElement, combine.mergeCombiner).mapPartitionsToPair(
-        //     partition -> {
-        //         TaskContext tc = TaskContext.get();
-        //         long taskID = tc.taskAttemptId();
-        //         List<Tuple2<Long, ArrayList<Tuple2<Long, FieldT>>>> scalar_partition = IteratorUtils.toList(partition);
-        //         System.out.println("distributedFFT batch size: " + scalar_partition.size());
-        //         if(inverse){
-        //             columnDomain.radix2InverseFFTBatch(scalar_partition, (int)taskID);
-
-        //         }else{
-        //             columnDomain.radix2FFTBatch(scalar_partition, (int)taskID);
-
-        //         }
-
-        //         return scalar_partition.iterator();
-        //     }
-        // ).flatMapToPair(element -> {
-        //     /* Bitshift and map to key j. */
-        //     final long index = element._1;
-
-        //     ArrayList<Tuple2<Long, FieldT>> combinedNumbers = new ArrayList<>();
-        //     for (int i = 0; i < columns; i++) {
-        //         final FieldT nthRoot =
-        //                 inverse ? omegaShift.pow(index * i).inverse() : omegaShift.pow(index * i);
-        //         combinedNumbers.add(new Tuple2<>(i * rows + index, nthRoot.mul(element._2.get(i)._2)));
-        //     }
-
-        //     return combinedNumbers.iterator();
-        // });
-
-        // return columnGroups.mapToPair(element -> {
-        //     /* AbstractGroup the array of inputs into columns using the combiner. */
-        //     final long group = element._1 / rows;
-        //     final long index = element._1 % rows;
-
-        //     return new Tuple2<>(group, new Tuple2<>(index, element._2));
-        // }).combineByKey(combine.createGroup, combine.mergeElement, combine.mergeCombiner)
-        //         .mapPartitionsToPair(partition -> {
-        //             TaskContext tc = TaskContext.get();
-        //             long taskID = tc.taskAttemptId();
-        //             /* Compute the forward FFT, on domain size rows, for each group. */
-
-        //             List<Tuple2<Long, ArrayList<Tuple2<Long, FieldT>>>> scalar_partition = IteratorUtils.toList(partition);
-        //             System.out.println("distributedFFT batch size: " + scalar_partition.size());
-        //             if(inverse){
-        //                 rowDomain.radix2InverseFFTBatch(scalar_partition, (int)taskID);
-    
-        //             }else{
-        //                 rowDomain.radix2FFTBatch(scalar_partition, (int)taskID);
-    
-        //             }
-    
-        //             return scalar_partition.iterator();
-        //         }).flatMapToPair(element -> {
-        //             /* Serialize and order evaluation results. */
-        //             final long index = element._1;
-
-        //             ArrayList<Tuple2<Long, FieldT>> outputs = new ArrayList<>();
-        //             for (int i = 0; i < rows; i++) {
-        //                 outputs.add(new Tuple2<>(i * columns + index, element._2.get(i)._2));
-        //             }
-
-        //             return outputs.iterator();
-        //         });
-
         /* Algorithm 1: Forward FFT, Mapper */
-
         final JavaPairRDD<Long, FieldT> columnGroups = input.mapToPair(element -> {
             /* AbstractGroup the array of inputs into rows using the combiner. */
             final long group = element._1 % rows;
             final long index = element._1 / rows;
 
             return new Tuple2<>(group, new Tuple2<>(index, element._2));
-        }).combineByKey(combine.createGroup, combine.mergeElement, combine.mergeCombiner)
-                .mapValues(partition -> {
-                    TaskContext tc = TaskContext.get();
-                    long taskID = tc.taskAttemptId();
-                    /* Compute the forward FFT, on domain size columns, for each group. */
-                    ArrayList<FieldT> groupArray = Utils.convertFromPairs(partition, (int) columns);
-                    //TODO lianke could we submit many small FFT to GPU at once?
-                    if (inverse) {
-                        columnDomain.radix2InverseFFT(groupArray, (int)taskID);
-                    } else {
-                        columnDomain.radix2FFT(groupArray, (int)taskID);
-                    }
+        }).combineByKey(combine.createGroup, combine.mergeElement, combine.mergeCombiner).mapPartitionsToPair(
+            partition -> {
+                TaskContext tc = TaskContext.get();
+                long taskID = tc.taskAttemptId();
+                List<Tuple2<Long, ArrayList<Tuple2<Long, FieldT>>>> scalar_partition = IteratorUtils.toList(partition);
+                System.out.println("distributedFFT batch size: " + scalar_partition.size());
+                if(inverse){
+                    columnDomain.radix2InverseFFTBatch(scalar_partition, (int)taskID);
 
-                    return groupArray;
-                }).flatMapToPair(element -> {
-                    /* Bitshift and map to key j. */
-                    final long index = element._1;
+                }else{
+                    columnDomain.radix2FFTBatch(scalar_partition, (int)taskID);
 
-                    ArrayList<Tuple2<Long, FieldT>> combinedNumbers = new ArrayList<>();
-                    for (int i = 0; i < columns; i++) {
-                        final FieldT nthRoot =
-                                inverse ? omegaShift.pow(index * i).inverse() : omegaShift.pow(index * i);
-                        combinedNumbers.add(new Tuple2<>(i * rows + index, nthRoot.mul(element._2.get(i))));
-                    }
+                }
 
-                    return combinedNumbers.iterator();
-                });
+                return scalar_partition.iterator();
+            }
+        ).flatMapToPair(element -> {
+            /* Bitshift and map to key j. */
+            final long index = element._1;
 
+            ArrayList<Tuple2<Long, FieldT>> combinedNumbers = new ArrayList<>();
+            for (int i = 0; i < columns; i++) {
+                final FieldT nthRoot =
+                        inverse ? omegaShift.pow(index * i).inverse() : omegaShift.pow(index * i);
+                combinedNumbers.add(new Tuple2<>(i * rows + index, nthRoot.mul(element._2.get(i)._2)));
+            }
 
+            return combinedNumbers.iterator();
+        });
 
-        /* Algorithm 2: Forward FFT, Reducer */
         return columnGroups.mapToPair(element -> {
             /* AbstractGroup the array of inputs into columns using the combiner. */
             final long group = element._1 / rows;
@@ -318,30 +245,104 @@ public class FFTAuxiliary {
 
             return new Tuple2<>(group, new Tuple2<>(index, element._2));
         }).combineByKey(combine.createGroup, combine.mergeElement, combine.mergeCombiner)
-                .mapValues(partition -> {
+                .mapPartitionsToPair(partition -> {
                     TaskContext tc = TaskContext.get();
                     long taskID = tc.taskAttemptId();
                     /* Compute the forward FFT, on domain size rows, for each group. */
-                    ArrayList<FieldT> groupArray = Utils.convertFromPairs(partition, (int) rows);
 
-                    if (inverse) {
-                        rowDomain.radix2InverseFFT(groupArray, (int)taskID);
-                    } else {
-                        rowDomain.radix2FFT(groupArray, (int)taskID);
+                    List<Tuple2<Long, ArrayList<Tuple2<Long, FieldT>>>> scalar_partition = IteratorUtils.toList(partition);
+                    System.out.println("distributedFFT batch size: " + scalar_partition.size());
+                    if(inverse){
+                        rowDomain.radix2InverseFFTBatch(scalar_partition, (int)taskID);
+    
+                    }else{
+                        rowDomain.radix2FFTBatch(scalar_partition, (int)taskID);
+    
                     }
-
-                    return groupArray;
+    
+                    return scalar_partition.iterator();
                 }).flatMapToPair(element -> {
                     /* Serialize and order evaluation results. */
                     final long index = element._1;
 
                     ArrayList<Tuple2<Long, FieldT>> outputs = new ArrayList<>();
                     for (int i = 0; i < rows; i++) {
-                        outputs.add(new Tuple2<>(i * columns + index, element._2.get(i)));
+                        outputs.add(new Tuple2<>(i * columns + index, element._2.get(i)._2));
                     }
 
                     return outputs.iterator();
                 });
+
+        // /* Algorithm 1: Forward FFT, Mapper */
+
+        // final JavaPairRDD<Long, FieldT> columnGroups = input.mapToPair(element -> {
+        //     /* AbstractGroup the array of inputs into rows using the combiner. */
+        //     final long group = element._1 % rows;
+        //     final long index = element._1 / rows;
+
+        //     return new Tuple2<>(group, new Tuple2<>(index, element._2));
+        // }).combineByKey(combine.createGroup, combine.mergeElement, combine.mergeCombiner)
+        //         .mapValues(partition -> {
+        //             TaskContext tc = TaskContext.get();
+        //             long taskID = tc.taskAttemptId();
+        //             /* Compute the forward FFT, on domain size columns, for each group. */
+        //             ArrayList<FieldT> groupArray = Utils.convertFromPairs(partition, (int) columns);
+        //             //TODO lianke could we submit many small FFT to GPU at once?
+        //             if (inverse) {
+        //                 columnDomain.radix2InverseFFT(groupArray, (int)taskID);
+        //             } else {
+        //                 columnDomain.radix2FFT(groupArray, (int)taskID);
+        //             }
+
+        //             return groupArray;
+        //         }).flatMapToPair(element -> {
+        //             /* Bitshift and map to key j. */
+        //             final long index = element._1;
+
+        //             ArrayList<Tuple2<Long, FieldT>> combinedNumbers = new ArrayList<>();
+        //             for (int i = 0; i < columns; i++) {
+        //                 final FieldT nthRoot =
+        //                         inverse ? omegaShift.pow(index * i).inverse() : omegaShift.pow(index * i);
+        //                 combinedNumbers.add(new Tuple2<>(i * rows + index, nthRoot.mul(element._2.get(i))));
+        //             }
+
+        //             return combinedNumbers.iterator();
+        //         });
+
+
+
+        // /* Algorithm 2: Forward FFT, Reducer */
+        // return columnGroups.mapToPair(element -> {
+        //     /* AbstractGroup the array of inputs into columns using the combiner. */
+        //     final long group = element._1 / rows;
+        //     final long index = element._1 % rows;
+
+        //     return new Tuple2<>(group, new Tuple2<>(index, element._2));
+        // }).combineByKey(combine.createGroup, combine.mergeElement, combine.mergeCombiner)
+        //         .mapValues(partition -> {
+        //             TaskContext tc = TaskContext.get();
+        //             long taskID = tc.taskAttemptId();
+        //             /* Compute the forward FFT, on domain size rows, for each group. */
+        //             ArrayList<FieldT> groupArray = Utils.convertFromPairs(partition, (int) rows);
+
+        //             if (inverse) {
+        //                 rowDomain.radix2InverseFFT(groupArray, (int)taskID);
+        //             } else {
+        //                 rowDomain.radix2FFT(groupArray, (int)taskID);
+        //             }
+
+        //             return groupArray;
+        //         }).flatMapToPair(element -> {
+        //             /* Serialize and order evaluation results. */
+        //             final long index = element._1;
+
+        //             ArrayList<Tuple2<Long, FieldT>> outputs = new ArrayList<>();
+        //             for (int i = 0; i < rows; i++) {
+        //                 outputs.add(new Tuple2<>(i * columns + index, element._2.get(i)));
+        //             }
+
+        //             return outputs.iterator();
+        //         });
     }
 
     /**

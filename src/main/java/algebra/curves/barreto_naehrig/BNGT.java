@@ -13,8 +13,7 @@ import algebra.curves.barreto_naehrig.BNFields.BNFq12;
 import algebra.curves.barreto_naehrig.BNFields.BNFq2;
 import algebra.curves.barreto_naehrig.BNFields.BNFq6;
 import algebra.curves.barreto_naehrig.abstract_bn_parameters.AbstractBNGTParameters;
-
-import java.math.BigInteger;
+import algebra.math.BigInteger;
 
 public abstract class BNGT<
         BNFqT extends BNFq<BNFqT>,

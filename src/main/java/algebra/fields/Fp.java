@@ -8,9 +8,9 @@
 package algebra.fields;
 
 import algebra.fields.abstractfieldparameters.AbstractFpParameters;
+import algebra.math.BigInteger;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.Random;
 

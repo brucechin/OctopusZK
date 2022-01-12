@@ -8,9 +8,9 @@
 package algebra.fields;
 
 import algebra.fields.abstractfieldparameters.AbstractFp2Parameters;
+import algebra.math.BigInteger;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 
 public class Fp2 extends AbstractFieldElement<Fp2> implements Serializable {
     //modulus is 21888242871839275222246405745257275088696311157297823662689037894645226208583

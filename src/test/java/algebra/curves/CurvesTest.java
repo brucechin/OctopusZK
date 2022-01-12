@@ -8,6 +8,7 @@
 package algebra.curves;
 
 import algebra.groups.AbstractGroup;
+import algebra.math.BigInteger;
 import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aG1Parameters;
 import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aG2Parameters;
 import algebra.curves.barreto_naehrig.bn254b.bn254b_parameters.BN254bG1Parameters;
@@ -18,8 +19,6 @@ import algebra.curves.fake.FakeInitialize;
 import algebra.curves.fake.fake_parameters.FakeG1Parameters;
 import algebra.curves.fake.fake_parameters.FakeG2Parameters;
 import org.junit.Test;
-
-import java.math.BigInteger;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;

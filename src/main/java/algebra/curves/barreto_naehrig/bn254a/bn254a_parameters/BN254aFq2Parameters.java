@@ -9,11 +9,11 @@ package algebra.curves.barreto_naehrig.bn254a.bn254a_parameters;
 
 import algebra.fields.Fp;
 import algebra.fields.Fp2;
+import algebra.math.BigInteger;
 import algebra.curves.barreto_naehrig.abstract_bn_parameters.AbstractBNFq2Parameters;
 import algebra.curves.barreto_naehrig.bn254a.BN254aFields.BN254aFq;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 
 public class BN254aFq2Parameters extends AbstractBNFq2Parameters implements Serializable {
     public BN254aFqParameters FqParameters;

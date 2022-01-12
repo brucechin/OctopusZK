@@ -9,9 +9,9 @@ package algebra.fields.fieldparameters;
 
 import algebra.fields.Fp;
 import algebra.fields.abstractfieldparameters.AbstractFpParameters;
+import algebra.math.BigInteger;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 
 public class SmallFpParameters extends AbstractFpParameters implements Serializable {
     private BigInteger modulus;

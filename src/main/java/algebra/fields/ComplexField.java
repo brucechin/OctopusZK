@@ -8,9 +8,10 @@
 package algebra.fields;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.Random;
+
+import algebra.math.BigInteger;
 
 public class ComplexField extends AbstractFieldElementExpanded<ComplexField>
         implements Serializable {
