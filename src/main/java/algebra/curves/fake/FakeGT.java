@@ -8,7 +8,7 @@
 package algebra.curves.fake;
 
 import algebra.fields.Fp;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 import algebra.curves.AbstractGT;
 import algebra.curves.fake.abstract_fake_parameters.AbstractFakeGTParameters;
 

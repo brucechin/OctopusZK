@@ -8,7 +8,7 @@
 package algebra.groups;
 
 import algebra.groups.abstractintegergroupparameters.AbstractAdditiveIntegerGroupParameters;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;

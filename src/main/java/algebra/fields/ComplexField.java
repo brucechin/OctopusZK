@@ -11,7 +11,7 @@ import java.io.Serializable;
 import java.security.SecureRandom;
 import java.util.Random;
 
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 public class ComplexField extends AbstractFieldElementExpanded<ComplexField>
         implements Serializable {

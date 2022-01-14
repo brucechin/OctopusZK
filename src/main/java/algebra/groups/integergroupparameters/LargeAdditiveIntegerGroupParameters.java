@@ -9,7 +9,7 @@ package algebra.groups.integergroupparameters;
 
 import algebra.groups.AdditiveIntegerGroup;
 import algebra.groups.abstractintegergroupparameters.AbstractAdditiveIntegerGroupParameters;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 import java.io.Serializable;
 

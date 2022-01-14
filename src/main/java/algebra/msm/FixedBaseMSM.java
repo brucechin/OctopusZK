@@ -25,7 +25,7 @@ import algebra.fields.Fp;
 import algebra.fields.fieldparameters.LargeFpParameters;
 import algebra.groups.AdditiveIntegerGroup;
 import algebra.groups.integergroupparameters.LargeAdditiveIntegerGroupParameters;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 import algebra.fields.Fp2;
 import java.util.Iterator;
 import java.util.ArrayList;

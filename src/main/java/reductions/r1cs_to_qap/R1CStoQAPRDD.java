@@ -225,7 +225,9 @@ public class R1CStoQAPRDD implements Serializable {
                     // Multiply the constraint value by the input value.
                     return new Tuple2<>(term._2._1._1, term._2._1._2.mul(term._2._2));
                 }).union(zeroIndexedC).reduceByKey(FieldT::add);
-
+        A.count();
+        B.count();
+        C.count();
         config.endLog("Compute evaluation of polynomials A, B, and C, on set S.");
 
         final int rows = (int) MathUtils.lowestPowerOfTwo((long) Math.sqrt(domainSize));
@@ -235,12 +237,18 @@ public class R1CStoQAPRDD implements Serializable {
         A = DistributedFFT.radix2InverseFFT(A, rows, cols, fieldFactory);
         B = DistributedFFT.radix2InverseFFT(B, rows, cols, fieldFactory);
         C = DistributedFFT.radix2InverseFFT(C, rows, cols, fieldFactory);
+        A.count();
+        B.count();
+        C.count();
         config.endLog("Perform radix-2 inverse FFT to determine the coefficients of A, B, and C.");
 
         config.beginLog("Compute evaluation of polynomials A, B, and C on set T.");
         A = DistributedFFT.radix2CosetFFT(A, multiplicativeGenerator, rows, cols, fieldFactory);
         B = DistributedFFT.radix2CosetFFT(B, multiplicativeGenerator, rows, cols, fieldFactory);
         C = DistributedFFT.radix2CosetFFT(C, multiplicativeGenerator, rows, cols, fieldFactory);
+        A.count();
+        B.count();
+        C.count();
         config.endLog("Compute evaluation of polynomials A, B, and C on set T.");
 
 

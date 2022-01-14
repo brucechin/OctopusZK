@@ -10,7 +10,7 @@ package algebra.fields.fieldparameters;
 import algebra.fields.Fp;
 import algebra.fields.Fp2;
 import algebra.fields.abstractfieldparameters.AbstractFp2Parameters;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 import java.io.Serializable;
 

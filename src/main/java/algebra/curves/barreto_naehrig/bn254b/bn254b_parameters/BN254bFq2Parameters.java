@@ -9,7 +9,7 @@ package algebra.curves.barreto_naehrig.bn254b.bn254b_parameters;
 
 import algebra.fields.Fp;
 import algebra.fields.Fp2;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 import algebra.curves.barreto_naehrig.abstract_bn_parameters.AbstractBNFq2Parameters;
 import algebra.curves.barreto_naehrig.bn254b.BN254bFields.BN254bFq;
 

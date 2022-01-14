@@ -8,7 +8,7 @@
 package algebra.groups.abstractintegergroupparameters;
 
 import algebra.groups.AdditiveIntegerGroup;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 public abstract class AbstractAdditiveIntegerGroupParameters {
 

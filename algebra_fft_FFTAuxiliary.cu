@@ -36,7 +36,7 @@ class fft_params_t {
     static const bool     CONSTANT_TIME=false;       // constant time implementations aren't available yet
     
     // parameters used locally in the application
-    static const uint32_t TPI=32;                   // threads per instance
+    static const uint32_t TPI=4;                   // threads per instance
     static const uint32_t BITS=512;                 // instance size
     static const uint32_t num_of_bytes=64;                 // instance size
 
@@ -179,10 +179,12 @@ void best_fft (std::vector<Scalar> &a, const Scalar &omg, int taskID)
 
     cuda_fft_first_step <<<blocks,threads_per_block>>>( in, omg, length, log_m);
     CUDA_CALL(cudaDeviceSynchronize());
+    printf("first step\n");
     size_t s = 1;
     for(; s <= log_m; s++){
         cuda_fft_second_step <<<blocks,threads_per_block>>>( in, omg, length, log_m, s);
         CUDA_CALL(cudaDeviceSynchronize());
+        cout << "second step taskID=" << taskID << " iter=" << s <<endl;
     }
 
     cudaError_t error = cudaGetLastError();
@@ -298,7 +300,7 @@ void best_fft_batch (std::vector<Scalar> &a, const Scalar &omg, int batch_size, 
 {
     int num_gpus = 1;
     CUDA_CALL(cudaGetDeviceCount(&num_gpus));
-    size_t threads_per_block = 128;
+    size_t threads_per_block = 512;
     size_t instance_per_block = (threads_per_block / fft_params_t::TPI);//TPI threads per instance, each block has threads.
     size_t blocks = (a.size() + instance_per_block - 1) / instance_per_block;
 

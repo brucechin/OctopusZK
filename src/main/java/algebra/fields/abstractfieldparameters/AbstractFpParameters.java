@@ -8,7 +8,7 @@
 package algebra.fields.abstractfieldparameters;
 
 import algebra.fields.Fp;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 public abstract class AbstractFpParameters {
     public abstract BigInteger modulus();

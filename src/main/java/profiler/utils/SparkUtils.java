@@ -1,7 +1,7 @@
 package profiler.utils;
 
 import algebra.fields.*;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 import algebra.curves.barreto_naehrig.bn254a.BN254aFields.*;
 import algebra.curves.barreto_naehrig.bn254a.BN254aG1;
 import algebra.curves.barreto_naehrig.bn254a.BN254aG2;

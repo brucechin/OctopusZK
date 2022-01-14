@@ -8,7 +8,7 @@
 package algebra.groups;
 
 import algebra.groups.integergroupparameters.LargeAdditiveIntegerGroupParameters;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 import org.junit.Test;
 

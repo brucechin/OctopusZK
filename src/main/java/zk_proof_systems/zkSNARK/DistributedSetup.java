@@ -66,19 +66,21 @@ public class DistributedSetup {
         // The delta inverse product component: (beta*A_i(t) + alpha*B_i(t) + C_i(t)) * delta^{-1}
         config.beginLog("Computing deltaABC and gammaABC for R1CS proving key and verification key");
         //due to lazy evaluation, the R1CStoQAPRelation is executed before qap is used.
-        final JavaPairRDD<Long, FieldT> betaAt =  FixedBaseMSM.distributedFieldBatchMSM(beta, qap.At(), config.sparkContext());     
-        final JavaPairRDD<Long, FieldT> alphaBt =  FixedBaseMSM.distributedFieldBatchMSM(alpha, qap.Bt(), config.sparkContext());     
+        final JavaPairRDD<Long, FieldT> betaAt = qap.At().mapValues(a -> a.mul(beta));
+        final JavaPairRDD<Long, FieldT> alphaBt = qap.Bt().mapValues(b -> b.mul(alpha));
+        // final JavaPairRDD<Long, FieldT> betaAt =  FixedBaseMSM.distributedFieldBatchMSM(beta, qap.At(), config.sparkContext());     
+        // final JavaPairRDD<Long, FieldT> alphaBt =  FixedBaseMSM.distributedFieldBatchMSM(alpha, qap.Bt(), config.sparkContext());     
 
         final JavaPairRDD<Long, FieldT> ABC = betaAt.union(alphaBt).union(qap.Ct())
                 .reduceByKey(FieldT::add).persist(config.storageLevel());
 
-        final JavaPairRDD<Long, FieldT> gammaABC = FixedBaseMSM.distributedFilterFieldBatchMSM(inverseDelta, inverseGamma, numInputs, 0, ABC, config.sparkContext()).persist(config.storageLevel());
-        final JavaPairRDD<Long, FieldT> deltaABC = FixedBaseMSM.distributedFilterFieldBatchMSM(inverseDelta, inverseGamma, numInputs, 1, ABC, config.sparkContext()).persist(config.storageLevel());
+        // final JavaPairRDD<Long, FieldT> gammaABC = FixedBaseMSM.distributedFilterFieldBatchMSM(inverseDelta, inverseGamma, numInputs, 0, ABC, config.sparkContext()).persist(config.storageLevel());
+        // final JavaPairRDD<Long, FieldT> deltaABC = FixedBaseMSM.distributedFilterFieldBatchMSM(inverseDelta, inverseGamma, numInputs, 1, ABC, config.sparkContext()).persist(config.storageLevel());
 
-        // final JavaPairRDD<Long, FieldT> gammaABC = ABC.filter(e -> e._1 < numInputs)
-        //         .mapValues(e -> e.mul(inverseGamma)).persist(config.storageLevel());
-        // final JavaPairRDD<Long, FieldT> deltaABC = ABC.filter(e -> e._1 >= numInputs)
-        //         .mapValues(e -> e.mul(inverseDelta)).persist(config.storageLevel());
+        final JavaPairRDD<Long, FieldT> gammaABC = ABC.filter(e -> e._1 < numInputs)
+                .mapValues(e -> e.mul(inverseGamma)).persist(config.storageLevel());
+        final JavaPairRDD<Long, FieldT> deltaABC = ABC.filter(e -> e._1 >= numInputs)
+                .mapValues(e -> e.mul(inverseDelta)).persist(config.storageLevel());
         gammaABC.count();
         deltaABC.count();
         config.endLog("Computing deltaABC and gammaABC for R1CS proving key and verification key");

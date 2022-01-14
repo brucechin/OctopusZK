@@ -8,7 +8,7 @@
 package algebra.fields;
 
 import algebra.fields.abstractfieldparameters.AbstractFp2Parameters;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 import java.io.Serializable;
 

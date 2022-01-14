@@ -12,7 +12,7 @@ import algebra.fields.AbstractFieldElementExpanded;
 import java.io.Serializable;
 import java.util.ArrayList;
 import algebra.fields.Fp2;
-import algebra.math.BigInteger;
+import java.math.BigInteger;
 
 public abstract class AbstractGroup<GroupT extends AbstractGroup<GroupT>> implements Serializable {
 
